@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+
+# This is the default, here just for reference
+export CSI_MODE=all
+# This is the default, here just for reference
+export CSI_ENDPOINT='[::]:50051'
+
+export X_CSI_PERSISTENCE_CONFIG="{\"storage\":\"db\",\"connection\":\"sqlite:///`realpath ../../tmp`/db.sqlite\"}"
+# At the moment Cinder, and cinderlib by extension, don't work properly if the ceph conf and keyring are not place under default /etc/ceph directory
+export X_CSI_BACKEND_CONFIG='{"volume_backend_name":"rbd","volume_driver":"cinder.volume.drivers.rbd.RBDDriver","rbd_user":"cinder","rbd_pool":"volumes","rbd_ceph_conf":"/etc/ceph/ceph.conf","rbd_keyring_conf":"/etc/ceph/ceph.client.cinder.keyring"}'

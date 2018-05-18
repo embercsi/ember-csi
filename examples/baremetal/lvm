@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+#
+# This is the default, here just for reference
+export CSI_MODE=all
+# This is the default, here just for reference
+export CSI_ENDPOINT='[::]:50051'
+
+export X_CSI_PERSISTENCE_CONFIG="{\"storage\":\"db\",\"connection\":\"sqlite:///`realpath ../../tmp`/db.sqlite\"}"
+export X_CSI_CINDERLIB_CONFIG='{"project_id":"com.redhat.cinderlib-csi","user_id":"com.redhat.cinderlib-csi","root_helper":"sudo"}'
+export X_CSI_BACKEND_CONFIG='{"iscsi_protocol":"iscsi","iscsi_ip_address":"192.168.1.23","iscsi_secondary_ip_addresses":["192.168.121.91"],"volume_backend_name":"CSI","volume_driver":"cinder.volume.drivers.lvm.LVMVolumeDriver","volume_group":"cinder-volumes","iscsi_helper":"lioadm"}'
