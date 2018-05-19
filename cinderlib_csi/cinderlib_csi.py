@@ -433,7 +433,7 @@ class Controller(csi.ControllerServicer, Identity):
         # there's been a race condition, so we cannot be idempotent, create a
         # new volume.
         if isinstance(snap, cinderlib.Snapshot):
-            print('Volume %s exists with id %s' % (request.name, vol.id))
+            print('Snapshot %s exists with id %s' % (request.name, vol.id))
         else:
             snap = vol.create_snapshot(name=request.name)
         snapshot = type.Snapshot(
