@@ -194,7 +194,7 @@ just run the following commands from the root of the `cinderlib-csi` project:
 
     $ cd tmp
     $ sudo dd if=/dev/zero of=cinder-volumes bs=1048576 seek=22527 count=1
-    $ sudo lodevice=`losetup --show -f ./cinder-volumes`
+    $ lodevice=`sudo losetup --show -f ./cinder-volumes`
     $ sudo pvcreate $lodevice
     $ sudo vgcreate cinder-volumes $lodevice
     $ sudo vgscan --cache
