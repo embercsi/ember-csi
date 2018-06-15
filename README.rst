@@ -190,6 +190,9 @@ Baremetal
 For example to test with the LVM driver on our development environment we can
 just run the following commands from the root of the `cinderlib-csi` project:
 
+  Note: First update the iscsi ip addresses in the
+  `lvm <examples/baremetal/lvm>`__ env file
+
 .. code-block:: shell
 
     $ cd tmp
