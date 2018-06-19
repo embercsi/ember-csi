@@ -303,7 +303,7 @@ Store the volume id for all the following calls:
 
 .. code-block:: shell
 
-   $ vol_id=`csc controller list-volumes -e tcp://127.0.0.1:50051|awk '{ print gensub("\"","","g",$1)}'
+   $ vol_id=`csc controller list-volumes -e tcp://127.0.0.1:50051|awk '{ print gensub("\"","","g",$1)}'`
 
 Attaching the volume to `tmp/mnt/publish` on baremetal:
 
