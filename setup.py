@@ -27,7 +27,7 @@ test_requirements = [
 
 setuptools.setup(
     name='cinderlib-csi',
-    version='0.0.1',
+    version='0.0.2',
     description=("CSI driver supporting all Cinder drivers without needing to "
                  "run any additional services like RabbitMQ, MariaDB, or "
                  "Cinder service"),
