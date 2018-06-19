@@ -9,3 +9,4 @@ Sphinx==1.4.8
 # Deployments should use packaged Cinder, but for dev we can install from git
 git+https://github.com/openstack/cinder.git@stable/pike
 grpcio-tools==1.12.0
+readme_renderer==21.0
