@@ -23,7 +23,7 @@ import csi_types as types
 
 
 NAME = 'com.redhat.cinderlib-csi'
-VENDOR_VERSION = '0.0.1'
+VENDOR_VERSION = '0.0.2'
 
 DEFAULT_ENDPOINT = '[::]:50051'
 DEFAULT_SIZE = 1.0
