@@ -309,7 +309,7 @@ Store the volume id for all the following calls:
 
    $ vol_id=`csc controller list-volumes -e tcp://127.0.0.1:50051|awk '{ print gensub("\"","","g",$1)}'`
 
-Attaching the volume to `tmp/mnt/publish` on baremetal:
+Attaching the volume to `tmp/mnt/publish` on baremetal as a block device:
 
 .. code-block:: shell
 
@@ -324,7 +324,7 @@ Attaching the volume to `tmp/mnt/publish` on baremetal:
     $ csc node publish --cap SINGLE_NODE_WRITER,block --pub-info connection_info="irrelevant" --staging-target-path `realpath ../../tmp/mnt/staging` --target-path `realpath ../../tmp/mnt/publish` $vol_id -e tcp://127.0.0.1:50051
     5ee5fd7c-45cd-44cf-af7b-06081f680f2c
 
-Attaching the volume to `tmp/mnt/publish` on container:
+Attaching the volume to `tmp/mnt/publish` on container as a block device:
 
 .. code-block:: shell
 
@@ -372,6 +372,24 @@ Deleting the volume:
 
     $ csc controller delete-volume $vol_id -e tcp://127.0.0.1:50051
 
+If we want to use the mount interface instead of the block one, we can also do
+it making sure we create directories instead of files and replacing the `block`
+word with `mount,ext4` if we want an `ext4` filesystem.
+
+For example these would be the commands for the baremetal attach:
+
+.. code-block:: shell
+
+    $ mkdir ../../tmp/mnt/{staging_dir,publish_dir}
+
+    $ csc controller publish --cap SINGLE_NODE_WRITER,mount,ext4 --node-id `hostname -f` $vol_id -e tcp://127.0.0.1:50051
+
+    $ csc node stage --pub-info connection_info="irrelevant" --cap SINGLE_NODE_WRITER,mount,ext4 --staging-target-path `realpath ../../tmp/mnt/staging_dir` $vol_id -e tcp://127.0.0.1:50051
+     5ee5fd7c-45cd-44cf-af7b-06081f680f2c
+
+    $ csc node publish --pub-info connection_info="irrelevant" --cap SINGLE_NODE_WRITER,mount,ext4 -staging-target-path `realpath ../../tmp/mnt/staging_dir` --target-path `realpath ../../tmp/mnt/publish_dir` $vol_id -e tcp://127.0.0.1:50051
+     5ee5fd7c-45cd-44cf-af7b-06081f680f2c
+
 
 Capable operational modes
 -------------------------
@@ -401,7 +419,6 @@ There are many things that need to be done in this POC driver, and here's a non
 exhaustive list:
 
 - Support for NFS volumes
-- Support for mount filesystems
 - Support for Kubernetes CRDs as the persistence storage
 - Unit tests
 - Functional tests

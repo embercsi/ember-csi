@@ -1,6 +1,13 @@
 History
 =======
 
+0.0.x (2018-XX-XX)
+------------------
+
+- Support for mount filesystems
+- Check staging and publishing targets
+
+
 0.0.2 (2018-06-19)
 ------------------
 
