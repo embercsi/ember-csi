@@ -432,8 +432,8 @@ class Controller(csi.ControllerServicer, Identity):
         rpcs = (types.CtrlCapabilityType.CREATE_DELETE_VOLUME,
                 types.CtrlCapabilityType.PUBLISH_UNPUBLISH_VOLUME,
                 types.CtrlCapabilityType.LIST_VOLUMES,
-                types.CtrlCapabilityType.CREATE_DELETE_SNAPSHOTS,
-                types.CtrlCapabilityType.LIST_SNAPSHOTS,
+                # types.CtrlCapabilityType.CREATE_DELETE_SNAPSHOTS,
+                # types.CtrlCapabilityType.LIST_SNAPSHOTS,
                 types.CtrlCapabilityType.GET_CAPACITY)
 
         capabilities = [types.CtrlCapability(rpc=types.CtrlRPC(type=rpc))
