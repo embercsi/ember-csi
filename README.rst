@@ -313,22 +313,22 @@ Attaching the volume to `tmp/mnt/publish` on baremetal as a block device:
 
 .. code-block:: shell
 
-    $ touch ../../tmp/mnt/{staging,publish}
+    $ touch tmp/mnt/{staging,publish}
 
     $ csc controller publish --cap SINGLE_NODE_WRITER,block --node-id `hostname -f` $vol_id -e tcp://127.0.0.1:50051
     "5ee5fd7c-45cd-44cf-af7b-06081f680f2c"  "connection_info"="{\"connector\": {\"initiator\": \"iqn.1994-05.com.redhat:aa532823bac9\", \"ip\": \"127.0.0.1\", \"platform\": \"x86_64\", \"host\": \"localhost.localdomain\", \"do_local_attach\": false, \"os_type\": \"linux2\", \"multipath\": false}, \"conn\": {\"driver_volume_type\": \"rbd\", \"data\": {\"secret_uuid\": null, \"volume_id\": \"5ee5fd7c-45cd-44cf-af7b-06081f680f2c\", \"auth_username\": \"cinder\", \"secret_type\": \"ceph\", \"name\": \"volumes/volume-5ee5fd7c-45cd-44cf-af7b-06081f680f2c\", \"discard\": true, \"keyring\": \"[client.cinder]\\n\\tkey = AQCQPetaof03IxAAoHZJD6kGxiMQfLdn3QzdlQ==\\n\", \"cluster_name\": \"ceph\", \"hosts\": [\"192.168.1.22\"], \"auth_enabled\": true, \"ports\": [\"6789\"]}}}"
 
-    $ csc node stage --pub-info connection_info="irrelevant" --cap SINGLE_NODE_WRITER,block --staging-target-path `realpath ../../tmp/mnt/staging` $vol_id -e tcp://127.0.0.1:50051
+    $ csc node stage --pub-info connection_info="irrelevant" --cap SINGLE_NODE_WRITER,block --staging-target-path `realpath tmp/mnt/staging` $vol_id -e tcp://127.0.0.1:50051
     5ee5fd7c-45cd-44cf-af7b-06081f680f2c
 
-    $ csc node publish --cap SINGLE_NODE_WRITER,block --pub-info connection_info="irrelevant" --staging-target-path `realpath ../../tmp/mnt/staging` --target-path `realpath ../../tmp/mnt/publish` $vol_id -e tcp://127.0.0.1:50051
+    $ csc node publish --cap SINGLE_NODE_WRITER,block --pub-info connection_info="irrelevant" --staging-target-path `realpath tmp/mnt/staging` --target-path `realpath tmp/mnt/publish` $vol_id -e tcp://127.0.0.1:50051
     5ee5fd7c-45cd-44cf-af7b-06081f680f2c
 
 Attaching the volume to `tmp/mnt/publish` on container as a block device:
 
 .. code-block:: shell
 
-    $ touch ../../tmp/mnt/{staging,publish}
+    $ touch tmp/mnt/{staging,publish}
 
     $ csc controller publish --cap SINGLE_NODE_WRITER,block --node-id `hostname -f` $vol_id -e tcp://127.0.0.1:50051
     "5ee5fd7c-45cd-44cf-af7b-06081f680f2c"  "connection_info"="{\"connector\": {\"initiator\": \"iqn.1994-05.com.redhat:aa532823bac9\", \"ip\": \"127.0.0.1\", \"platform\": \"x86_64\", \"host\": \"localhost.localdomain\", \"do_local_attach\": false, \"os_type\": \"linux2\", \"multipath\": false}, \"conn\": {\"driver_volume_type\": \"rbd\", \"data\": {\"secret_uuid\": null, \"volume_id\": \"5ee5fd7c-45cd-44cf-af7b-06081f680f2c\", \"auth_username\": \"cinder\", \"secret_type\": \"ceph\", \"name\": \"volumes/volume-5ee5fd7c-45cd-44cf-af7b-06081f680f2c\", \"discard\": true, \"keyring\": \"[client.cinder]\\n\\tkey = AQCQPetaof03IxAAoHZJD6kGxiMQfLdn3QzdlQ==\\n\", \"cluster_name\": \"ceph\", \"hosts\": [\"192.168.1.22\"], \"auth_enabled\": true, \"ports\": [\"6789\"]}}}"
@@ -344,10 +344,10 @@ Detaching the volume on baremetal:
 
 .. code-block:: shell
 
-    $ csc node unpublish --target-path `realpath ../../tmp/mnt/publish` $vol_id -e tcp://127.0.0.1:50051
+    $ csc node unpublish --target-path `realpath tmp/mnt/publish` $vol_id -e tcp://127.0.0.1:50051
     5ee5fd7c-45cd-44cf-af7b-06081f680f2c
 
-    $ csc node unstage --staging-target-path `realpath ../../tmp/mnt/staging` $vol_id -e tcp://127.0.0.1:50051
+    $ csc node unstage --staging-target-path `realpath tmp/mnt/staging` $vol_id -e tcp://127.0.0.1:50051
     5ee5fd7c-45cd-44cf-af7b-06081f680f2c
 
     $ csc controller unpublish --node-id `hostname -f` $vol_id -e tcp://127.0.0.1:50051
@@ -380,14 +380,14 @@ For example these would be the commands for the baremetal attach:
 
 .. code-block:: shell
 
-    $ mkdir ../../tmp/mnt/{staging_dir,publish_dir}
+    $ mkdir tmp/mnt/{staging_dir,publish_dir}
 
     $ csc controller publish --cap SINGLE_NODE_WRITER,mount,ext4 --node-id `hostname -f` $vol_id -e tcp://127.0.0.1:50051
 
-    $ csc node stage --pub-info connection_info="irrelevant" --cap SINGLE_NODE_WRITER,mount,ext4 --staging-target-path `realpath ../../tmp/mnt/staging_dir` $vol_id -e tcp://127.0.0.1:50051
+    $ csc node stage --pub-info connection_info="irrelevant" --cap SINGLE_NODE_WRITER,mount,ext4 --staging-target-path `realpath tmp/mnt/staging_dir` $vol_id -e tcp://127.0.0.1:50051
      5ee5fd7c-45cd-44cf-af7b-06081f680f2c
 
-    $ csc node publish --pub-info connection_info="irrelevant" --cap SINGLE_NODE_WRITER,mount,ext4 -staging-target-path `realpath ../../tmp/mnt/staging_dir` --target-path `realpath ../../tmp/mnt/publish_dir` $vol_id -e tcp://127.0.0.1:50051
+    $ csc node publish --pub-info connection_info="irrelevant" --cap SINGLE_NODE_WRITER,mount,ext4 -staging-target-path `realpath tmp/mnt/staging_dir` --target-path `realpath tmp/mnt/publish_dir` $vol_id -e tcp://127.0.0.1:50051
      5ee5fd7c-45cd-44cf-af7b-06081f680f2c
 
 
