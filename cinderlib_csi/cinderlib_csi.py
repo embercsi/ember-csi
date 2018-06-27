@@ -559,7 +559,7 @@ class Node(csi.NodeServicer, Identity):
             context.abort(grpc.StatusCode.UNKNOWN,
                           'Error detecting filesystem: %s' % exc)
 
-    def _mount(self, capability, private_bind, target, context):
+    def _check_mount_exists(self, capability, private_bind, target, context):
         mounts = self._get_mount(private_bind)
         if mounts:
             if target != mounts[0][1]:
@@ -573,6 +573,11 @@ class Node(csi.NodeServicer, Identity):
                 context.abort(grpc.StatusCode.ALREADY_EXISTS,
                               'Already mounted with different flags (%s)' %
                               missing_flags)
+            return True
+        return False
+
+    def _mount(self, capability, private_bind, target, context):
+        if self._check_mount_exists(capability, private_bind, target, context):
             return
 
         # We don't use the util-linux Python library to reduce dependencies
@@ -674,6 +679,18 @@ class Node(csi.NodeServicer, Identity):
         self._validate_capabilities([request.volume_capability], context)
         staging_target, is_block = self._check_path(request, context,
                                                     is_staging=True)
+
+        device, private_bind = self._get_vol_device(request.volume_id)
+        error = (not device or
+                 (is_block and not self._get_device(staging_target)) or
+                 (not is_block and
+                  not self._check_mount_exists(request.volume_capability,
+                                               private_bind, staging_target,
+                                               context)))
+        if error:
+            context.abort(grpc.StatusCode.FAILED_PRECONDITION,
+                          'Staging was not been successfully called')
+
         target, is_block = self._check_path(request, context, is_staging=False)
 
         # TODO(geguileo): Add support for modes, etc.
