@@ -13,4 +13,8 @@ fi
 # Run the CSI driver service
 cinderlib-csi
 
+exit_code=$?
+
 rm -rf tmp groups
+
+exit $exit_code

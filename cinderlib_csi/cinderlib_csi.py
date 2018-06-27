@@ -9,6 +9,7 @@ import json
 import os
 import socket
 import stat
+import sys
 import time
 
 from eventlet import tpool
@@ -791,7 +792,10 @@ def main():
           (type(csi_plugin.backend.driver).__name__,
            csi_plugin.backend.get_version()))
 
-    server.add_insecure_port(endpoint)
+    if not server.add_insecure_port(endpoint):
+        sys.stderr.write('\nERROR: Could not bind to %s\n' % endpoint)
+        exit(1)
+
     server.start()
     print('Now serving on %s...' % endpoint)
 
