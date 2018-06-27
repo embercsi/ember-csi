@@ -1,6 +1,6 @@
 # Cinderlib CSI driver
 
-[![PyPi](https://img.shields.io/pypi/v/cinderlib_csi.svg)](https://pypi.python.org/pypi/cinderlib_csi) [![PyVersion](https://img.shields.io/pypi/pyversions/cinderlib_csi.svg)](https://pypi.python.org/pypi/cinderlib_csi) [![License](https://img.shields.io/:license-apache-blue.svg)](http://www.apache.org/licenses/LICENSE-2.0)
+[![Docker build status](https://img.shields.io/docker/build/akrog/cinderlib-csi.svg)](https://hub.docker.com/r/akrog/cinderlib-csi/) [![Docker build](https://img.shields.io/docker/automated/akrog/cinderlib-csi.svg)](https://hub.docker.com/r/akrog/cinderlib-csi/builds/) [![PyPi](https://img.shields.io/pypi/v/cinderlib_csi.svg)](https://pypi.python.org/pypi/cinderlib_csi) [![PyVersion](https://img.shields.io/pypi/pyversions/cinderlib_csi.svg)](https://pypi.python.org/pypi/cinderlib_csi) [![License](https://img.shields.io/:license-apache-blue.svg)](http://www.apache.org/licenses/LICENSE-2.0)
 
 
 CSI Python driver that leverages all Cinder drivers to provide block volumes without needing to run any additional service, such as RabbitMQ, MariaDB, Cinder-API, Cinder-Scheduler, or Cinder-Volume.
