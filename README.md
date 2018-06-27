@@ -119,9 +119,9 @@ The CSI driver is configured via environmental variables, any value that doesn't
 The only role that has been tested at the moment is the default one, where Controller and Node servicer are executed in the same service (`CSI_MODE=all`), and other modes are expected to have issues at the moment.
 
 
-## Staring the plugin
+## Starting the plugin
 
-Once we have installed `cinderlib-csi` and required dependencies (for the backend and for the connection type) we just have to run the `cinderlib-csi` service with a user that can do passwordless sudo.
+Once we have installed `cinderlib-csi` and required dependencies (for the backend and for the connection type) we just have to run the `cinderlib-csi` service with a user that can do passwordless sudo:
 
 ```
     $ cinderlib-csi
@@ -139,7 +139,7 @@ In all cases we have to run the plugin first before we can test it, and for that
 
 For example to test with the LVM driver on our development environment we can just run the following commands from the root of the `cinderlib-csi` project:
 
-*Note*: The iscsi IP addresses are auto-assigned in the [lvm](examples/baremetal/lvm) env file. You may change these IP addresses if desired.
+*Note*: The iscsi IP addresses are auto-assigned in the [lvm](examples/baremetal/lvm) env file. You may change these IP addresses if desired:
 
 ```
     $ cd tmp
@@ -161,7 +161,7 @@ For example to test with the LVM driver on our development environment we can ju
 ```
 
 
-There is also an example of testing a Ceph cluster using a user called "cinder" and the "volumes" pool.  For the Ceph/RBD backend, due to a limitation in Cinder, we need to have both the credentials and the configuration in `/etc/ceph` for it to work.
+There is also an example of testing a Ceph cluster using a user called "cinder" and the "volumes" pool.  For the Ceph/RBD backend, due to a limitation in Cinder, we need to have both the credentials and the configuration in `/etc/ceph` for it to work:
 
 ```
     $ cd examples/baremetal
@@ -181,7 +181,7 @@ There is a sample `Dockerfile` included in the project that has been used to cre
 
 There are two bash scripts, one for each example, that will run the CSI driver on a container, be aware that the container needs to run as privileged to mount the volumes.
 
-For the RBD example we need to copy our "ceph.conf" and "ceph.client.cinder.keyring" files, assuming we are using the "cinder" user into the example/docker directory replacing the existing ones.
+For the RBD example we need to copy our "ceph.conf" and "ceph.client.cinder.keyring" files, assuming we are using the "cinder" user into the example/docker directory replacing the existing ones:
 
 ```
     $ cd examples/docker
