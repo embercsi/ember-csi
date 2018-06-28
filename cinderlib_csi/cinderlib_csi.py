@@ -3,10 +3,13 @@
 from concurrent import futures
 from datetime import datetime
 import functools
+import glob
 import itertools
 import json
 import os
 import socket
+import stat
+import sys
 import time
 
 from eventlet import tpool
@@ -78,10 +81,14 @@ class NodeInfo(object):
 
 class Identity(csi.IdentityServicer):
     backend = None
+    # NOTE(geguileo): For now let's only support single reader/writer modes
+    SUPPORTED_ACCESS = (types.AccessModeType.SINGLE_NODE_WRITER,
+                        types.AccessModeType.SINGLE_NODE_READER_ONLY)
     PROBE_RESP = types.ProbeResp()
     CAPABILITIES = types.CapabilitiesResponse(
         [types.ServiceType.CONTROLLER_SERVICE])
     manifest = None
+    MKFS = '/sbin/mkfs.'
 
     def __init__(self, server):
         if self.manifest is not None:
@@ -105,6 +112,42 @@ class Identity(csi.IdentityServicer):
 
         csi.add_IdentityServicer_to_server(self, server)
         self.manifest = manifest
+        self.supported_fs_types = self._get_system_fs_types()
+
+    @classmethod
+    def _get_system_fs_types(cls):
+        fs_types = glob.glob(cls.MKFS + '*')
+        start = len(cls.MKFS)
+        result = [fst[start:] for fst in fs_types]
+        print('Supported filesystems are: %s' % ', '.join(result))
+        return result
+
+    def _unsupported_mode(self, capability):
+        return capability.access_mode.mode not in self.SUPPORTED_ACCESS
+
+    def _unsupported_fs_type(self, capability):
+        # TODO: validate mount_flags
+        return (capability.HasField('mount') and
+                capability.mount.fs_type and
+                capability.mount.fs_type not in self.supported_fs_types)
+
+    def _validate_capabilities(self, capabilities, context=None):
+        msg = ''
+
+        for capability in capabilities:
+            # TODO(geguileo): Find out what is the right status code
+            if self._unsupported_mode(capability):
+                msg = 'Unsupported access mode'
+                break
+
+            if self._unsupported_fs_type(capability):
+                msg = 'Unsupported file system type'
+                break
+
+        if context and msg:
+            context.abort(grpc.StatusCode.INVALID_ARGUMENT, msg)
+
+        return msg
 
     def GetPluginInfo(self, request, context):
         return self.INFO
@@ -134,13 +177,10 @@ class Identity(csi.IdentityServicer):
         return res
 
     def sudo(self, *cmd):
-        putils.execute(*cmd, run_as_root=True, root_helper='sudo')
+        return putils.execute(*cmd, run_as_root=True, root_helper='sudo')
 
 
 class Controller(csi.ControllerServicer, Identity):
-    # NOTE(geguileo): For now let's only support single reader/writer modes
-    SUPPORTED_ACCESS = (types.AccessModeType.SINGLE_NODE_WRITER,
-                        types.AccessModeType.SINGLE_NODE_READER_ONLY)
     CTRL_UNPUBLISH_RESP = types.UnpublishResp()
     DELETE_RESP = types.DeleteResp()
     DELETE_SNAP_RESP = types.DeleteSnapResp()
@@ -197,9 +237,6 @@ class Controller(csi.ControllerServicer, Identity):
             return res[0]
         return res
 
-    def _unsupported_mode(self, capability):
-        return capability.access_mode.mode not in self.SUPPORTED_ACCESS
-
     def _calculate_size(self, request, context):
         # Must be idempotent
         min_size = self._get_size('required', request, self.default_size)
@@ -217,24 +254,10 @@ class Controller(csi.ControllerServicer, Identity):
             vol_size = max_size
         return (vol_size, min_size, max_size)
 
-    def _validate_capabilities(self, capabilities, vol=None):
-        for cap in capabilities:
-            # TODO(geguileo): Find out what is the right status code
-            if not cap.HasField('block'):
-                return 'Driver only supports block types'
-
-            # TODO(geguileo): Find out what is the right status code
-            if self._unsupported_mode(cap):
-                return 'Unsupported access mode'
-
-        return ''
-
     def CreateVolume(self, request, context):
         vol_size, min_size, max_size = self._calculate_size(request, context)
 
-        msg = self._validate_capabilities(request.volume_capabilities)
-        if msg:
-            context.abort(grpc.StatusCode.INVALID_ARGUMENT, msg)
+        self._validate_capabilities(request.volume_capabilities, context)
 
         # TODO(geguileo): Use request.parameters for vol type extra specs and
         #                 return volume_attributes to reflect parameters used.
@@ -396,9 +419,7 @@ class Controller(csi.ControllerServicer, Identity):
         return types.ListResp(**fields)
 
     def GetCapacity(self, request, context):
-        msg = self._validate_capabilities(request.volume_capabilities)
-        if msg:
-            context.abort(grpc.StatusCode.INVALID_ARGUMENT, msg)
+        self._validate_capabilities(request.volume_capabilities, context)
         # TODO(geguileo): Take into account over provisioning values
         stats = self.backend.stats(refresh=True)
         if 'pools' in stats:
@@ -412,8 +433,8 @@ class Controller(csi.ControllerServicer, Identity):
         rpcs = (types.CtrlCapabilityType.CREATE_DELETE_VOLUME,
                 types.CtrlCapabilityType.PUBLISH_UNPUBLISH_VOLUME,
                 types.CtrlCapabilityType.LIST_VOLUMES,
-                types.CtrlCapabilityType.CREATE_DELETE_SNAPSHOTS,
-                types.CtrlCapabilityType.LIST_SNAPSHOTS,
+                # types.CtrlCapabilityType.CREATE_DELETE_SNAPSHOTS,
+                # types.CtrlCapabilityType.LIST_SNAPSHOTS,
                 types.CtrlCapabilityType.GET_CAPACITY)
 
         capabilities = [types.CtrlCapability(rpc=types.CtrlRPC(type=rpc))
@@ -492,19 +513,27 @@ class Node(csi.NodeServicer, Identity):
         Identity.__init__(self, server)
         csi.add_NodeServicer_to_server(self, server)
 
+    def _get_split_file(self, filename):
+        with open(filename) as f:
+            result = [line.split() for line in f.read().split('\n') if line]
+        return result
+
     def _get_mountinfo(self):
-        with open('/proc/self/mountinfo') as f:
-            mountinfo = [line.split() for line in f.read().split('\n') if line]
-        return mountinfo
+        return self._get_split_file('/proc/self/mountinfo')
 
     def _vol_private_location(self, volume_id):
         private_bind = os.path.join(os.getcwd(), volume_id)
         return private_bind
 
+    def _get_mount(self, private_bind):
+        mounts = self._get_split_file('/proc/self/mounts')
+        result = [mount for mount in mounts if mount[0] == private_bind]
+        return result
+
     def _get_device(self, path):
         for line in self._get_mountinfo():
             if line[4] == path:
-                return line[3]
+                return line[9] if line[9].startswith('/') else line[3]
         return None
 
     def _get_vol_device(self, volume_id):
@@ -512,15 +541,80 @@ class Node(csi.NodeServicer, Identity):
         device = self._get_device(private_bind)
         return device, private_bind
 
+    def _format_device(self, capability, device, context):
+        # We don't use the util-linux Python library to reduce dependencies
+        fs_type = capability.mount.fs_type
+        try:
+            stdout, stderr = self.sudo('lsblk', '-nlfoFSTYPE', device)
+            fs_types = filter(None, stdout.split())
+            if fs_types:
+                if fs_types[0] == fs_type:
+                    return
+                context.abort(grpc.StatusCode.ALREADY_EXISTS,
+                              'Cannot stage filesystem %s on device that '
+                              'already has filesystem %s' %
+                              (fs_type, fs_types[0]))
+            self.sudo(self.MKFS + fs_type, device)
+        except Exception as exc:
+            context.abort(grpc.StatusCode.UNKNOWN,
+                          'Error detecting filesystem: %s' % exc)
+
+    def _check_mount_exists(self, capability, private_bind, target, context):
+        mounts = self._get_mount(private_bind)
+        if mounts:
+            if target != mounts[0][1]:
+                context.abort(grpc.StatusCode.ALREADY_EXISTS,
+                              'Filesystem already mounted on %s' %
+                              mounts[0][1])
+
+            requested_flags = set(capability.mount.mount_flags or [])
+            missing_flags = requested_flags.difference(mounts[0][3].split(','))
+            if missing_flags:
+                context.abort(grpc.StatusCode.ALREADY_EXISTS,
+                              'Already mounted with different flags (%s)' %
+                              missing_flags)
+            return True
+        return False
+
+    def _mount(self, capability, private_bind, target, context):
+        if self._check_mount_exists(capability, private_bind, target, context):
+            return
+
+        # We don't use the util-linux Python library to reduce dependencies
+        command = ['mount', '-t', capability.mount.fs_type]
+        if capability.mount.mount_flags:
+            command.append('-o')
+            command.append(','.join(capability.mount.mount_flags))
+        command.append(private_bind)
+        command.append(target)
+        self.sudo(*command)
+
+    def _check_path(self, request, context, is_staging):
+        is_block = request.volume_capability.HasField('block')
+        attr_name = 'staging_target_path' if is_staging else 'target_path'
+        path = getattr(request, attr_name)
+        try:
+            stat_target = os.stat(path)
+        except OSError as exc:
+            context.abort(grpc.StatusCode.INVALID_ARGUMENT,
+                          'Invalid %s path: %s' % (attr_name, exc))
+
+        is_block = request.volume_capability.HasField('block')
+        method = stat.S_ISREG if is_block else stat.S_ISDIR
+        if not method(stat_target.st_mode):
+            context.abort(grpc.StatusCode.INVALID_ARGUMENT,
+                          'Invalid existing %s' % attr_name)
+        return path, is_block
+
     def NodeStageVolume(self, request, context):
         vol = self._get_vol(request.volume_id)
         if not vol:
             context.abort(grpc.StatusCode.NOT_FOUND,
                           'Volume %s does not exist' % request.volume_id)
 
-        # TODO(geguileo): Check capabilities
-        # TODO(geguileo): Check that the provided staging_target_path is an
-        # existing file for block or directory for filesystems
+        self._validate_capabilities([request.volume_capability], context)
+        target, is_block = self._check_path(request, context, is_staging=True)
+
         device, private_bind = self._get_vol_device(vol.id)
         if not device:
             # For now we don't really require the publish_info, since we share
@@ -532,13 +626,20 @@ class Node(csi.NodeServicer, Identity):
             open(private_bind, 'a').close()
             # TODO(geguileo): make path for private binds configurable
             self.sudo('mount', '--bind', conn.path, private_bind)
+            device = conn.path
 
-        # If CO did something wrong and called us twice avoid multiple binds
-        device = self._get_device(request.staging_target_path)
-        if not device:
-            # TODO(geguileo): Add support for NFS/QCOW2
-            self.sudo('mount', '--bind', private_bind,
-                      request.staging_target_path)
+        if is_block:
+            # Avoid multiple binds if CO incorrectly called us twice
+            device = self._get_device(target)
+            if not device:
+                # TODO(geguileo): Add support for NFS/QCOW2
+                self.sudo('mount', '--bind', private_bind, target)
+        else:
+            self._format_device(request.volume_capability, private_bind,
+                                context)
+            self._mount(request.volume_capability, private_bind, target,
+                        context)
+
         return self.STAGE_RESP
 
     def NodeUnstageVolume(self, request, context):
@@ -556,6 +657,9 @@ class Node(csi.NodeServicer, Identity):
                 if line[3] in (device, private_bind):
                     count += 1
 
+            if self._get_mount(private_bind):
+                count += 1
+
             # If the volume is still in use we cannot unstage (one use is for
             # our private volume reference and the other for staging path
             if count > 2:
@@ -572,20 +676,35 @@ class Node(csi.NodeServicer, Identity):
         return self.UNSTAGE_RESP
 
     def NodePublishVolume(self, request, context):
+        self._validate_capabilities([request.volume_capability], context)
+        staging_target, is_block = self._check_path(request, context,
+                                                    is_staging=True)
 
-        # TODO(geguileo): Check if staging_target_path is passed and exists
+        device, private_bind = self._get_vol_device(request.volume_id)
+        error = (not device or
+                 (is_block and not self._get_device(staging_target)) or
+                 (not is_block and
+                  not self._check_mount_exists(request.volume_capability,
+                                               private_bind, staging_target,
+                                               context)))
+        if error:
+            context.abort(grpc.StatusCode.FAILED_PRECONDITION,
+                          'Staging was not been successfully called')
+
+        target, is_block = self._check_path(request, context, is_staging=False)
+
         # TODO(geguileo): Add support for modes, etc.
+
         # Check if it's already published
-        device = self._get_device(request.target_path)
+        device = self._get_device(target)
         volume_device, private_bind = self._get_vol_device(request.volume_id)
-        if device in (volume_device, request.staging_target_path):
+        if device in (volume_device, staging_target, private_bind):
             return self.NODE_PUBLISH_RESP
 
         # TODO(geguileo): Check how many are mounted and fail if > 0
 
         # If not published bind it
-        self.sudo('mount', '--bind', request.staging_target_path,
-                  request.target_path)
+        self.sudo('mount', '--bind', staging_target, target)
         return self.NODE_PUBLISH_RESP
 
     def NodeUnpublishVolume(self, request, context):
@@ -690,7 +809,10 @@ def main():
           (type(csi_plugin.backend.driver).__name__,
            csi_plugin.backend.get_version()))
 
-    server.add_insecure_port(endpoint)
+    if not server.add_insecure_port(endpoint):
+        sys.stderr.write('\nERROR: Could not bind to %s\n' % endpoint)
+        exit(1)
+
     server.start()
     print('Now serving on %s...' % endpoint)
 
