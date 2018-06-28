@@ -8,6 +8,7 @@
 - Exit on binding error
 - Check presence of REQUIRED fields
 - Log requests and responses
+- Support defining default mount filesystem
 
 
 ## 0.0.2 (2018-06-19)

@@ -34,6 +34,7 @@ DEFAULT_PERSISTENCE_CFG = {'storage': 'db',
                            'connection': 'sqlite:///db.sqlite'}
 DEFAULT_CINDERLIB_CFG = {'project_id': NAME, 'user_id': NAME,
                          'root_helper': 'sudo'}
+DEFAULT_MOUNT_FS = 'ext4'
 REFRESH_TIME = 1
 
 GB = float(1024 ** 3)
@@ -163,6 +164,10 @@ class Identity(csi.IdentityServicer):
         csi.add_IdentityServicer_to_server(self, server)
         self.manifest = manifest
         self.supported_fs_types = self._get_system_fs_types()
+        if DEFAULT_MOUNT_FS not in self.supported_fs_types:
+            sys.stderr.write('Invalid default mount filesystem %s\n' %
+                             DEFAULT_MOUNT_FS)
+            exit(1)
 
     @classmethod
     def _get_system_fs_types(cls):
@@ -612,7 +617,7 @@ class Node(csi.NodeServicer, Identity):
 
     def _format_device(self, capability, device, context):
         # We don't use the util-linux Python library to reduce dependencies
-        fs_type = capability.mount.fs_type
+        fs_type = capability.mount.fs_type or DEFAULT_MOUNT_FS
         try:
             stdout, stderr = self.sudo('lsblk', '-nlfoFSTYPE', device)
             fs_types = filter(None, stdout.split())
@@ -650,7 +655,7 @@ class Node(csi.NodeServicer, Identity):
             return
 
         # We don't use the util-linux Python library to reduce dependencies
-        command = ['mount', '-t', capability.mount.fs_type]
+        command = ['mount', '-t', capability.mount.fs_type or DEFAULT_MOUNT_FS]
         if capability.mount.mount_flags:
             command.append('-o')
             command.append(','.join(capability.mount.mount_flags))
@@ -850,11 +855,14 @@ def _load_json_config(name, default=None):
 
 
 def main():
+    global DEFAULT_MOUNT_FS
     # CSI_ENDPOINT should accept multiple formats 0.0.0.0:5000, unix:foo.sock
     endpoint = os.environ.get('CSI_ENDPOINT', DEFAULT_ENDPOINT)
     mode = os.environ.get('CSI_MODE') or 'all'
+    DEFAULT_MOUNT_FS = os.environ.get('X_CSI_DEFAULT_MOUNT_FS',
+                                      DEFAULT_MOUNT_FS)
     if mode not in ('controller', 'node', 'all'):
-        print('Invalid mode value (%s)' % mode)
+        sys.stderr.write('Invalid mode value (%s)\n' % mode)
         exit(1)
     server_class = globals()[mode.title()]
 
