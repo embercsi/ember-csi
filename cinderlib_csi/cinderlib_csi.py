@@ -389,7 +389,7 @@ class Controller(csi.ControllerServicer, Identity):
         return self.DELETE_RESP
 
     @logrpc
-    @require('volume_id', 'node_id', 'volume_capability', 'readonly')
+    @require('volume_id', 'node_id', 'volume_capability')
     def ControllerPublishVolume(self, request, context):
         vol, node = self._get_vol_node(request, context)
 
@@ -750,7 +750,7 @@ class Node(csi.NodeServicer, Identity):
 
     @logrpc
     @require('volume_id', 'staging_target_path', 'target_path',
-             'volume_capability', 'readonly')
+             'volume_capability')
     def NodePublishVolume(self, request, context):
         self._validate_capabilities([request.volume_capability], context)
         staging_target, is_block = self._check_path(request, context,
