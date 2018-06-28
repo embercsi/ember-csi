@@ -53,6 +53,29 @@ def nano_to_date(nanoseconds):
     return date.replace(tzinfo=pytz.UTC)
 
 
+def require(*fields):
+    fields = set(fields)
+
+    def join(what):
+        return ', '.join(what)
+
+    def func_wrapper(f):
+        @functools.wraps(f)
+        def checker(self, request, context):
+            request_fields = {f[0].name for f in request.ListFields()}
+            missing = fields - request_fields
+            if missing:
+                print('ERROR: Call to %s is missing fields %s.'
+                      '\n\tExpecting %s\n\tFound: %s' %
+                      (f.__name__, join(missing), join(fields),
+                       join(request_fields)))
+                msg = 'Missing required fields: %s' % join(missing)
+                context.abort(grpc.StatusCode.INVALID_ARGUMENT, msg)
+            return f(self, request, context)
+        return checker
+    return func_wrapper
+
+
 class NodeInfo(object):
     __slots__ = ('id', 'connector_dict')
 
@@ -254,6 +277,7 @@ class Controller(csi.ControllerServicer, Identity):
             vol_size = max_size
         return (vol_size, min_size, max_size)
 
+    @require('name', 'volume_capabilities')
     def CreateVolume(self, request, context):
         vol_size, min_size, max_size = self._calculate_size(request, context)
 
@@ -304,6 +328,7 @@ class Controller(csi.ControllerServicer, Identity):
                               attributes=request.parameters)
         return types.CreateResp(volume=volume)
 
+    @require('volume_id')
     def DeleteVolume(self, request, context):
         vol = self._get_vol(request.volume_id)
         if not vol:
@@ -331,6 +356,7 @@ class Controller(csi.ControllerServicer, Identity):
 
         return self.DELETE_RESP
 
+    @require('volume_id', 'node_id', 'volume_capability', 'readonly')
     def ControllerPublishVolume(self, request, context):
         vol, node = self._get_vol_node(request, context)
 
@@ -350,6 +376,7 @@ class Controller(csi.ControllerServicer, Identity):
         publish_info = {'connection_info': json.dumps(conn.connection_info)}
         return types.CtrlPublishResp(publish_info=publish_info)
 
+    @require('volume_id')
     def ControllerUnpublishVolume(self, request, context):
         vol, node = self._get_vol_node(request, context)
 
@@ -359,6 +386,7 @@ class Controller(csi.ControllerServicer, Identity):
             vol.connections[0].disconnect()
         return self.CTRL_UNPUBLISH_RESP
 
+    @require('volume_id', 'volume_capabilities')
     def ValidateVolumeCapabilities(self, request, context):
         vol = self._get_vol(request.volume_id)
         if not vol:
@@ -606,6 +634,7 @@ class Node(csi.NodeServicer, Identity):
                           'Invalid existing %s' % attr_name)
         return path, is_block
 
+    @require('volume_id', 'staging_target_path', 'volume_capability')
     def NodeStageVolume(self, request, context):
         vol = self._get_vol(request.volume_id)
         if not vol:
@@ -642,6 +671,7 @@ class Node(csi.NodeServicer, Identity):
 
         return self.STAGE_RESP
 
+    @require('volume_id', 'staging_target_path')
     def NodeUnstageVolume(self, request, context):
         # TODO(geguileo): Add support for NFS/QCOW2
         vol = self._get_vol(request.volume_id)
@@ -675,6 +705,8 @@ class Node(csi.NodeServicer, Identity):
             os.remove(private_bind)
         return self.UNSTAGE_RESP
 
+    @require('volume_id', 'staging_target_path', 'target_path',
+             'volume_capability', 'readonly')
     def NodePublishVolume(self, request, context):
         self._validate_capabilities([request.volume_capability], context)
         staging_target, is_block = self._check_path(request, context,
@@ -707,6 +739,7 @@ class Node(csi.NodeServicer, Identity):
         self.sudo('mount', '--bind', staging_target, target)
         return self.NODE_PUBLISH_RESP
 
+    @require('volume_id', 'target_path')
     def NodeUnpublishVolume(self, request, context):
         device = self._get_device(request.target_path)
         if device:

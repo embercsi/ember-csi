@@ -6,6 +6,7 @@
 - Support for mount filesystems
 - Check staging and publishing targets
 - Exit on binding error
+- Check presence of REQUIRED fields
 
 
 ## 0.0.2 (2018-06-19)
