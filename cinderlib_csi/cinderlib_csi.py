@@ -402,7 +402,7 @@ class Controller(csi.ControllerServicer, Identity):
         if vol.status == 'in-use':
             for conn in vol.connections:
                 # TODO(geguileo): Change when we enable multi-attach
-                if conn.instance_uuid != request.node_id:
+                if conn.attached_host != request.node_id:
                     context.abort(grpc.StatusCode.FAILED_PRECONDITION,
                                   'Volume published to another node')
 
@@ -410,7 +410,7 @@ class Controller(csi.ControllerServicer, Identity):
             #                 and raise ALREADY_EXISTS if not compatible
             conn = vol.connections[0]
         else:
-            conn = vol.connect(node.connector_dict, instance_uuid=node.id)
+            conn = vol.connect(node.connector_dict, attached_host=node.id)
         publish_info = {'connection_info': json.dumps(conn.connection_info)}
         return types.CtrlPublishResp(publish_info=publish_info)
 
