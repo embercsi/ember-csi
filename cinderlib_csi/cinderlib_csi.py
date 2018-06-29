@@ -281,10 +281,13 @@ class Controller(csi.ControllerServicer, Identity):
         return True
 
     def _get_vol_node(self, request, context):
-        node = NodeInfo.get(request.node_id)
-        if not node:
-            context.abort(grpc.StatusCode.NOT_FOUND,
-                          'Node %s does not exist' % request.node_id)
+        if request.node_id:
+            node = NodeInfo.get(request.node_id)
+            if not node:
+                context.abort(grpc.StatusCode.NOT_FOUND,
+                              'Node %s does not exist' % request.node_id)
+        else:
+            node = None
 
         vol = self._get_vol(request.volume_id)
         if not vol:
@@ -426,11 +429,9 @@ class Controller(csi.ControllerServicer, Identity):
     @require('volume_id')
     def ControllerUnpublishVolume(self, request, context):
         vol, node = self._get_vol_node(request, context)
-
-        # TODO(geguileo): With multi-attach use request.node_id to compare with
-        # connection.instance_id
-        if vol.status == 'in-use':
-            vol.connections[0].disconnect()
+        for conn in vol.connections:
+            if node is None or conn.attached_host == node.id:
+                conn.disconnect()
         return self.CTRL_UNPUBLISH_RESP
 
     @logrpc
