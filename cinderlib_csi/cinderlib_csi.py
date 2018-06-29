@@ -11,6 +11,7 @@ import socket
 import stat
 import sys
 import time
+import traceback
 
 from eventlet import tpool
 import grpc
@@ -70,11 +71,17 @@ def logrpc(f):
                          (req_id, f.__name__, msg))
         try:
             result = f(self, request, context)
-        except Exception:
-            code = str(context._state.code)
-            details = context._state.details
-            sys.stdout.write('!! GRPC [%s]: %s on %s (%s)\n' %
-                             (req_id, str(code)[11:], f.__name__, details))
+        except Exception as exc:
+            if context._state.code:
+                code = str(context._state.code)[11:]
+                details = context._state.details
+                tback = ''
+            else:
+                code = 'Unexpected exception'
+                details = exc.message
+                tback = '\n' + tab(traceback.format_exc())
+            sys.stdout.write('!! GRPC [%s]: %s on %s (%s)%s\n' %
+                             (req_id, code, f.__name__, details, tback))
             raise
         if str(result):
             str_result = '\n%s' % tab(result)
