@@ -1,4 +1,5 @@
-#!/bin/python
+#!/usr/bin/env python
+
 # Supports CSI v0.2.0
 # TODO(geguileo): Check that all parameters are present on received RPC calls
 from concurrent import futures
@@ -12,6 +13,7 @@ import socket
 import stat
 import sys
 import time
+import traceback
 
 from eventlet import tpool
 import grpc
@@ -28,6 +30,7 @@ import csi_types as types
 
 NAME = 'com.redhat.cinderlib-csi'
 VENDOR_VERSION = '0.0.2'
+CSI_SPEC = '0.2.0'
 
 DEFAULT_ENDPOINT = '[::]:50051'
 DEFAULT_SIZE = 1.0
@@ -43,6 +46,50 @@ ONE_DAY_IN_SECONDS = 60 * 60 * 24
 CINDER_VERSION = pkg_resources.get_distribution('cinder').version
 NANOSECONDS = 10 ** 9
 EPOCH = datetime.utcfromtimestamp(0).replace(tzinfo=pytz.UTC)
+
+
+def no_debug(f):
+    return f
+
+
+def debug(f):
+    @functools.wraps(f)
+    def wrapper(*args, **kwargs):
+        global DEBUG_ON
+        if DEBUG_ON:
+            DEBUG_LIBRARY.set_trace()
+        return f(*args, **kwargs)
+    return wrapper
+
+
+def setup_debug():
+    def toggle_debug(signum, stack):
+        global DEBUG_ON
+        DEBUG_ON = not DEBUG_ON
+        sys.stdout.write('Debugging is %s\n' % ('ON' if DEBUG_ON else 'OFF'))
+
+    debug_mode = str(os.environ.get('X_CSI_DEBUG_MODE') or '').upper()
+    if debug_mode not in ('', 'PDB', 'RPDB'):
+        sys.stderr.write('Invalid X_CSI_DEBUG_MODE %s (valid values are PDB '
+                         'and RPDB)\n' % debug_mode)
+        exit(3)
+
+    if not debug_mode:
+        return None, no_debug
+
+    if debug_mode == 'PDB':
+        import pdb as debug_library
+    else:
+        import rpdb as debug_library
+
+    import signal
+    signal.signal(signal.SIGUSR1, toggle_debug)
+
+    return debug_library, debug
+
+
+DEBUG_ON = False
+DEBUG_LIBRARY, debuggable = setup_debug()
 
 
 def date_to_nano(date):
@@ -70,11 +117,17 @@ def logrpc(f):
                          (req_id, f.__name__, msg))
         try:
             result = f(self, request, context)
-        except Exception:
-            code = str(context._state.code)
-            details = context._state.details
-            sys.stdout.write('!! GRPC [%s]: %s on %s (%s)\n' %
-                             (req_id, str(code)[11:], f.__name__, details))
+        except Exception as exc:
+            if context._state.code:
+                code = str(context._state.code)[11:]
+                details = context._state.details
+                tback = ''
+            else:
+                code = 'Unexpected exception'
+                details = exc.message
+                tback = '\n' + tab(traceback.format_exc())
+            sys.stdout.write('!! GRPC [%s]: %s on %s (%s)%s\n' %
+                             (req_id, code, f.__name__, details, tback))
             raise
         if str(result):
             str_result = '\n%s' % tab(result)
@@ -205,14 +258,17 @@ class Identity(csi.IdentityServicer):
 
         return msg
 
+    @debuggable
     @logrpc
     def GetPluginInfo(self, request, context):
         return self.INFO
 
+    @debuggable
     @logrpc
     def GetPluginCapabilities(self, request, context):
         return self.CAPABILITIES
 
+    @debuggable
     @logrpc
     def Probe(self, request, context):
         failure = False
@@ -235,8 +291,21 @@ class Identity(csi.IdentityServicer):
             return res[0]
         return res
 
-    def sudo(self, *cmd):
-        return putils.execute(*cmd, run_as_root=True, root_helper='sudo')
+    def sudo(self, *cmd, **kwargs):
+        retries = kwargs.pop('retries', 1)
+        delay = kwargs.pop('delay', 1)
+        backoff = kwargs.pop('backoff', 2)
+        errors = kwargs.pop('errors', [32])
+        while retries:
+            try:
+                return putils.execute(*cmd, run_as_root=True,
+                                      root_helper='sudo')
+            except putils.ProcessExecutionError as exc:
+                retries -= 1
+                if exc.exit_code not in errors or not retries:
+                    raise
+                time.sleep(delay)
+                delay *= backoff
 
 
 class Controller(csi.ControllerServicer, Identity):
@@ -274,10 +343,13 @@ class Controller(csi.ControllerServicer, Identity):
         return True
 
     def _get_vol_node(self, request, context):
-        node = NodeInfo.get(request.node_id)
-        if not node:
-            context.abort(grpc.StatusCode.NOT_FOUND,
-                          'Node %s does not exist' % request.node_id)
+        if request.node_id:
+            node = NodeInfo.get(request.node_id)
+            if not node:
+                context.abort(grpc.StatusCode.NOT_FOUND,
+                              'Node %s does not exist' % request.node_id)
+        else:
+            node = None
 
         vol = self._get_vol(request.volume_id)
         if not vol:
@@ -313,6 +385,7 @@ class Controller(csi.ControllerServicer, Identity):
             vol_size = max_size
         return (vol_size, min_size, max_size)
 
+    @debuggable
     @logrpc
     @require('name', 'volume_capabilities')
     def CreateVolume(self, request, context):
@@ -365,6 +438,7 @@ class Controller(csi.ControllerServicer, Identity):
                               attributes=request.parameters)
         return types.CreateResp(volume=volume)
 
+    @debuggable
     @logrpc
     @require('volume_id')
     def DeleteVolume(self, request, context):
@@ -394,6 +468,7 @@ class Controller(csi.ControllerServicer, Identity):
 
         return self.DELETE_RESP
 
+    @debuggable
     @logrpc
     @require('volume_id', 'node_id', 'volume_capability')
     def ControllerPublishVolume(self, request, context):
@@ -403,7 +478,7 @@ class Controller(csi.ControllerServicer, Identity):
         if vol.status == 'in-use':
             for conn in vol.connections:
                 # TODO(geguileo): Change when we enable multi-attach
-                if conn.instance_uuid != request.node_id:
+                if conn.attached_host != request.node_id:
                     context.abort(grpc.StatusCode.FAILED_PRECONDITION,
                                   'Volume published to another node')
 
@@ -411,21 +486,21 @@ class Controller(csi.ControllerServicer, Identity):
             #                 and raise ALREADY_EXISTS if not compatible
             conn = vol.connections[0]
         else:
-            conn = vol.connect(node.connector_dict, instance_uuid=node.id)
+            conn = vol.connect(node.connector_dict, attached_host=node.id)
         publish_info = {'connection_info': json.dumps(conn.connection_info)}
         return types.CtrlPublishResp(publish_info=publish_info)
 
+    @debuggable
     @logrpc
     @require('volume_id')
     def ControllerUnpublishVolume(self, request, context):
         vol, node = self._get_vol_node(request, context)
-
-        # TODO(geguileo): With multi-attach use request.node_id to compare with
-        # connection.instance_id
-        if vol.status == 'in-use':
-            vol.connections[0].disconnect()
+        for conn in vol.connections:
+            if node is None or conn.attached_host == node.id:
+                conn.disconnect()
         return self.CTRL_UNPUBLISH_RESP
 
+    @debuggable
     @logrpc
     @require('volume_id', 'volume_capabilities')
     def ValidateVolumeCapabilities(self, request, context):
@@ -471,6 +546,7 @@ class Controller(csi.ControllerServicer, Identity):
             token = None
         return selected_resources, token
 
+    @debuggable
     @logrpc
     def ListVolumes(self, request, context):
         vols = self._get_vol()
@@ -488,6 +564,7 @@ class Controller(csi.ControllerServicer, Identity):
             fields['next_token'] = token
         return types.ListResp(**fields)
 
+    @debuggable
     @logrpc
     def GetCapacity(self, request, context):
         self._validate_capabilities(request.volume_capabilities, context)
@@ -500,6 +577,7 @@ class Controller(csi.ControllerServicer, Identity):
         # TODO(geguileo): Confirm available capacity is in bytes
         return types.CapacityResp(available_capacity=int(free * GB))
 
+    @debuggable
     @logrpc
     def ControllerGetCapabilities(self, request, context):
         rpcs = (types.CtrlCapabilityType.CREATE_DELETE_VOLUME,
@@ -514,6 +592,7 @@ class Controller(csi.ControllerServicer, Identity):
 
         return types.CtrlCapabilityResp(capabilities=capabilities)
 
+    @debuggable
     @logrpc
     def CreateSnapshot(self, request, context):
         vol = self._get_vol(request.source_volume_id)
@@ -538,6 +617,7 @@ class Controller(csi.ControllerServicer, Identity):
             status=types.SnapStatus(types.SnapshotStatusType.READY))
         return types.CreateSnapResp(snapshot=snapshot)
 
+    @debuggable
     @logrpc
     def DeleteSnapshot(self, request, context):
         snap = self._get_snap(request.snapshot_id)
@@ -547,6 +627,7 @@ class Controller(csi.ControllerServicer, Identity):
         snap.delete()
         return self.DELETE_SNAP_RESP
 
+    @debuggable
     @logrpc
     def ListSnapshots(self, request, context):
         snaps = self._get_snap()
@@ -619,20 +700,16 @@ class Node(csi.NodeServicer, Identity):
     def _format_device(self, capability, device, context):
         # We don't use the util-linux Python library to reduce dependencies
         fs_type = capability.mount.fs_type or DEFAULT_MOUNT_FS
-        try:
-            stdout, stderr = self.sudo('lsblk', '-nlfoFSTYPE', device)
-            fs_types = filter(None, stdout.split())
-            if fs_types:
-                if fs_types[0] == fs_type:
-                    return
-                context.abort(grpc.StatusCode.ALREADY_EXISTS,
-                              'Cannot stage filesystem %s on device that '
-                              'already has filesystem %s' %
-                              (fs_type, fs_types[0]))
-            self.sudo(self.MKFS + fs_type, device)
-        except Exception as exc:
-            context.abort(grpc.StatusCode.UNKNOWN,
-                          'Error detecting filesystem: %s' % exc)
+        stdout, stderr = self.sudo('lsblk', '-nlfoFSTYPE', device, retries=4)
+        fs_types = filter(None, stdout.split())
+        if fs_types:
+            if fs_types[0] == fs_type:
+                return
+            context.abort(grpc.StatusCode.ALREADY_EXISTS,
+                          'Cannot stage filesystem %s on device that '
+                          'already has filesystem %s' %
+                          (fs_type, fs_types[0]))
+        self.sudo(self.MKFS + fs_type, device)
 
     def _check_mount_exists(self, capability, private_bind, target, context):
         mounts = self._get_mount(private_bind)
@@ -669,18 +746,19 @@ class Node(csi.NodeServicer, Identity):
         attr_name = 'staging_target_path' if is_staging else 'target_path'
         path = getattr(request, attr_name)
         try:
-            stat_target = os.stat(path)
+            st_mode = os.stat(path).st_mode
         except OSError as exc:
             context.abort(grpc.StatusCode.INVALID_ARGUMENT,
                           'Invalid %s path: %s' % (attr_name, exc))
 
-        is_block = request.volume_capability.HasField('block')
-        method = stat.S_ISREG if is_block else stat.S_ISDIR
-        if not method(stat_target.st_mode):
-            context.abort(grpc.StatusCode.INVALID_ARGUMENT,
-                          'Invalid existing %s' % attr_name)
-        return path, is_block
+        if ((is_block and stat.S_ISBLK(st_mode) or stat.S_ISREG(st_mode)) or
+                (not is_block and stat.S_ISDIR(st_mode))):
+            return path, is_block
 
+        context.abort(grpc.StatusCode.INVALID_ARGUMENT,
+                      'Invalid existing %s' % attr_name)
+
+    @debuggable
     @logrpc
     @require('volume_id', 'staging_target_path', 'volume_capability')
     def NodeStageVolume(self, request, context):
@@ -719,6 +797,7 @@ class Node(csi.NodeServicer, Identity):
 
         return self.STAGE_RESP
 
+    @debuggable
     @logrpc
     @require('volume_id', 'staging_target_path')
     def NodeUnstageVolume(self, request, context):
@@ -747,13 +826,15 @@ class Node(csi.NodeServicer, Identity):
 
             conn = vol.connections[0]
             if count == 2:
-                self.sudo('umount', request.staging_target_path)
+                self.sudo('umount', request.staging_target_path,
+                          retries=4)
             conn.detach()
             if count > 0:
-                self.sudo('umount', private_bind)
+                self.sudo('umount', private_bind, retries=4)
             os.remove(private_bind)
         return self.UNSTAGE_RESP
 
+    @debuggable
     @logrpc
     @require('volume_id', 'staging_target_path', 'target_path',
              'volume_capability')
@@ -789,18 +870,21 @@ class Node(csi.NodeServicer, Identity):
         self.sudo('mount', '--bind', staging_target, target)
         return self.NODE_PUBLISH_RESP
 
+    @debuggable
     @logrpc
     @require('volume_id', 'target_path')
     def NodeUnpublishVolume(self, request, context):
         device = self._get_device(request.target_path)
         if device:
-            self.sudo('umount', request.target_path)
+            self.sudo('umount', request.target_path, retries=4)
         return self.NODE_UNPUBLISH_RESP
 
+    @debuggable
     @logrpc
     def NodeGetId(self, request, context):
         return self.node_id
 
+    @debuggable
     @logrpc
     def NodeGetCapabilities(self, request, context):
         rpc = types.NodeCapabilityType.STAGE_UNSTAGE_VOLUME
@@ -879,8 +963,10 @@ def main():
         exit(2)
 
     mode_msg = 'in ' + mode + ' only mode ' if mode != 'all' else ''
-    print('Starting cinderlib CSI v%s %s(cinderlib: %s, cinder: %s)' %
-          (VENDOR_VERSION, mode_msg, cinderlib.__version__, CINDER_VERSION))
+    print('Starting cinderlib CSI v%s %s(cinderlib: v%s, cinder: v%s, '
+          'CSI spec: v%s)' %
+          (VENDOR_VERSION, mode_msg, cinderlib.__version__, CINDER_VERSION,
+           CSI_SPEC))
 
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
 
@@ -897,6 +983,9 @@ def main():
     print('Running backend %s v%s' %
           (type(csi_plugin.backend.driver).__name__,
            csi_plugin.backend.get_version()))
+
+    print('Debugging is %s' %
+          ('ON with %s' % DEBUG_LIBRARY.__name__ if DEBUG_LIBRARY else 'OFF'))
 
     if not server.add_insecure_port(endpoint):
         sys.stderr.write('\nERROR: Could not bind to %s\n' % endpoint)

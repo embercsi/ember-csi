@@ -11,7 +11,11 @@ COPY cinderlib_csi/*.py /csi/
 
 # This is the default port, but if we change it via CSI_ENDPOINT then this will
 # no longer be relevant.
-EXPOSE 50051
+# For the Master version expose RPDB port to support remote debugging
+EXPOSE 50051 4444
+
+# Enable RPDB debugging on this container by default
+ENV X_CSI_DEBUG_MODE=rpdb
 
 # Define default command
 CMD ["python", "/csi/cinderlib_csi.py"]
