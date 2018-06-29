@@ -5,4 +5,4 @@ docker run --env-file rbd -t --privileged --net=host \
     -v `realpath ../../tmp`:/var/lib/cinder  \
     -v `realpath ./ceph.conf`:/etc/ceph/ceph.conf \
     -v `realpath ./ceph.client.cinder.keyring`:/etc/ceph/ceph.client.cinder.keyring \
-    -p 50051:50051 akrog/cinderlib-csi
+    -p 50051:50051 -p 4444:4444 akrog/cinderlib-csi

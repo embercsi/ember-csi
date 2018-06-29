@@ -116,6 +116,7 @@ The CSI driver is configured via environmental variables, any value that doesn't
 | `X_CSI_CINDERLIB_CONFIG`   | controller | Global `cinderlib` configuration                              | {'project_id': 'com.redhat.cinderlib-csi', 'user_id': 'com.redhat.cinderlib-csi', 'root_helper': 'sudo'} | {"project_id":"com.redhat.cinderlib-csi","user_id":"com.redhat.cinderlib-csi","root_helper":"sudo"}                                                                                                                                     |
 | `X_CSI_BACKEND_CONFIG`     | controller | Driver configuration                                          |                                                                                                          | {"volume_backend_name": "rbd", "volume_driver": "cinder.volume.drivers.rbd.RBDDriver", "rbd_user": "cinder", "rbd_pool": "volumes", "rbd_ceph_conf": "/etc/ceph/ceph.conf", "rbd_keyring_conf": "/etc/ceph/ceph.client.cinder.keyring"} |
 | `X_CSI_DEFAULT_MOUNT_FS`   | all        | Default mount filesystem when missing in publish calls        | ext4                                                                                                     | btrfs                                                                                                                                                                                                                                   |
+| `X_CSI_DEBUG_MODE`         | all        | Debug mode (rpdb, pdb) to use. Disabled by default.           |                                                                                                          | rpdb                                                                                                                                                                                                                                   |
 
 The only role that has been tested at the moment is the default one, where Controller and Node servicer are executed in the same service (`CSI_MODE=all`), and other modes are expected to have issues at the moment.
 
@@ -159,6 +160,7 @@ For example to test with the LVM driver on our development environment we can ju
     Starting cinderlib CSI v0.0.2 (cinderlib: v0.2.1, cinder: v11.1.2.dev5, CSI spec: v0.2.0)
     Supported filesystems are: fat, ext4dev, vfat, ext3, ext2, msdos, ext4, hfsplus, cramfs, xfs, ntfs, minix, btrfs
     Running backend LVMVolumeDriver v3.0.0
+    Debugging is OFF
     Now serving on [::]:50051...
 ```
 
@@ -171,6 +173,7 @@ There is also an example of testing a Ceph cluster using a user called "cinder" 
     Starting cinderlib CSI v0.0.2 (cinderlib: v0.2.1, cinder: v11.1.2.dev5, CSI spec: v0.2.0)
     Supported filesystems are: fat, ext4dev, vfat, ext3, ext2, msdos, ext4, hfsplus, cramfs, xfs, ntfs, minix, btrfs
     Running backend LVMVolumeDriver v3.0.0
+    Debugging is OFF
     Now serving on [::]:50051...
 ```
 
@@ -190,8 +193,9 @@ For the RBD example we need to copy our "ceph.conf" and "ceph.client.cinder.keyr
     $ cd examples/docker
     $ ./rbd.sh
     Starting cinderlib CSI v0.0.2 (cinderlib: v0.2.1, cinder: v11.1.0, CSI spec: v0.2.0)
-    Supported filesystems are: ext3, ext2, ext4, cramfs, xfs, minix, btrfs
+    Supported filesystems are: cramfs, minix, ext3, ext2, ext4, xfs, btrfs
     Running backend LVMVolumeDriver v3.0.0
+    Debugging is ON with rpdb
     Now serving on [::]:50051...
 ```
 
@@ -330,6 +334,41 @@ For example these would be the commands for the baremetal attach:
 The CSI spec defines a set of `AccessModes` that CSI drivers can support, such as single writer, single reader, multiple writers, single writer and multiple readers.
 
 This CSI driver currently only supports `SINGLE_MODE_WRITER`, although it will also succeed with the `SINGLE_MODE_READER_ONLY` mode and mount it as read/write.
+
+
+## Debugging
+
+The cinderlib-CSI plugin supports live debugging when run in the baremetal and when running as a container.
+
+There are two mechanisms that can be used to debug the driver: with `pdb`, and with `rpdb`.
+
+The difference between them is that `pdb` works with stdin and stdout, whereas `rpdb` opens port 4444 to accept remote connections for debugging.
+
+Debugging the cinderlib-CSI plugin requires enabling debugging on the plugin before starting it, and then one it is running we have to turn it on.
+
+Enabling debugging is done using the `X_CSI_DEBUG_MODE` environmental variable.  Setting it to `pdb` or `rpdb` will enable debugging.  The plugin has this feature disabled by default, but our *latest* and *master* containers have it enabled by default with `rpdb`.
+
+Once we have the plugin running with the debugging enable (we can see it in the start message) we can turn it on and off using the `SIGUSR1` signal, and the service will output the change with a *Debugging is ON* or *Debugging is OFF* message.
+
+After turning it *ON* the plugin will stop for debugging on the next GRPC request.  Going into interactive mode if using `pdb` or opening port 4444 if using `rpdb`.  When using `rpdb` we'll see the following message on the plugin: *pdb is running on 127.0.0.1:4444*
+
+Sending the signal to toggle ON/OFF the debugging is quite easy.  For baremetal we can do:
+
+```
+    $ pkill -USR1 cinderlib-csi
+```
+
+And for containers we can do:
+
+```
+    $ docker kill -sUSR1 $container
+```
+
+If we are using `rpdb` then we'll have to connect to the port:
+
+```
+    $ nc 127.0.0.1 4444
+```
 
 
 ## Support
