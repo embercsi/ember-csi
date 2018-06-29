@@ -291,8 +291,21 @@ class Identity(csi.IdentityServicer):
             return res[0]
         return res
 
-    def sudo(self, *cmd):
-        return putils.execute(*cmd, run_as_root=True, root_helper='sudo')
+    def sudo(self, *cmd, **kwargs):
+        retries = kwargs.pop('retries', 1)
+        delay = kwargs.pop('delay', 1)
+        backoff = kwargs.pop('backoff', 2)
+        errors = kwargs.pop('errors', [32])
+        while retries:
+            try:
+                return putils.execute(*cmd, run_as_root=True,
+                                      root_helper='sudo')
+            except putils.ProcessExecutionError as exc:
+                retries -= 1
+                if exc.exit_code not in errors or not retries:
+                    raise
+                time.sleep(delay)
+                delay *= backoff
 
 
 class Controller(csi.ControllerServicer, Identity):
@@ -687,20 +700,16 @@ class Node(csi.NodeServicer, Identity):
     def _format_device(self, capability, device, context):
         # We don't use the util-linux Python library to reduce dependencies
         fs_type = capability.mount.fs_type or DEFAULT_MOUNT_FS
-        try:
-            stdout, stderr = self.sudo('lsblk', '-nlfoFSTYPE', device)
-            fs_types = filter(None, stdout.split())
-            if fs_types:
-                if fs_types[0] == fs_type:
-                    return
-                context.abort(grpc.StatusCode.ALREADY_EXISTS,
-                              'Cannot stage filesystem %s on device that '
-                              'already has filesystem %s' %
-                              (fs_type, fs_types[0]))
-            self.sudo(self.MKFS + fs_type, device)
-        except Exception as exc:
-            context.abort(grpc.StatusCode.UNKNOWN,
-                          'Error detecting filesystem: %s' % exc)
+        stdout, stderr = self.sudo('lsblk', '-nlfoFSTYPE', device, retries=4)
+        fs_types = filter(None, stdout.split())
+        if fs_types:
+            if fs_types[0] == fs_type:
+                return
+            context.abort(grpc.StatusCode.ALREADY_EXISTS,
+                          'Cannot stage filesystem %s on device that '
+                          'already has filesystem %s' %
+                          (fs_type, fs_types[0]))
+        self.sudo(self.MKFS + fs_type, device)
 
     def _check_mount_exists(self, capability, private_bind, target, context):
         mounts = self._get_mount(private_bind)
@@ -817,10 +826,11 @@ class Node(csi.NodeServicer, Identity):
 
             conn = vol.connections[0]
             if count == 2:
-                self.sudo('umount', request.staging_target_path)
+                self.sudo('umount', request.staging_target_path,
+                          retries=4)
             conn.detach()
             if count > 0:
-                self.sudo('umount', private_bind)
+                self.sudo('umount', private_bind, retries=4)
             os.remove(private_bind)
         return self.UNSTAGE_RESP
 
@@ -866,7 +876,7 @@ class Node(csi.NodeServicer, Identity):
     def NodeUnpublishVolume(self, request, context):
         device = self._get_device(request.target_path)
         if device:
-            self.sudo('umount', request.target_path)
+            self.sudo('umount', request.target_path, retries=4)
         return self.NODE_UNPUBLISH_RESP
 
     @debuggable
