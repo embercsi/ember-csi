@@ -358,10 +358,10 @@ Sending the signal to toggle ON/OFF the debugging is quite easy.  For baremetal 
     $ pkill -USR1 cinderlib-csi
 ```
 
-And for containers we can do:
+And for the container (assuming its named `cinderlib-csi` like in the examples) we can do:
 
 ```
-    $ docker kill -sUSR1 $container
+    $ docker kill -sUSR1 cinderlib-csi
 ```
 
 If we are using `rpdb` then we'll have to connect to the port:
