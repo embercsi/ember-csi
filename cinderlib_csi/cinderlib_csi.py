@@ -34,6 +34,7 @@ DEFAULT_PERSISTENCE_CFG = {'storage': 'db',
                            'connection': 'sqlite:///db.sqlite'}
 DEFAULT_CINDERLIB_CFG = {'project_id': NAME, 'user_id': NAME,
                          'root_helper': 'sudo'}
+DEFAULT_MOUNT_FS = 'ext4'
 REFRESH_TIME = 1
 
 GB = float(1024 ** 3)
@@ -51,6 +52,56 @@ def date_to_nano(date):
 def nano_to_date(nanoseconds):
     date = datetime.utcfromtimestamp(float(nanoseconds)/NANOSECONDS)
     return date.replace(tzinfo=pytz.UTC)
+
+
+def logrpc(f):
+    def tab(what):
+        return '\t' + '\n\t'.join(filter(None, str(what).split('\n')))
+
+    @functools.wraps(f)
+    def dolog(self, request, context):
+        req_id = id(request)
+        if request.ListFields():
+            msg = ' params\n%s' % tab(request)
+        else:
+            msg = 'out params'
+        sys.stdout.write('=> GRPC [%s]: %s with%s\n' %
+                         (req_id, f.__name__, msg))
+        try:
+            result = f(self, request, context)
+        except Exception:
+            code = str(context._state.code)
+            details = context._state.details
+            sys.stdout.write('!! GRPC [%s]: %s on %s (%s)\n' %
+                             (req_id, str(code)[11:], f.__name__, details))
+            raise
+        if str(result):
+            str_result = '\n%s' % tab(result)
+        else:
+            str_result = ' nothing'
+        sys.stdout.write('<= GRPC [%s]: %s returns%s\n' %
+                         (req_id, f.__name__, str_result))
+        return result
+    return dolog
+
+
+def require(*fields):
+    fields = set(fields)
+
+    def join(what):
+        return ', '.join(what)
+
+    def func_wrapper(f):
+        @functools.wraps(f)
+        def checker(self, request, context):
+            request_fields = {f[0].name for f in request.ListFields()}
+            missing = fields - request_fields
+            if missing:
+                msg = 'Missing required fields: %s' % join(missing)
+                context.abort(grpc.StatusCode.INVALID_ARGUMENT, msg)
+            return f(self, request, context)
+        return checker
+    return func_wrapper
 
 
 class NodeInfo(object):
@@ -113,6 +164,10 @@ class Identity(csi.IdentityServicer):
         csi.add_IdentityServicer_to_server(self, server)
         self.manifest = manifest
         self.supported_fs_types = self._get_system_fs_types()
+        if DEFAULT_MOUNT_FS not in self.supported_fs_types:
+            sys.stderr.write('Invalid default mount filesystem %s\n' %
+                             DEFAULT_MOUNT_FS)
+            exit(1)
 
     @classmethod
     def _get_system_fs_types(cls):
@@ -149,12 +204,15 @@ class Identity(csi.IdentityServicer):
 
         return msg
 
+    @logrpc
     def GetPluginInfo(self, request, context):
         return self.INFO
 
+    @logrpc
     def GetPluginCapabilities(self, request, context):
         return self.CAPABILITIES
 
+    @logrpc
     def Probe(self, request, context):
         failure = False
         # check configuration
@@ -254,6 +312,8 @@ class Controller(csi.ControllerServicer, Identity):
             vol_size = max_size
         return (vol_size, min_size, max_size)
 
+    @logrpc
+    @require('name', 'volume_capabilities')
     def CreateVolume(self, request, context):
         vol_size, min_size, max_size = self._calculate_size(request, context)
 
@@ -304,6 +364,8 @@ class Controller(csi.ControllerServicer, Identity):
                               attributes=request.parameters)
         return types.CreateResp(volume=volume)
 
+    @logrpc
+    @require('volume_id')
     def DeleteVolume(self, request, context):
         vol = self._get_vol(request.volume_id)
         if not vol:
@@ -331,6 +393,8 @@ class Controller(csi.ControllerServicer, Identity):
 
         return self.DELETE_RESP
 
+    @logrpc
+    @require('volume_id', 'node_id', 'volume_capability')
     def ControllerPublishVolume(self, request, context):
         vol, node = self._get_vol_node(request, context)
 
@@ -350,6 +414,8 @@ class Controller(csi.ControllerServicer, Identity):
         publish_info = {'connection_info': json.dumps(conn.connection_info)}
         return types.CtrlPublishResp(publish_info=publish_info)
 
+    @logrpc
+    @require('volume_id')
     def ControllerUnpublishVolume(self, request, context):
         vol, node = self._get_vol_node(request, context)
 
@@ -359,6 +425,8 @@ class Controller(csi.ControllerServicer, Identity):
             vol.connections[0].disconnect()
         return self.CTRL_UNPUBLISH_RESP
 
+    @logrpc
+    @require('volume_id', 'volume_capabilities')
     def ValidateVolumeCapabilities(self, request, context):
         vol = self._get_vol(request.volume_id)
         if not vol:
@@ -402,6 +470,7 @@ class Controller(csi.ControllerServicer, Identity):
             token = None
         return selected_resources, token
 
+    @logrpc
     def ListVolumes(self, request, context):
         vols = self._get_vol()
         selected, token = self._paginate(request, context, vols)
@@ -418,6 +487,7 @@ class Controller(csi.ControllerServicer, Identity):
             fields['next_token'] = token
         return types.ListResp(**fields)
 
+    @logrpc
     def GetCapacity(self, request, context):
         self._validate_capabilities(request.volume_capabilities, context)
         # TODO(geguileo): Take into account over provisioning values
@@ -429,6 +499,7 @@ class Controller(csi.ControllerServicer, Identity):
         # TODO(geguileo): Confirm available capacity is in bytes
         return types.CapacityResp(available_capacity=int(free * GB))
 
+    @logrpc
     def ControllerGetCapabilities(self, request, context):
         rpcs = (types.CtrlCapabilityType.CREATE_DELETE_VOLUME,
                 types.CtrlCapabilityType.PUBLISH_UNPUBLISH_VOLUME,
@@ -442,6 +513,7 @@ class Controller(csi.ControllerServicer, Identity):
 
         return types.CtrlCapabilityResp(capabilities=capabilities)
 
+    @logrpc
     def CreateSnapshot(self, request, context):
         vol = self._get_vol(request.source_volume_id)
         if not vol:
@@ -465,6 +537,7 @@ class Controller(csi.ControllerServicer, Identity):
             status=types.SnapStatus(types.SnapshotStatusType.READY))
         return types.CreateSnapResp(snapshot=snapshot)
 
+    @logrpc
     def DeleteSnapshot(self, request, context):
         snap = self._get_snap(request.snapshot_id)
         if not snap:
@@ -473,6 +546,7 @@ class Controller(csi.ControllerServicer, Identity):
         snap.delete()
         return self.DELETE_SNAP_RESP
 
+    @logrpc
     def ListSnapshots(self, request, context):
         snaps = self._get_snap()
         selected, token = self._paginate(request, context, snaps)
@@ -543,7 +617,7 @@ class Node(csi.NodeServicer, Identity):
 
     def _format_device(self, capability, device, context):
         # We don't use the util-linux Python library to reduce dependencies
-        fs_type = capability.mount.fs_type
+        fs_type = capability.mount.fs_type or DEFAULT_MOUNT_FS
         try:
             stdout, stderr = self.sudo('lsblk', '-nlfoFSTYPE', device)
             fs_types = filter(None, stdout.split())
@@ -581,7 +655,7 @@ class Node(csi.NodeServicer, Identity):
             return
 
         # We don't use the util-linux Python library to reduce dependencies
-        command = ['mount', '-t', capability.mount.fs_type]
+        command = ['mount', '-t', capability.mount.fs_type or DEFAULT_MOUNT_FS]
         if capability.mount.mount_flags:
             command.append('-o')
             command.append(','.join(capability.mount.mount_flags))
@@ -606,6 +680,8 @@ class Node(csi.NodeServicer, Identity):
                           'Invalid existing %s' % attr_name)
         return path, is_block
 
+    @logrpc
+    @require('volume_id', 'staging_target_path', 'volume_capability')
     def NodeStageVolume(self, request, context):
         vol = self._get_vol(request.volume_id)
         if not vol:
@@ -642,6 +718,8 @@ class Node(csi.NodeServicer, Identity):
 
         return self.STAGE_RESP
 
+    @logrpc
+    @require('volume_id', 'staging_target_path')
     def NodeUnstageVolume(self, request, context):
         # TODO(geguileo): Add support for NFS/QCOW2
         vol = self._get_vol(request.volume_id)
@@ -675,6 +753,9 @@ class Node(csi.NodeServicer, Identity):
             os.remove(private_bind)
         return self.UNSTAGE_RESP
 
+    @logrpc
+    @require('volume_id', 'staging_target_path', 'target_path',
+             'volume_capability')
     def NodePublishVolume(self, request, context):
         self._validate_capabilities([request.volume_capability], context)
         staging_target, is_block = self._check_path(request, context,
@@ -707,15 +788,19 @@ class Node(csi.NodeServicer, Identity):
         self.sudo('mount', '--bind', staging_target, target)
         return self.NODE_PUBLISH_RESP
 
+    @logrpc
+    @require('volume_id', 'target_path')
     def NodeUnpublishVolume(self, request, context):
         device = self._get_device(request.target_path)
         if device:
             self.sudo('umount', request.target_path)
         return self.NODE_UNPUBLISH_RESP
 
+    @logrpc
     def NodeGetId(self, request, context):
         return self.node_id
 
+    @logrpc
     def NodeGetCapabilities(self, request, context):
         rpc = types.NodeCapabilityType.STAGE_UNSTAGE_VOLUME
         capabilities = [types.NodeCapability(rpc=types.NodeRPC(type=rpc))]
@@ -770,11 +855,14 @@ def _load_json_config(name, default=None):
 
 
 def main():
+    global DEFAULT_MOUNT_FS
     # CSI_ENDPOINT should accept multiple formats 0.0.0.0:5000, unix:foo.sock
     endpoint = os.environ.get('CSI_ENDPOINT', DEFAULT_ENDPOINT)
     mode = os.environ.get('CSI_MODE') or 'all'
+    DEFAULT_MOUNT_FS = os.environ.get('X_CSI_DEFAULT_MOUNT_FS',
+                                      DEFAULT_MOUNT_FS)
     if mode not in ('controller', 'node', 'all'):
-        print('Invalid mode value (%s)' % mode)
+        sys.stderr.write('Invalid mode value (%s)\n' % mode)
         exit(1)
     server_class = globals()[mode.title()]
 
