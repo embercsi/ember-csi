@@ -64,13 +64,10 @@ spec:
 
       containers:
       - name: csi-attacher
-        image: quay.io/k8scsi//csi-attacher:v0.2.0
+        image: quay.io/k8scsi/csi-attacher:v0.2.0
         args:
           - "--v=5"
           - "--csi-address=$(ADDRESS)"
-          - "--leader-election"
-          - "--leader-election-namespace=$(MY_NAMESPACE)"
-          - "--leader-election-identity=$(MY_NAME)"
         env:
           - name: MY_NAME
             valueFrom:
@@ -81,29 +78,31 @@ spec:
               fieldRef:
                 fieldPath: metadata.namespace
           - name: ADDRESS
-            value: /csi/csi.sock
+            value: /var/run/cinderlib-csi/csi.sock
         volumeMounts:
           - name: socket-dir
-            mountPath: /csi
+            mountPath: /var/run/cinderlib-csi
 
       - name: csi-provisioner
-        image: quay.io/k8scsi//csi-provisioner:v0.2.1
+        image: quay.io/k8scsi/csi-provisioner:v0.2.1
         args:
           - "--v=5"
-          - "--provisioner=csi-cinderplugin"
+          - "--provisioner=csi-cinderlibplugin"
           - "--csi-address=$(ADDRESS)"
         env:
           - name: ADDRESS
-            value: /csi/csi.sock
+            value: /var/run/cinderlib-csi/csi.sock
         volumeMounts:
           - name: socket-dir
-            mountPath: /csi
+            mountPath: /var/run/cinderlib-csi
 
       - name: cinderlib-csi
         image: akrog/cinderlib-csi
         securityContext:
           privileged: true
         env:
+        - name: CSI_ENDPOINT
+          value: unix:///var/run/cinderlib-csi/csi.sock
         - name: CSI_MODE
           value:  controller
         - name: X_CSI_BACKEND_CONFIG
@@ -118,11 +117,10 @@ spec:
         - name: ceph-secrets
           mountPath: /etc/ceph
         - name: socket-dir
-          mountPath: /csi
+          mountPath: /var/run/cinderlib-csi
 
       volumes:
       - name: socket-dir
-        emptyDir:
 
       - name: ceph-secrets
         secret:
@@ -134,6 +132,7 @@ kind: DaemonSet
 apiVersion: apps/v1
 metadata:
   name: cinderlib-csi-ds
+  namespace: csi
 spec:
   selector:
     matchLabels:
@@ -144,7 +143,7 @@ spec:
         app: cinderlib-csi-driver
     spec:
       nodeSelector:
-          role: node
+          node-role.kubernetes.io/compute: "true"
       serviceAccount: cinderlib-csi
       containers:
         - name: csi-driver-registrar
@@ -156,14 +155,14 @@ spec:
             - "--csi-address=$(ADDRESS)"
           env:
             - name: ADDRESS
-              value: /csi/csi.sock
+              value: /var/run/cinderlib-csi/csi.sock
             - name: KUBE_NODE_NAME
               valueFrom:
                 fieldRef:
                   fieldPath: spec.nodeName
           volumeMounts:
             - name: socket-dir
-              mountPath: /csi
+              mountPath: /var/run/cinderlib-csi
 
         - name: cinderlib-csi-driver
           securityContext:
@@ -173,8 +172,22 @@ spec:
             allowPrivilegeEscalation: true
           image: akrog/cinderlib-csi
           env:
+            - name: CSI_ENDPOINT
+              value: unix:///var/run/cinderlib-csi/csi.sock
+
             - name: CSI_MODE
               value: node
+
+            - name: X_CSI_STORAGE_NW_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.podI
+
+            - name: X_CSI_NODE_ID
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+
             - name: X_CSI_BACKEND_CONFIG
               valueFrom:
                 secretKeyRef:
@@ -186,8 +199,10 @@ spec:
           volumeMounts:
             - name: ceph-secrets
               mountPath: /etc/ceph
+
             - name: socket-dir
-              mountPath: /csi
+              mountPath: /var/run/cinderlib-csi
+
             - name: dev
               mountPath: /dev
       volumes:
@@ -196,9 +211,7 @@ spec:
             secretName: ceph-secrets
 
         - name: socket-dir
-          hostPath:
-            path: /var/lib/kubelet/plugins/csi-cinderplugin
-            type: DirectoryOrCreate
+
         - name: dev
           hostPath:
             path: /dev
