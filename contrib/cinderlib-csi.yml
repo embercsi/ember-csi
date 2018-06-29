@@ -181,7 +181,7 @@ spec:
             - name: X_CSI_STORAGE_NW_IP
               valueFrom:
                 fieldRef:
-                  fieldPath: spec.podI
+                  fieldPath: spec.podIP
 
             - name: X_CSI_NODE_ID
               valueFrom:
