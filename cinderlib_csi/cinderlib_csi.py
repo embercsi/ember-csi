@@ -27,6 +27,7 @@ import csi_types as types
 
 NAME = 'com.redhat.cinderlib-csi'
 VENDOR_VERSION = '0.0.2'
+CSI_SPEC = '0.2.0'
 
 DEFAULT_ENDPOINT = '[::]:50051'
 DEFAULT_SIZE = 1.0
@@ -878,8 +879,10 @@ def main():
         exit(2)
 
     mode_msg = 'in ' + mode + ' only mode ' if mode != 'all' else ''
-    print('Starting cinderlib CSI v%s %s(cinderlib: %s, cinder: %s)' %
-          (VENDOR_VERSION, mode_msg, cinderlib.__version__, CINDER_VERSION))
+    print('Starting cinderlib CSI v%s %s(cinderlib: v%s, cinder: v%s, '
+          'CSI spec: v%s)' %
+          (VENDOR_VERSION, mode_msg, cinderlib.__version__, CINDER_VERSION,
+           CSI_SPEC))
 
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
 

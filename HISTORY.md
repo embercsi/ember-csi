@@ -10,6 +10,7 @@
 - Log requests and responses
 - Support defining default mount filesystem
 - Fix UUID warning
+- Show supported CSI spec version on start
 
 
 ## 0.0.2 (2018-06-19)
