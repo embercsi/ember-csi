@@ -668,17 +668,17 @@ class Node(csi.NodeServicer, Identity):
         attr_name = 'staging_target_path' if is_staging else 'target_path'
         path = getattr(request, attr_name)
         try:
-            stat_target = os.stat(path)
+            st_mode = os.stat(path).st_mode
         except OSError as exc:
             context.abort(grpc.StatusCode.INVALID_ARGUMENT,
                           'Invalid %s path: %s' % (attr_name, exc))
 
-        is_block = request.volume_capability.HasField('block')
-        method = stat.S_ISREG if is_block else stat.S_ISDIR
-        if not method(stat_target.st_mode):
-            context.abort(grpc.StatusCode.INVALID_ARGUMENT,
-                          'Invalid existing %s' % attr_name)
-        return path, is_block
+        if ((is_block and stat.S_ISBLK(st_mode) or stat.S_ISREG(st_mode)) or
+                (not is_block and stat.S_ISDIR(st_mode))):
+            return path, is_block
+
+        context.abort(grpc.StatusCode.INVALID_ARGUMENT,
+                      'Invalid existing %s' % attr_name)
 
     @logrpc
     @require('volume_id', 'staging_target_path', 'volume_capability')
