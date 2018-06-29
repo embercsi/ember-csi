@@ -156,7 +156,8 @@ For example to test with the LVM driver on our development environment we can ju
     ___ summary ___
       py27: skipped tests
       congratulations :)
-    Starting cinderlib CSI v0.0.1 (cinderlib: 0.1.0, cinder: 11.1.1.dev41)
+    Starting cinderlib CSI v0.0.2 (cinderlib: v0.2.1, cinder: v11.1.2.dev5, CSI spec: v0.2.0)
+    Supported filesystems are: fat, ext4dev, vfat, ext3, ext2, msdos, ext4, hfsplus, cramfs, xfs, ntfs, minix, btrfs
     Running backend LVMVolumeDriver v3.0.0
     Now serving on [::]:50051...
 ```
@@ -167,8 +168,9 @@ There is also an example of testing a Ceph cluster using a user called "cinder" 
 ```
     $ cd examples/baremetal
     $ ./run.sh rbd
-    Starting cinderlib CSI v0.0.1 (cinderlib: 0.1.0, cinder: 11.1.0)
-    Running backend RBDDriver v1.2.0
+    Starting cinderlib CSI v0.0.2 (cinderlib: v0.2.1, cinder: v11.1.2.dev5, CSI spec: v0.2.0)
+    Supported filesystems are: fat, ext4dev, vfat, ext3, ext2, msdos, ext4, hfsplus, cramfs, xfs, ntfs, minix, btrfs
+    Running backend LVMVolumeDriver v3.0.0
     Now serving on [::]:50051...
 ```
 
@@ -187,8 +189,9 @@ For the RBD example we need to copy our "ceph.conf" and "ceph.client.cinder.keyr
 ```
     $ cd examples/docker
     $ ./rbd.sh
-    Starting cinderlib CSI v0.0.1 (cinderlib: 0.1.0, cinder: 11.1.0)
-    Running backend RBDDriver v1.2.0
+    Starting cinderlib CSI v0.0.2 (cinderlib: v0.2.1, cinder: v11.1.0, CSI spec: v0.2.0)
+    Supported filesystems are: ext3, ext2, ext4, cramfs, xfs, minix, btrfs
+    Running backend LVMVolumeDriver v3.0.0
     Now serving on [::]:50051...
 ```
 
@@ -202,7 +205,7 @@ Checking the plugin info:
 
 ```
     $ csc identity plugin-info -e tcp://127.0.0.1:50051
-    "com.redhat.cinderlib-csi"      "0.0.1" "cinder-driver"="RBDDriver"     "cinder-driver-supported"="True"        "cinder-driver-version"="1.2.0" "cinder-version"="11.1.0"       "cinderlib-version"="0.1.0"     "persistence"="DBPersistence"
+    "com.redhat.cinderlib-csi"      "0.0.2" "cinder-driver"="RBDDriver"     "cinder-driver-supported"="True"        "cinder-driver-version"="1.2.0" "cinder-version"="11.1.0"       "cinderlib-version"="0.2.1"     "persistence"="DBPersistence"
 ```
 
 Checking the node id:
