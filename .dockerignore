@@ -1,0 +1,13 @@
+build/
+dist/
+docs/
+.venv/
+.tox/
+tests/
+tmp/
+.git/
+.github/
+*.py[cod]
+.*.sw?
+Dockerfile
+Dockerfile-master
