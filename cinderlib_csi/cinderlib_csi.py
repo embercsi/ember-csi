@@ -18,7 +18,6 @@ import traceback
 from eventlet import tpool
 import grpc
 import cinderlib
-from cinderlib import persistence
 from os_brick.initiator import connector as brick_connector
 from oslo_concurrency import processutils as putils
 import pkg_resources
@@ -172,7 +171,7 @@ class NodeInfo(object):
         return cls(node_id, json.loads(kv[0].value))
 
     @classmethod
-    def set(self, node_id, storage_nw_ip):
+    def set(cls, node_id, storage_nw_ip):
         if not storage_nw_ip:
             storage_nw_ip = socket.gethostbyname(socket.gethostname())
 
@@ -195,16 +194,20 @@ class Identity(csi.IdentityServicer):
     manifest = None
     MKFS = '/sbin/mkfs.'
 
-    def __init__(self, server):
+    def __init__(self, server, cinderlib_cfg):
         if self.manifest is not None:
             return
+
+        self.root_helper = (cinderlib_cfg or {}).get('root_helper') or 'sudo'
 
         manifest = {
             'cinderlib-version': cinderlib.__version__,
             'cinder-version': CINDER_VERSION,
         }
-        if self.persistence:
-            manifest['persistence'] = type(self.persistence).__name__
+        self.persistence = cinderlib.Backend.persistence
+        manifest['persistence'] = type(self.persistence).__name__
+
+        manifest['mode'] = type(self).__name__.lower()
 
         if self.backend:
             manifest['cinder-driver-version'] = self.backend.get_version()
@@ -285,8 +288,9 @@ class Identity(csi.IdentityServicer):
         return self.PROBE_RESP
 
     def _get_vol(self, volume_id=None, **filters):
+        backend_name = self.backend.id if self.backend else None
         res = self.persistence.get_volumes(
-            volume_id=volume_id, backend_name=self.backend.id, **filters)
+            volume_id=volume_id, backend_name=backend_name, **filters)
         if res and len(res) == 1 and (volume_id or filters):
             return res[0]
         return res
@@ -299,7 +303,7 @@ class Identity(csi.IdentityServicer):
         while retries:
             try:
                 return putils.execute(*cmd, run_as_root=True,
-                                      root_helper='sudo')
+                                      root_helper=self.root_helper)
             except putils.ProcessExecutionError as exc:
                 retries -= 1
                 if exc.exit_code not in errors or not retries:
@@ -319,8 +323,7 @@ class Controller(csi.ControllerServicer, Identity):
         cinderlib.setup(persistence_config=persistence_config,
                         **cinderlib_config)
         self.backend = cinderlib.Backend(**backend_config)
-        self.persistence = self.backend.persistence
-        Identity.__init__(self, server)
+        Identity.__init__(self, server, cinderlib_config)
         csi.add_ControllerServicer_to_server(self, server)
 
     def _get_size(self, what, request, default):
@@ -654,19 +657,17 @@ class Node(csi.NodeServicer, Identity):
     NODE_PUBLISH_RESP = types.NodePublishResp()
     NODE_UNPUBLISH_RESP = types.NodeUnpublishResp()
 
-    def __init__(self, server, persistence_config=None, node_id=None,
-                 storage_nw_ip=None, **kwargs):
+    def __init__(self, server, persistence_config=None, cinderlib_config=None,
+                 node_id=None, storage_nw_ip=None, **kwargs):
         if persistence_config:
-            self.persistence = persistence.setup(persistence_config)
-            # TODO(geguileo): Make Node only service work, which may require
-            # modifications to cinderlib or faking the Backend object, since
-            # all objects set the backend field on initialization.
-            # cinderlib.objects.Object.setup(self.persistence, ...)
+            cinderlib_config['fail_on_missing_backend'] = False
+            cinderlib.setup(persistence_config=persistence_config,
+                            **cinderlib_config)
+            Identity.__init__(self, server, cinderlib_config)
 
         node_id = node_id or socket.getfqdn()
         self.node_id = types.IdResp(node_id=node_id)
         self.node_info = NodeInfo.set(node_id, storage_nw_ip)
-        Identity.__init__(self, server)
         csi.add_NodeServicer_to_server(self, server)
 
     def _get_split_file(self, filename):
@@ -892,7 +893,6 @@ class Node(csi.NodeServicer, Identity):
         return types.NodeCapabilityResp(capabilities=capabilities)
 
 
-# Inheritance order is important, as we only want to run Controller.__init__
 class All(Controller, Node):
     def __init__(self, server, persistence_config, backend_config,
                  cinderlib_config=None, default_size=DEFAULT_SIZE,
@@ -958,7 +958,7 @@ def main():
                                          DEFAULT_CINDERLIB_CFG)
     backend_config = _load_json_config('X_CSI_BACKEND_CONFIG')
     node_id = _load_json_config('X_CSI_NODE_ID')
-    if not backend_config:
+    if mode != 'node' and not backend_config:
         print('Missing required backend configuration')
         exit(2)
 
@@ -977,12 +977,18 @@ def main():
     state.server = ServerProxy(state.server)
     state.completion_queue = tpool.Proxy(state.completion_queue)
 
-    csi_plugin = server_class(server, persistence_config, backend_config,
-                              cinderlib_config, storage_nw_ip=storage_nw_ip,
+    csi_plugin = server_class(server=server,
+                              persistence_config=persistence_config,
+                              backend_config=backend_config,
+                              cinderlib_config=cinderlib_config,
+                              storage_nw_ip=storage_nw_ip,
                               node_id=node_id)
-    print('Running backend %s v%s' %
-          (type(csi_plugin.backend.driver).__name__,
-           csi_plugin.backend.get_version()))
+    msg = 'Running as %s' % mode
+    if mode != 'node':
+        driver_name = type(csi_plugin.backend.driver).__name__
+        msg += ' with backend %s v%s' % (driver_name,
+                                         csi_plugin.backend.get_version())
+    print(msg)
 
     print('Debugging is %s' %
           ('ON with %s' % DEBUG_LIBRARY.__name__ if DEBUG_LIBRARY else 'OFF'))
