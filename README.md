@@ -338,7 +338,25 @@ This CSI driver currently only supports `SINGLE_MODE_WRITER`, although it will a
 
 ## Debugging
 
-The cinderlib-CSI plugin supports live debugging when run in the baremetal and when running as a container.
+The first tool for debugging is the log that displays detailed information on the driver code used by *cinderlib-CSI*.  We can enable DEBUG logs using the `X_CSI_CINDERLIB_CONFIG` environmental variable, and setting the `disable_logs` key in it to `false`.
+
+For baremetal:
+
+```
+    export X_CSI_CINDERLIB_CONFIG={"project_id":"com.redhat.cinderlib-csi","user_id":"com.redhat.cinderlib-csi","root_helper":"sudo","disable_logs":false}
+
+```
+
+For containers we can just add the environmental variable to a file and import into our run using `--env-file` or adding it to our command line with `-e`.
+
+In both cases it should not have the `export` command:
+
+```
+    X_CSI_CINDERLIB_CONFIG={"project_id":"com.redhat.cinderlib-csi","user_id":"com.redhat.cinderlib-csi","root_helper":"sudo","disable_logs":false}
+
+```
+
+Besides this basic debugging level, the cinderlib-CSI plugin also supports live debugging when run in the baremetal and when running as a container.
 
 There are two mechanisms that can be used to debug the driver: with `pdb`, and with `rpdb`.
 
