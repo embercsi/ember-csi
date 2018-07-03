@@ -388,6 +388,33 @@ If we are using `rpdb` then we'll have to connect to the port:
     $ nc 127.0.0.1 4444
 ```
 
+## Troubleshooting
+
+### CSC commands timeout
+
+If you have a slow backend or a slow data network connection, and you are creating mount volumes, then you may run into "context deadline exceeded" errors when running the node staging command on the volume.
+
+This is just a 60 seconds timeout, and we can easily fix this by increasing allowed timeout for the command to complete.  For example to 5 minutes with `-t5m` or to 1 hour if we are manually debugging things on the server side with `-t1h`.
+
+### Staging fails in container using iSCSI
+
+
+When I try to stage a volume using a containerized *Node* I see the error "ERROR root VolumeDeviceNotFound: Volume device not found at .".
+
+Turning the DEBUG log levels shows me login errors:
+
+```
+    2018-07-03 11:14:57.258 1 WARNING os_brick.initiator.connectors.iscsi [req-0e77bf32-a29b-40d1-b359-9e115435a94a com.redhat.cinderlib-csi com.redhat.cinderlib-csi - - -] Failed to connect to iSCSI portal 192.168.1.1:3260.
+    2018-07-03 11:14:57.259 1 WARNING os_brick.initiator.connectors.iscsi [req-0e77bf32-a29b-40d1-b359-9e115435a94a com.redhat.cinderlib-csi com.redhat.cinderlib-csi - - -] Failed to login iSCSI target iqn.2008-05.com.something:smt00153500071-514f0c50023f6c01 on portal 192.168.1.1:3260 (exit code 12).: ProcessExecutionError: Unexpected error while running command.
+```
+
+And looking into the host's journal (where the `iscsid` daemon is running) I can see `Kmod` errors:
+
+```
+    Jul 03 13:15:02 think iscsid[9509]: Could not insert module . Kmod error -2
+```
+
+This seems to be cause by some kind of incompatibility between the host and the container's iSCSI modules.  We currently don't have a solution other than using a CentOS 7 host system.
 
 ## Support
 
