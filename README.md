@@ -338,12 +338,14 @@ This CSI driver currently only supports `SINGLE_MODE_WRITER`, although it will a
 
 ## Debugging
 
-The first tool for debugging is the log that displays detailed information on the driver code used by *cinderlib-CSI*.  We can enable DEBUG logs using the `X_CSI_CINDERLIB_CONFIG` environmental variable, and setting the `disable_logs` key in it to `false`.
+The first tool for debugging is the log that displays detailed information on the driver code used by *cinderlib-CSI*.  We can enable INFO or DEBUG logs using the `X_CSI_CINDERLIB_CONFIG` environmental variable.
 
-For baremetal:
+To enable logs, defaulting to INFO level, we must set the `disable_logs` key to `false`.  If we want them at DEBUG levels, we also need to set `debug` to `true`.
+
+For baremetal, enablig DEBUG log levels can be done like this:
 
 ```
-    export X_CSI_CINDERLIB_CONFIG={"project_id":"com.redhat.cinderlib-csi","user_id":"com.redhat.cinderlib-csi","root_helper":"sudo","disable_logs":false}
+    export X_CSI_CINDERLIB_CONFIG={"project_id":"com.redhat.cinderlib-csi","user_id":"com.redhat.cinderlib-csi","root_helper":"sudo","disable_logs":false,"debug":true}
 
 ```
 
@@ -352,7 +354,7 @@ For containers we can just add the environmental variable to a file and import i
 In both cases it should not have the `export` command:
 
 ```
-    X_CSI_CINDERLIB_CONFIG={"project_id":"com.redhat.cinderlib-csi","user_id":"com.redhat.cinderlib-csi","root_helper":"sudo","disable_logs":false}
+    X_CSI_CINDERLIB_CONFIG={"project_id":"com.redhat.cinderlib-csi","user_id":"com.redhat.cinderlib-csi","root_helper":"sudo","disable_logs":false,"debug":true}
 
 ```
 
