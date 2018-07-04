@@ -10,7 +10,7 @@ with open('HISTORY.md') as history_file:
     history = history_file.read()
 
 requirements = [
-    'cinderlib>=0.2.2',
+    'cinderlib>0.2.1',
     'grpcio==1.12.0',
     # GRPCIO v1.12.0 has broken dependencies, so we include them here
     'protobuf>=3.5.0.post1',
