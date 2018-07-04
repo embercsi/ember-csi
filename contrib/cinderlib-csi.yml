@@ -145,6 +145,7 @@ spec:
       nodeSelector:
           node-role.kubernetes.io/compute: "true"
       serviceAccount: cinderlib-csi
+      hostNetwork: true
       containers:
         - name: csi-driver-registrar
           image: quay.io/k8scsi/driver-registrar:v0.2.0
@@ -167,6 +168,7 @@ spec:
         - name: cinderlib-csi-driver
           securityContext:
             privileged: true
+
             capabilities:
               add: ["SYS_ADMIN"]
             allowPrivilegeEscalation: true
@@ -178,15 +180,15 @@ spec:
             - name: CSI_MODE
               value: node
 
-            - name: X_CSI_STORAGE_NW_IP
-              valueFrom:
-                fieldRef:
-                  fieldPath: spec.podIP
-
-            - name: X_CSI_NODE_ID
-              valueFrom:
-                fieldRef:
-                  fieldPath: spec.nodeName
+            #- name: X_CSI_STORAGE_NW_IP
+              #valueFrom:
+                #fieldRef:
+                  #fieldPath: status.hostIP
+#
+            #- name: X_CSI_NODE_ID
+              #valueFrom:
+                #fieldRef:
+                  #fieldPath: spec.nodeName
 
             - name: X_CSI_BACKEND_CONFIG
               valueFrom:

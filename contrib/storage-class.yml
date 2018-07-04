@@ -1,0 +1,8 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: cinderlib
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "true"
+provisioner: csi-cinderlibplugin
+parameters:
