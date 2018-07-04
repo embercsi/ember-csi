@@ -2,7 +2,11 @@ FROM akrog/cinderlib:latest
 LABEL maintainers="Gorka Eguileor <geguileo@redhat.com>"
 LABEL description="Cinderlib CSI Plugin"
 
-RUN yum -y install xfsprogs e2fsprogs btrfs-progs && yum clean all && rm -rf /var/cache/yum && pip install --no-cache-dir 'grpcio==1.12.0rc1' 'protobuf>=3.5.0.post1' && mkdir /csi
+RUN yum -y install xfsprogs e2fsprogs btrfs-progs && \
+    yum clean all && \
+    rm -rf /var/cache/yum && \
+    pip install --no-cache-dir 'grpcio==1.12.0rc1' 'protobuf>=3.5.0.post1' && \
+    mkdir /csi
 
 # Copy cinderlib-csi from directory directory
 COPY . /csi
