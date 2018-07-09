@@ -15,9 +15,9 @@ import sys
 import time
 import traceback
 
+import cinderlib
 from eventlet import tpool
 import grpc
-import cinderlib
 from os_brick.initiator import connector as brick_connector
 from oslo_concurrency import processutils as putils
 import pkg_resources
