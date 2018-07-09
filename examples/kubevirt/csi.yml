@@ -1,0 +1,130 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: cinderlib-csi-xtremio-sc
+  namespace: default
+  # annotations:
+  #   storageclass.kubernetes.io/is-default-class: "true"
+provisioner: com.redhat.cinderlib-csi
+reclaimPolicy: Delete
+volumeBindingMode: Immediate
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app: cinderlib-driver
+  name: csi-xtremio-pod
+  namespace: default
+spec:
+  serviceAccount: csi-service-account
+  hostNetwork: true
+  containers:
+  - name: external-provisioner
+    args:
+    - --v=5
+    - --provisioner=com.redhat.cinderlib-csi
+    - --csi-address=/csi-data/csi.sock
+    image: quay.io/k8scsi/csi-provisioner:v0.2.1
+    imagePullPolicy: Always
+    volumeMounts:
+    - mountPath: /csi-data
+      name: socket-dir
+  - name: driver-registrar
+    args:
+    - --v=5
+    - --csi-address=/csi-data/csi.sock
+    env:
+    - name: KUBE_NODE_NAME
+      valueFrom:
+        fieldRef:
+          apiVersion: v1
+          fieldPath: spec.nodeName
+    image: quay.io/k8scsi/driver-registrar:v0.2.0
+    imagePullPolicy: Always
+    volumeMounts:
+    - mountPath: /csi-data
+      name: socket-dir
+  - name: external-attacher
+    args:
+    - --v=5
+    - --csi-address=/csi-data/csi.sock
+    image: quay.io/k8scsi/csi-attacher:v0.2.0
+    imagePullPolicy: Always
+    volumeMounts:
+    - mountPath: /csi-data
+      name: socket-dir
+  - name: cinderlib-driver
+    env:
+    - name: PYTHONUNBUFFERED
+      value: '0'
+    - name: CSI_ENDPOINT
+      value: unix:///csi-data/csi.sock
+    - name: KUBE_NODE_NAME
+      valueFrom:
+        fieldRef:
+          apiVersion: v1
+          fieldPath: spec.nodeName
+    - name: X_CSI_PERSISTENCE_CONFIG
+      value: '{"storage":"db","connection":"sqlite:////var/lib/cinder/db.sqlite"}'
+    - name: X_CSI_BACKEND_CONFIG
+      value: '{"volume_backend_name":"xtremio","volume_driver":"cinder.volume.drivers.dell_emc.xtremio.XtremIOISCSIDriver","san_ip":"192.168.1.2","xtremio_cluster_name":"cluster-name","san_login":"user","san_password":"toomanysecrets"}'
+    image: akrog/cinderlib-csi:master
+    imagePullPolicy: Always
+    securityContext:
+      privileged: true
+      allowPrivilegeEscalation: true
+    volumeMounts:
+    - mountPath: /csi-data
+      name: socket-dir
+    - mountPath: /var/lib/kubelet
+      mountPropagation: Bidirectional
+      name: mountpoint-dir
+    - mountPath: /etc/iscsi
+      mountPropagation: Bidirectional
+      name: iscsi-dir
+    - mountPath: /dev
+      mountPropagation: Bidirectional
+      name: dev-dir
+    - mountPath: /var/lib/cinder
+      mountPropagation: Bidirectional
+      name: cinder-dir
+    - mountPath: /etc/lvm/lvm.conf
+      mountPropagation: None
+      name: lvm-conf
+  - name: csc
+    image: akrog/csc:v0.2.0
+    imagePullPolicy: IfNotPresent
+    command: ["tail"]
+    args: ["-f", "/dev/null"]
+    env:
+      - name: CSI_ENDPOINT
+        value: unix:///csi-data/csi.sock
+    volumeMounts:
+      - name: socket-dir
+        mountPath: /csi-data
+  volumes:
+  - hostPath:
+      path: /var/lib/kubelet/plugins/com.redhat.cinderlib-csi
+      type: DirectoryOrCreate
+    name: socket-dir
+  - hostPath:
+      path: /var/lib/kubelet
+      type: Directory
+    name: mountpoint-dir
+  - hostPath:
+      path: /etc/iscsi
+      type: Directory
+    name: iscsi-dir
+  - hostPath:
+      path: /dev
+      # type: Directory
+    name: dev-dir
+  - hostPath:
+      path: /root/cinderlib
+      type: DirectoryOrCreate
+    name: cinder-dir
+  - hostPath:
+      path: /root/lvm.conf
+      type: File
+    name: lvm-conf
