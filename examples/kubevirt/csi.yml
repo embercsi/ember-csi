@@ -66,7 +66,7 @@ spec:
           apiVersion: v1
           fieldPath: spec.nodeName
     - name: X_CSI_PERSISTENCE_CONFIG
-      value: '{"storage":"db","connection":"sqlite:////var/lib/cinder/db.sqlite"}'
+      value: '{"storage":"crd"}'
     - name: X_CSI_BACKEND_CONFIG
       value: '{"volume_backend_name":"xtremio","volume_driver":"cinder.volume.drivers.dell_emc.xtremio.XtremIOISCSIDriver","san_ip":"192.168.1.2","xtremio_cluster_name":"cluster-name","san_login":"user","san_password":"toomanysecrets"}'
     image: akrog/cinderlib-csi:master
@@ -86,9 +86,6 @@ spec:
     - mountPath: /dev
       mountPropagation: Bidirectional
       name: dev-dir
-    - mountPath: /var/lib/cinder
-      mountPropagation: Bidirectional
-      name: cinder-dir
     - mountPath: /etc/lvm/lvm.conf
       mountPropagation: None
       name: lvm-conf
@@ -120,10 +117,6 @@ spec:
       path: /dev
       # type: Directory
     name: dev-dir
-  - hostPath:
-      path: /root/cinderlib
-      type: DirectoryOrCreate
-    name: cinder-dir
   - hostPath:
       path: /root/lvm.conf
       type: File

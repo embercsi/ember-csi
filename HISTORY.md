@@ -11,6 +11,7 @@
 - Support defining default mount filesystem
 - Show supported CSI spec version on start
 - Support live debugging of running driver
+- Add CRD metadata persistence plugin for Kubernetes
 
 ### Bugs
 
