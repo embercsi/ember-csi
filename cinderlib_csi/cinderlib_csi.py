@@ -1031,8 +1031,9 @@ def main():
                                          csi_plugin.backend.get_version())
     print(msg)
 
-    print('Debugging is %s' %
-          ('ON with %s' % DEBUG_LIBRARY.__name__ if DEBUG_LIBRARY else 'OFF'))
+    print('Debugging feature is %s.' %
+          ('ENABLED with %s and OFF. Toggle it with SIGUSR1' %
+           DEBUG_LIBRARY.__name__ if DEBUG_LIBRARY else 'DISABLED'))
 
     if not server.add_insecure_port(endpoint):
         sys.stderr.write('\nERROR: Could not bind to %s\n' % endpoint)
