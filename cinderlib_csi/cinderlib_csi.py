@@ -40,6 +40,7 @@ DEFAULT_CINDERLIB_CFG = {'project_id': NAME, 'user_id': NAME,
                          'root_helper': 'sudo'}
 DEFAULT_MOUNT_FS = 'ext4'
 REFRESH_TIME = 1
+MULTIPATH_FIND_RETRIES = 3
 
 GB = float(1024 ** 3)
 ONE_DAY_IN_SECONDS = 60 * 60 * 24
@@ -815,7 +816,14 @@ class Node(csi.NodeServicer, Identity):
             # the persistence storage, but if we would need to deserialize it
             # with json.loads from key 'connection_info'
             conn = vol.connections[0]
-            conn.attach()
+            # Some slow systems may take a while to detect the multipath so we
+            # retry the attach.  Since we don't disconnect this will go fast
+            # through the login phase.
+            for i in range(MULTIPATH_FIND_RETRIES):
+                conn.attach()
+                if not conn.use_multipath or conn.path.startswith('/dev/dm'):
+                    break
+                sys.stdout.write('Retrying to get a multipath')
             # Create the private bind file
             open(private_bind, 'a').close()
             # TODO(geguileo): make path for private binds configurable
