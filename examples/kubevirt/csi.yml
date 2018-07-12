@@ -118,6 +118,6 @@ spec:
       # type: Directory
     name: dev-dir
   - hostPath:
-      path: /root/lvm.conf
+      path: /etc/lvm/lvm.conf
       type: File
     name: lvm-conf
