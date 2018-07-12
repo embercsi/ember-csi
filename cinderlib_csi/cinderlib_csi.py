@@ -110,15 +110,17 @@ def logrpc(f):
     @functools.wraps(f)
     def dolog(self, request, context):
         req_id = id(request)
+        start = datetime.utcnow()
         if request.ListFields():
             msg = ' params\n%s' % tab(request)
         else:
             msg = 'out params'
-        sys.stdout.write('=> GRPC [%s]: %s with%s\n' %
-                         (req_id, f.__name__, msg))
+        sys.stdout.write('=> %s GRPC [%s]: %s with%s\n' %
+                         (start, req_id, f.__name__, msg))
         try:
             result = f(self, request, context)
         except Exception as exc:
+            end = datetime.utcnow()
             if context._state.code:
                 code = str(context._state.code)[11:]
                 details = context._state.details
@@ -127,15 +129,18 @@ def logrpc(f):
                 code = 'Unexpected exception'
                 details = exc.message
                 tback = '\n' + tab(traceback.format_exc())
-            sys.stdout.write('!! GRPC [%s]: %s on %s (%s)%s\n' %
-                             (req_id, code, f.__name__, details, tback))
+            sys.stdout.write('!! %s GRPC in %.0fs [%s]: %s on %s (%s)%s\n' %
+                             (end, (end - start).total_seconds(), req_id, code,
+                              f.__name__, details, tback))
             raise
+        end = datetime.utcnow()
         if str(result):
             str_result = '\n%s' % tab(result)
         else:
             str_result = ' nothing'
-        sys.stdout.write('<= GRPC [%s]: %s returns%s\n' %
-                         (req_id, f.__name__, str_result))
+        sys.stdout.write('<= %s GRPC in %.0fs [%s]: %s returns%s\n' %
+                         (end, (end - start).total_seconds(), req_id,
+                          f.__name__, str_result))
         return result
     return dolog
 
