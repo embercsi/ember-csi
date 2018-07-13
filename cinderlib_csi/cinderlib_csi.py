@@ -3,6 +3,7 @@
 # Supports CSI v0.2.0
 # TODO(geguileo): Check that all parameters are present on received RPC calls
 from concurrent import futures
+import contextlib
 from datetime import datetime
 import functools
 import glob
@@ -47,6 +48,11 @@ ONE_DAY_IN_SECONDS = 60 * 60 * 24
 CINDER_VERSION = pkg_resources.get_distribution('cinder').version
 NANOSECONDS = 10 ** 9
 EPOCH = datetime.utcfromtimestamp(0).replace(tzinfo=pytz.UTC)
+
+ABORT_DUPLICATES = (
+    (os.environ.get('X_CSI_ABORT_DUPLICATES') or '').upper() == 'TRUE')
+
+locks = {}
 
 
 def no_debug(f):
@@ -164,6 +170,11 @@ def require(*fields):
     return func_wrapper
 
 
+@contextlib.contextmanager
+def noop_cm():
+    yield
+
+
 class Worker(object):
     current_workers = {}
 
@@ -171,19 +182,34 @@ class Worker(object):
     def _unique_worker(cls, func, request_field):
         @functools.wraps(func)
         def wrapper(self, request, context):
+            global locks
+
             worker_id = getattr(request, request_field)
             my_method = func.__name__
             my_thread = threading.current_thread().ident
-            method, thread = cls.current_workers.setdefault(
-                worker_id, (my_method, my_thread))
-            if (method, thread) != (my_method, my_thread):
-                context.abort(grpc.StatusCode.ABORTED,
-                              'Cannot %s on %s while thread %s is doing %s' %
-                              (my_method, worker_id, thread, method))
-            try:
-                return func(self, request, context)
-            finally:
-                del cls.current_workers[worker_id]
+            current = (my_method, my_thread)
+
+            if ABORT_DUPLICATES:
+                lock = noop_cm()
+            else:
+                lock = locks.get(my_method)
+                if not lock:
+                    lock = locks[my_method] = threading.Lock()
+
+            with lock:
+                method, thread = cls.current_workers.setdefault(worker_id,
+                                                                current)
+
+                if (method, thread) != current:
+                    context.abort(
+                        grpc.StatusCode.ABORTED,
+                        'Cannot %s on %s while thread %s is doing %s' %
+                        (my_method, worker_id, thread, method))
+
+                try:
+                    return func(self, request, context)
+                finally:
+                    del cls.current_workers[worker_id]
         return wrapper
 
     @classmethod
