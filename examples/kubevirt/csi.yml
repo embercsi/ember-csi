@@ -89,6 +89,12 @@ spec:
     - mountPath: /etc/lvm/lvm.conf
       mountPropagation: None
       name: lvm-conf
+    - mountPath: /run
+      mountPropagation: Bidirectional
+      name: run-dir
+    - mountPath: /lib/modules
+      mountPropagation: Bidirectional
+      name: modules-dir
   - name: csc
     image: akrog/csc:v0.2.0
     imagePullPolicy: IfNotPresent
@@ -121,3 +127,9 @@ spec:
       path: /etc/lvm/lvm.conf
       type: File
     name: lvm-conf
+  - hostPath:
+      path: /run
+    name: run-dir
+  - hostPath:
+      path: /lib/modules
+    name: modules-dir
