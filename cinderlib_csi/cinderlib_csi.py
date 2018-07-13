@@ -769,8 +769,8 @@ class Node(csi.NodeServicer, Identity):
 
     def _format_device(self, fs_type, device, context):
         # We don't use the util-linux Python library to reduce dependencies
-        stdout, stderr = self.sudo('lsblk', '-nlfoFSTYPE', device, retries=4,
-                                   errors=[1, 32])
+        stdout, stderr = self.sudo('lsblk', '-nlfoFSTYPE', device, retries=5,
+                                   errors=[1, 32], delay=2)
         fs_types = filter(None, stdout.split())
         if fs_types:
             if fs_types[0] == fs_type:
