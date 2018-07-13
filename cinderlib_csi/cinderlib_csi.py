@@ -242,7 +242,8 @@ class NodeInfo(object):
         # For now just set multipathing and not enforcing it
         connector_dict = brick_connector.get_connector_properties(
             'sudo', storage_nw_ip, True, False)
-        kv = cinderlib.KeyValue(node_id, json.dumps(connector_dict))
+        value = json.dumps(connector_dict, separators=(',', ':'))
+        kv = cinderlib.KeyValue(node_id, value)
         cinderlib.Backend.persistence.set_key_value(kv)
         return NodeInfo(node_id, connector_dict)
 
