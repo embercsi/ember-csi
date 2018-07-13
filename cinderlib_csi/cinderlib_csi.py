@@ -767,9 +767,8 @@ class Node(csi.NodeServicer, Identity):
         device = self._get_device(private_bind)
         return device, private_bind
 
-    def _format_device(self, capability, device, context):
+    def _format_device(self, fs_type, device, context):
         # We don't use the util-linux Python library to reduce dependencies
-        fs_type = capability.mount.fs_type or DEFAULT_MOUNT_FS
         stdout, stderr = self.sudo('lsblk', '-nlfoFSTYPE', device, retries=4,
                                    errors=[1, 32])
         fs_types = filter(None, stdout.split())
@@ -799,15 +798,13 @@ class Node(csi.NodeServicer, Identity):
             return True
         return False
 
-    def _mount(self, capability, private_bind, target, context):
-        if self._check_mount_exists(capability, private_bind, target, context):
-            return
-
+    def _mount(self, fs_type, mount_flags, private_bind, target):
+        # Mount must only be called if it's already not mounted
         # We don't use the util-linux Python library to reduce dependencies
-        command = ['mount', '-t', capability.mount.fs_type or DEFAULT_MOUNT_FS]
-        if capability.mount.mount_flags:
+        command = ['mount', '-t', fs_type]
+        if mount_flags:
             command.append('-o')
-            command.append(','.join(capability.mount.mount_flags))
+            command.append(','.join(mount_flags))
         command.append(private_bind)
         command.append(target)
         self.sudo(*command)
@@ -869,11 +866,14 @@ class Node(csi.NodeServicer, Identity):
                 # TODO(geguileo): Add support for NFS/QCOW2
                 self.sudo('mount', '--bind', private_bind, target)
         else:
-            self._format_device(request.volume_capability, private_bind,
-                                context)
-            self._mount(request.volume_capability, private_bind, target,
-                        context)
-
+            if not self._check_mount_exists(request.volume_capability,
+                                            private_bind, target, context):
+                fs_type = (request.volume_capability.mount.fs_type or
+                           DEFAULT_MOUNT_FS)
+                self._format_device(fs_type, private_bind, context)
+                self._mount(fs_type,
+                            request.volume_capability.mount.mount_flags,
+                            private_bind, target)
         return self.STAGE_RESP
 
     @debuggable
