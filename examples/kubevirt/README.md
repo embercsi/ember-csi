@@ -24,16 +24,16 @@ make cluster-sync
 csi/csi_up.sh
 
 # Setup RBAC
-cluster/kubectl.sh csi/rbac.yml
+cluster/kubectl.sh create -f csi/rbac.yml
 
 # Setup the CSI driver
-cluster/kubectl.sh csi/csi.yml
+cluster/kubectl.sh create -f csi/csi.yml
 
 # Create a PVC (creates a volume on the storage via the CSI plugin)
-cluster/kubectl.sh csi/pvc.yml
+cluster/kubectl.sh create -f csi/pvc.yml
 
 # Create an APP that uses the created volume
-cluster/kubectl.sh csi/app.yml
+cluster/kubectl.sh create -f csi/app.yml
 ```
 
 We can send GRPC commands to the CSI driver using the deployed csc container.
