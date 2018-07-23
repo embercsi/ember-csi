@@ -258,6 +258,8 @@ class Identity(csi.IdentityServicer):
         [types.ServiceType.CONTROLLER_SERVICE])
     manifest = None
     MKFS = '/sbin/mkfs.'
+    DEFAULT_MKFS_ARGS = tuple()
+    MKFS_ARGS = {'ext4': ('-F',)}
 
     def __init__(self, server, cinderlib_cfg):
         if self.manifest is not None:
@@ -779,7 +781,10 @@ class Node(csi.NodeServicer, Identity):
                           'Cannot stage filesystem %s on device that '
                           'already has filesystem %s' %
                           (fs_type, fs_types[0]))
-        self.sudo(self.MKFS + fs_type, device)
+        cmd = [self.MKFS + fs_type]
+        cmd.extend(self.MKFS_ARGS.get(fs_type, self.DEFAULT_MKFS_ARGS))
+        cmd.append(device)
+        self.sudo(*cmd)
 
     def _check_mount_exists(self, capability, private_bind, target, context):
         mounts = self._get_mount(private_bind)
