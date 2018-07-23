@@ -1043,7 +1043,7 @@ def main():
     cinderlib_config = _load_json_config('X_CSI_CINDERLIB_CONFIG',
                                          DEFAULT_CINDERLIB_CFG)
     backend_config = _load_json_config('X_CSI_BACKEND_CONFIG')
-    node_id = _load_json_config('X_CSI_NODE_ID')
+    node_id = os.environ.get('X_CSI_NODE_ID')
     if mode != 'node' and not backend_config:
         print('Missing required backend configuration')
         exit(2)
