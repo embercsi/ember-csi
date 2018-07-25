@@ -857,7 +857,7 @@ class Node(csi.NodeServicer, Identity):
                 conn.attach()
                 if not conn.use_multipath or conn.path.startswith('/dev/dm'):
                     break
-                sys.stdout.write('Retrying to get a multipath')
+                sys.stdout.write('Retrying to get a multipath\n')
             # Create the private bind file
             open(private_bind, 'a').close()
             # TODO(geguileo): make path for private binds configurable
@@ -909,14 +909,16 @@ class Node(csi.NodeServicer, Identity):
                 context.abort(grpc.StatusCode.ABORTED,
                               'Operation pending for volume')
 
-            conn = vol.connections[0]
             if count == 2:
                 self.sudo('umount', request.staging_target_path,
                           retries=4)
-            conn.detach()
             if count > 0:
                 self.sudo('umount', private_bind, retries=4)
             os.remove(private_bind)
+
+            conn = vol.connections[0]
+            conn.detach()
+
         return self.UNSTAGE_RESP
 
     @debuggable
