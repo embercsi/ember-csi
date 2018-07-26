@@ -10,4 +10,4 @@ if [[ ! -v VIRTUAL_ENV ]]; then
     . .tox/py27/bin/activate
 fi
 
-python -m grpc_tools.protoc --proto_path=. --grpc_python_out=./cinderlib_csi --python_out=./cinderlib_csi csi.proto
+python -m grpc_tools.protoc --proto_path=. --grpc_python_out=./ember_csi --python_out=./ember_csi csi.proto

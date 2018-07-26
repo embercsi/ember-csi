@@ -8,8 +8,8 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: csi-controller-cr
 rules:
-  # Allow managing cinderlib resources
-  - apiGroups: ['cinderlib.gorka.eguileor.com']
+  # Allow managing ember resources
+  - apiGroups: ['ember-csi.io']
     resources: ['*']
     verbs: ['*']
   # Allow listing and creating CRDs
@@ -74,7 +74,7 @@ spec:
         image: quay.io/k8scsi/csi-provisioner:v0.2.1
         args:
         - --v=5
-        - --provisioner=com.redhat.cinderlib-csi
+        - --provisioner=io.ember-csi
         - --csi-address=/csi-data/csi.sock
         volumeMounts:
         - mountPath: /csi-data
@@ -88,7 +88,7 @@ spec:
         - mountPath: /csi-data
           name: socket-dir
       - name: csi-driver
-        image: akrog/cinderlib-csi:master
+        image: akrog/ember-csi:master
         imagePullPolicy: Always
         securityContext:
           privileged: true
@@ -108,7 +108,7 @@ spec:
         - name: X_CSI_PERSISTENCE_CONFIG
           value: '{"storage":"crd"}'
         - name: X_CSI_BACKEND_CONFIG
-          value: '{"iscsi_protocol":"iscsi","iscsi_ip_address":"192.168.10.100","volume_backend_name":"lvm","volume_driver":"cinder.volume.drivers.lvm.LVMVolumeDriver","volume_group":"cinder-volumes","iscsi_helper":"lioadm"}'
+          value: '{"iscsi_protocol":"iscsi","iscsi_ip_address":"192.168.10.100","volume_backend_name":"lvm","volume_driver":"cinder.volume.drivers.lvm.LVMVolumeDriver","volume_group":"ember-volumes","iscsi_helper":"lioadm"}'
         volumeMounts:
         - name: socket-dir
           mountPath: /csi-data

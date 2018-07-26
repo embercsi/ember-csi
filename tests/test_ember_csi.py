@@ -2,21 +2,21 @@
 # -*- coding: utf-8 -*-
 
 """
-test_cinderlib_csi
+test_ember_csi
 ----------------------------------
 
-Tests for `cinderlib_csi` module.
+Tests for `ember_csi` module.
 """
 
 
 import sys
 import unittest
 
-from cinderlib_csi import cinderlib_csi
+from ember_csi import ember_csi
 
 
 
-class TestCinderlib_csi(unittest.TestCase):
+class TestEmber_csi(unittest.TestCase):
 
     def setUp(self):
         pass

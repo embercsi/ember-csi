@@ -1,6 +1,6 @@
-# Cinderlib-CSI on Kubevirt
+# Ember-CSI on Kubevirt
 
-To use the Cinderlib-CSI driver on Kubevirt we need to make changes to our deployment.
+To use the Ember-CSI plugin on Kubevirt we need to make changes to our deployment.
 
 The easiest way to make the changes is to copy this kubevirt directory into a directory of the kubevirt repository, and run the `csi_up.sh` script from there after the cluster is up and running.
 

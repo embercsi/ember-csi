@@ -1,22 +1,18 @@
-"""CRD metadata persistence plugin for Cinderlib
+"""CRD metadata persistence plugin
 
 The identifier for this plugin when using it in the X_CSI_PERSISTENCE_CONFIG
 environmental variable is "crd".
 
-All cinderlib-CSI containers (node and controllers) must have the following
+All Ember-CSI containers (node and controllers) must have the following
 RBACs:
 
    # Allow listing and creating CRDs
-   - apiGroups:
-     - apiextensions.k8s.io
-     resources:
-     - customresourcedefinitions
-     verbs:
-     - list
-     - create
+   - apiGroups: ['apiextensions.k8s.io']
+     resources: ['customresourcedefinitions']
+     verbs: ['list', 'create']
 
-   # Allow managing cinderlib resources
-   - apiGroups: ["cinderlib.gorka.eguileor.com"]
+   # Allow managing Ember resources
+   - apiGroups: ["ember-csi.io"]
      resources: ["*"]
      verbs: ["*"]
 
@@ -39,11 +35,11 @@ short names:
     kubectl get keyvalue
     kubectl get keyvalues
 
-Since they are added to the all and cinderlib categories we can also see them
+Since they are added to the all and ember categories we can also see them
 with:
 
     kubectl get all
-    kubectl get cinderlib
+    kubectl get ember
 
 This plugin is not watching the CROs and acting on changes, so we should not be
 creating/deleting/changing them via kubectl, but through the CSI interface
@@ -69,10 +65,10 @@ class CRD(object):
     In the future we may want to do this more efficiently: have individual
     annotation fields and use patch to only update changes.
 
-    The CRDs are added to the "all" and "cinderlib" categories.
+    The CRDs are added to the "all" and "ember" categories.
     """
     CRD_VERSION = 'v1'
-    DOMAIN = 'cinderlib.gorka.eguileor.com'
+    DOMAIN = 'ember-csi.io'
     NAMESPACE = 'default'
     RESOURCE_VERSION_ATTR = '__resource_version'
 
@@ -108,11 +104,11 @@ class CRD(object):
     def create_crd_definition(cls):
         """Creates a CRD definition for the current class.
 
-        The CRDs are added to the "all" and "cinderlib" categories, making it
+        The CRDs are added to the "all" and "ember" categories, making it
         possible to list them with
 
             kubectl get all
-            kubectl get cinderlib
+            kubectl get ember
 
         As well as with the individual names and shortcuts.
         """
@@ -126,7 +122,7 @@ class CRD(object):
                                   'singular': cls.singular,
                                   'plural': cls.plural,
                                   'shortNames': [cls.SHORTNAME],
-                                  'categories': ['all', 'cinderlib']}}}
+                                  'categories': ['all', 'ember']}}}
         K8S.ext_api.create_custom_resource_definition(crd)
 
     @classmethod

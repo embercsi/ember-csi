@@ -1,11 +1,11 @@
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
-  name: cinderlib-csi-xtremio-sc
+  name: ember-csi-xtremio-sc
   namespace: default
   # annotations:
   #   storageclass.kubernetes.io/is-default-class: "true"
-provisioner: com.redhat.cinderlib-csi
+provisioner: io.ember-csi
 reclaimPolicy: Delete
 volumeBindingMode: Immediate
 ---
@@ -13,7 +13,7 @@ apiVersion: v1
 kind: Pod
 metadata:
   labels:
-    app: cinderlib-driver
+    app: ember-driver
   name: csi-xtremio-pod
   namespace: default
 spec:
@@ -23,7 +23,7 @@ spec:
   - name: external-provisioner
     args:
     - --v=5
-    - --provisioner=com.redhat.cinderlib-csi
+    - --provisioner=io.ember-csi
     - --csi-address=/csi-data/csi.sock
     image: quay.io/k8scsi/csi-provisioner:v0.2.1
     imagePullPolicy: Always
@@ -54,7 +54,7 @@ spec:
     volumeMounts:
     - mountPath: /csi-data
       name: socket-dir
-  - name: cinderlib-driver
+  - name: ember-driver
     env:
     - name: PYTHONUNBUFFERED
       value: '0'
@@ -69,7 +69,7 @@ spec:
       value: '{"storage":"crd"}'
     - name: X_CSI_BACKEND_CONFIG
       value: '{"volume_backend_name":"xtremio","volume_driver":"cinder.volume.drivers.dell_emc.xtremio.XtremIOISCSIDriver","san_ip":"192.168.1.2","xtremio_cluster_name":"cluster-name","san_login":"user","san_password":"toomanysecrets"}'
-    image: akrog/cinderlib-csi:master
+    image: akrog/ember-csi:master
     imagePullPolicy: Always
     securityContext:
       privileged: true
@@ -108,7 +108,7 @@ spec:
         mountPath: /csi-data
   volumes:
   - hostPath:
-      path: /var/lib/kubelet/plugins/com.redhat.cinderlib-csi
+      path: /var/lib/kubelet/plugins/io.ember-csi
       type: DirectoryOrCreate
     name: socket-dir
   - hostPath:

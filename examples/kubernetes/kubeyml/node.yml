@@ -8,8 +8,8 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: csi-node-cr
 rules:
-  # Allow managing cinderlib resources
-  - apiGroups: ['cinderlib.gorka.eguileor.com']
+  # Allow managing ember resources
+  - apiGroups: ['ember-csi.io']
     resources: ['*']
     verbs: ['*']
   # Allow listing and creating CRDs
@@ -71,7 +71,7 @@ spec:
           - mountPath: /csi-data
             name: socket-dir
         - name: csi-driver
-          image: akrog/cinderlib-csi:master
+          image: akrog/ember-csi:master
           securityContext:
             privileged: true
             allowPrivilegeEscalation: true
@@ -132,7 +132,7 @@ spec:
       volumes:
         - name: socket-dir
           hostPath:
-            path: /var/lib/kubelet/plugins/com.redhat.cinderlib-csi
+            path: /var/lib/kubelet/plugins/io.ember-csi
             type: DirectoryOrCreate
         - name: mountpoint-dir
           hostPath:

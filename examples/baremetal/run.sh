@@ -11,7 +11,7 @@ fi
 . ./$1
 
 # Run the CSI driver service
-cinderlib-csi
+ember-csi
 
 exit_code=$?
 

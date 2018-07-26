@@ -9,9 +9,9 @@ kind: ClusterRole
 metadata:
   name: csi-cluster-role
 rules:
-# Allow managing cinderlib resources
+# Allow managing ember resources
 - apiGroups:
-  - cinderlib.gorka.eguileor.com
+  - ember-csi.io
   resources:
   - '*'
   verbs:

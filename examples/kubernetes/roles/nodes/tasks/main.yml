@@ -7,7 +7,7 @@
 - name: save iptables
   command: service iptables save
 
-# Accept loop devices for the LVM cinder-volumes VG and reject anything else
+# Accept loop devices for the LVM ember-volumes VG and reject anything else
 - name: Disable new LVM volumes
   lineinfile:
     path: /etc/lvm/lvm.conf

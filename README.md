@@ -1,11 +1,9 @@
-# Cinderlib CSI driver
+# Ember CSI
 
-[![Docker build status](https://img.shields.io/docker/build/akrog/cinderlib-csi.svg)](https://hub.docker.com/r/akrog/cinderlib-csi/) [![Docker build](https://img.shields.io/docker/automated/akrog/cinderlib-csi.svg)](https://hub.docker.com/r/akrog/cinderlib-csi/builds/) [![PyPi](https://img.shields.io/pypi/v/cinderlib_csi.svg)](https://pypi.python.org/pypi/cinderlib_csi) [![PyVersion](https://img.shields.io/pypi/pyversions/cinderlib_csi.svg)](https://pypi.python.org/pypi/cinderlib_csi) [![License](https://img.shields.io/:license-apache-blue.svg)](http://www.apache.org/licenses/LICENSE-2.0)
+[![Docker build status](https://img.shields.io/docker/build/akrog/ember-csi.svg)](https://hub.docker.com/r/akrog/ember-csi/) [![Docker build](https://img.shields.io/docker/automated/akrog/ember-csi.svg)](https://hub.docker.com/r/akrog/ember-csi/builds/) [![PyPi](https://img.shields.io/pypi/v/ember_csi.svg)](https://pypi.python.org/pypi/ember_csi) [![PyVersion](https://img.shields.io/pypi/pyversions/ember_csi.svg)](https://pypi.python.org/pypi/ember_csi) [![License](https://img.shields.io/:license-apache-blue.svg)](http://www.apache.org/licenses/LICENSE-2.0)
 
 
-CSI Python driver that leverages all Cinder drivers to provide block volumes without needing to run any additional service, such as RabbitMQ, MariaDB, Cinder-API, Cinder-Scheduler, or Cinder-Volume.
-
-Current code is is a **Proof of Concept** only compatible with Cinder OSP-12/Pike release.
+Multi-vendor CSI plugin driver supporting over 80 storage drivers in a single plugin to provide `block` and `mount` storage to Container Orchestration systems.
 
 * Free software: Apache Software License 2.0
 * Documentation: Pending
@@ -40,7 +38,7 @@ This driver requires that Cinder v11.0 (OSP-12/Pike) is already installed in the
 - From github
 - From other repositories
 
-Any other basic requirement is already handled by `cinderlib-csi` when installing from PyPi.
+Any other basic requirement is already handled by `ember-csi` when installing from PyPi.
 
 Besides the basic dependencies there are also some drivers that have additional requirements that must be met for proper operation of the driver and/or attachment/detachment operations, just like in Cinder.
 
@@ -77,10 +75,10 @@ First we need to install the Cinder Python package, for example to install from 
 ```
 
 
-Then we just need to install the `cinderlib-csi` package:
+Then we just need to install the `ember-csi` package:
 
 ```
-    $ sudo pip install cinderlib-csi
+    $ sudo pip install ember-csi
 ```
 
 
@@ -113,7 +111,7 @@ The CSI driver is configured via environmental variables, any value that doesn't
 | `X_CSI_STORAGE_NW_IP`      | node       | IP address in the Node used to connect to the storage         | IP resolved from Node's fqdn                                                                             | 192.168.1.22                                                                                                                                                                                                                            |
 | `X_CSI_NODE_ID`            | node       | ID used by this node to identify itself to the controller     | Node's fqdn                                                                                              | csi_test_node                                                                                                                                                                                                                           |
 | `X_CSI_PERSISTENCE_CONFIG` | all        | Configuration of the `cinderlib` metadata persistence plugin. | {'storage': 'db', 'connection': 'sqlite:///db.sqlite'}                                                   | {'storage': 'db', 'connection': 'mysql+pymysql://root:stackdb@192.168.1.1/cinder?charset=utf8'}                                                                                                                                         |
-| `X_CSI_CINDERLIB_CONFIG`   | all        | Global `cinderlib` configuration                              | {'project_id': 'com.redhat.cinderlib-csi', 'user_id': 'com.redhat.cinderlib-csi', 'root_helper': 'sudo'} | {"project_id":"com.redhat.cinderlib-csi","user_id":"com.redhat.cinderlib-csi","root_helper":"sudo"}                                                                                                                                     |
+| `X_CSI_EMBER_CONFIG`       | all        | Global `cinderlib` configuration                              | {'project_id': 'io.ember-csi', 'user_id': 'io.ember-csi', 'root_helper': 'sudo'}                         | {"project_id":"k8s project","user_id":"csi driver","root_helper":"sudo"}                                                                                                                                                                |
 | `X_CSI_BACKEND_CONFIG`     | controller | Driver configuration                                          |                                                                                                          | {"volume_backend_name": "rbd", "volume_driver": "cinder.volume.drivers.rbd.RBDDriver", "rbd_user": "cinder", "rbd_pool": "volumes", "rbd_ceph_conf": "/etc/ceph/ceph.conf", "rbd_keyring_conf": "/etc/ceph/ceph.client.cinder.keyring"} |
 | `X_CSI_DEFAULT_MOUNT_FS`   | node       | Default mount filesystem when missing in publish calls        | ext4                                                                                                     | btrfs                                                                                                                                                                                                                                   |
 | `X_CSI_DEBUG_MODE`         | all        | Debug mode (rpdb, pdb) to use. Disabled by default.           |                                                                                                          | rpdb                                                                                                                                                                                                                                    |
@@ -124,41 +122,41 @@ The only role that has been tested at the moment is the default one, where Contr
 
 ## Starting the plugin
 
-Once we have installed `cinderlib-csi` and required dependencies (for the backend and for the connection type) we just have to run the `cinderlib-csi` service with a user that can do passwordless sudo:
+Once we have installed `ember-csi` and required dependencies (for the backend and for the connection type) we just have to run the `ember-csi` service with a user that can do passwordless sudo:
 
 ```
-    $ cinderlib-csi
+    $ ember-csi
 ```
 
 
 ## Testing the plugin
 
-There are several examples of running the CSI cinderlib driver in the `examples` directory both for a baremetal deployment and a containerized version of the driver.
+There are several examples of running the Ember CSI plugin in the `examples` directory both for a baremetal deployment and a containerized version of the driver.
 
 In all cases we have to run the plugin first before we can test it, and for that we have to check the configuration provided as a test before starting the plugin.  By default all examples run the service on port 50051.
 
 
 ### Baremetal
 
-For example to test with the LVM driver on our development environment we can just run the following commands from the root of the `cinderlib-csi` project:
+For example to test with the LVM driver on our development environment we can just run the following commands from the root of the `ember-csi` project:
 
 *Note*: The iscsi IP addresses are auto-assigned in the [lvm](examples/baremetal/lvm) env file. You may change these IP addresses if desired:
 
 ```
     $ cd tmp
-    $ sudo dd if=/dev/zero of=cinder-volumes bs=1048576 seek=22527 count=1
-    $ lodevice=`sudo losetup --show -f ./cinder-volumes`
+    $ sudo dd if=/dev/zero of=ember-volumes bs=1048576 seek=22527 count=1
+    $ lodevice=`sudo losetup --show -f ./ember-volumes`
     $ sudo pvcreate $lodevice
-    $ sudo vgcreate cinder-volumes $lodevice
+    $ sudo vgcreate ember-volumes $lodevice
     $ sudo vgscan --cache
     $ cd ../examples/baremetal
     $ ./run.sh lvm
-    py27 develop-inst-nodeps: /home/geguileo/code/reuse-cinder-drivers/cinderlib-csi
+    py27 develop-inst-nodeps: /home/geguileo/code/ember-csi
     py27 installed: ...
     ___ summary ___
       py27: skipped tests
       congratulations :)
-    Starting cinderlib CSI v0.0.2 (cinderlib: v0.2.1, cinder: v11.1.2.dev5, CSI spec: v0.2.0)
+    Starting Ember CSI v0.0.2 (cinderlib: v0.2.1, cinder: v11.1.2.dev5, CSI spec: v0.2.0)
     Supported filesystems are: fat, ext4dev, vfat, ext3, ext2, msdos, ext4, hfsplus, cramfs, xfs, ntfs, minix, btrfs
     Running backend LVMVolumeDriver v3.0.0
     Debugging is OFF
@@ -171,7 +169,7 @@ There is also an example of testing a Ceph cluster using a user called "cinder" 
 ```
     $ cd examples/baremetal
     $ ./run.sh rbd
-    Starting cinderlib CSI v0.0.2 (cinderlib: v0.2.1, cinder: v11.1.2.dev5, CSI spec: v0.2.0)
+    Starting Ember CSI v0.0.2 (cinderlib: v0.2.1, cinder: v11.1.2.dev5, CSI spec: v0.2.0)
     Supported filesystems are: fat, ext4dev, vfat, ext3, ext2, msdos, ext4, hfsplus, cramfs, xfs, ntfs, minix, btrfs
     Running backend LVMVolumeDriver v3.0.0
     Debugging is OFF
@@ -184,7 +182,7 @@ There is also an XtremIO example that only requires the iSCSI connection package
 
 ### Containerized
 
-There is a sample `Dockerfile` included in the project that has been used to create the `akrog/cinderlib-csi` container available in the docker hub.
+There is a sample `Dockerfile` included in the project that has been used to create the `akrog/ember-csi` container available in the docker hub.
 
 There are two bash scripts, one for each example, that will run the CSI driver on a container, be aware that the container needs to run as privileged to mount the volumes.
 
@@ -193,7 +191,7 @@ For the RBD example we need to copy our "ceph.conf" and "ceph.client.cinder.keyr
 ```
     $ cd examples/docker
     $ ./rbd.sh
-    Starting cinderlib CSI v0.0.2 (cinderlib: v0.2.1, cinder: v11.1.0, CSI spec: v0.2.0)
+    Starting Ember CSI v0.0.2 (cinderlib: v0.2.1, cinder: v11.1.0, CSI spec: v0.2.0)
     Supported filesystems are: cramfs, minix, ext3, ext2, ext4, xfs, btrfs
     Running backend LVMVolumeDriver v3.0.0
     Debugging is ON with rpdb
@@ -210,7 +208,7 @@ Checking the plugin info:
 
 ```
     $ csc identity plugin-info -e tcp://127.0.0.1:50051
-    "com.redhat.cinderlib-csi"      "0.0.2" "cinder-driver"="RBDDriver"     "cinder-driver-supported"="True"        "cinder-driver-version"="1.2.0" "cinder-version"="11.1.0"       "cinderlib-version"="0.2.1"     "persistence"="DBPersistence"
+    "io.ember-csi"      "0.0.2" "cinder-driver"="RBDDriver"     "cinder-driver-supported"="True"        "cinder-driver-version"="1.2.0" "cinder-version"="11.1.0"       "cinderlib-version"="0.2.1"     "persistence"="DBPersistence"
 ```
 
 Checking the node id:
@@ -339,14 +337,14 @@ This CSI driver currently only supports `SINGLE_MODE_WRITER`, although it will a
 
 ## Debugging
 
-The first tool for debugging is the log that displays detailed information on the driver code used by *cinderlib-CSI*.  We can enable INFO or DEBUG logs using the `X_CSI_CINDERLIB_CONFIG` environmental variable.
+The first tool for debugging is the log that displays detailed information on the driver code used by *ember-CSI*.  We can enable INFO or DEBUG logs using the `X_CSI_EMBER_CONFIG` environmental variable.
 
 To enable logs, defaulting to INFO level, we must set the `disable_logs` key to `false`.  If we want them at DEBUG levels, we also need to set `debug` to `true`.
 
 For baremetal, enablig DEBUG log levels can be done like this:
 
 ```
-    export X_CSI_CINDERLIB_CONFIG={"project_id":"com.redhat.cinderlib-csi","user_id":"com.redhat.cinderlib-csi","root_helper":"sudo","disable_logs":false,"debug":true}
+    export X_CSI_EMBER_CONFIG={"project_id":"io.ember-csi","user_id":"io.ember-csi","root_helper":"sudo","disable_logs":false,"debug":true}
 
 ```
 
@@ -355,17 +353,17 @@ For containers we can just add the environmental variable to a file and import i
 In both cases it should not have the `export` command:
 
 ```
-    X_CSI_CINDERLIB_CONFIG={"project_id":"com.redhat.cinderlib-csi","user_id":"com.redhat.cinderlib-csi","root_helper":"sudo","disable_logs":false,"debug":true}
+    X_CSI_EMBER_CONFIG={"project_id":"io.ember-csi","user_id":"io.ember-csi","root_helper":"sudo","disable_logs":false,"debug":true}
 
 ```
 
-Besides this basic debugging level, the cinderlib-CSI plugin also supports live debugging when run in the baremetal and when running as a container.
+Besides this basic debugging level, the Ember CSI plugin also supports live debugging when run in the baremetal and when running as a container.
 
 There are two mechanisms that can be used to debug the driver: with `pdb`, and with `rpdb`.
 
 The difference between them is that `pdb` works with stdin and stdout, whereas `rpdb` opens port 4444 to accept remote connections for debugging.
 
-Debugging the cinderlib-CSI plugin requires enabling debugging on the plugin before starting it, and then one it is running we have to turn it on.
+Debugging the Ember CSI plugin requires enabling debugging on the plugin before starting it, and then one it is running we have to turn it on.
 
 Enabling debugging is done using the `X_CSI_DEBUG_MODE` environmental variable.  Setting it to `pdb` or `rpdb` will enable debugging.  The plugin has this feature disabled by default, but our *latest* and *master* containers have it enabled by default with `rpdb`.
 
@@ -376,13 +374,13 @@ After turning it *ON* the plugin will stop for debugging on the next GRPC reques
 Sending the signal to toggle ON/OFF the debugging is quite easy.  For baremetal we can do:
 
 ```
-    $ pkill -USR1 cinderlib-csi
+    $ pkill -USR1 ember-csi
 ```
 
-And for the container (assuming its named `cinderlib-csi` like in the examples) we can do:
+And for the container (assuming its named `ember-csi` like in the examples) we can do:
 
 ```
-    $ docker kill -sUSR1 cinderlib-csi
+    $ docker kill -sUSR1 ember-csi
 ```
 
 If we are using `rpdb` then we'll have to connect to the port:
@@ -407,8 +405,8 @@ When I try to stage a volume using a containerized *Node* I see the error "ERROR
 Turning the DEBUG log levels shows me login errors:
 
 ```
-    2018-07-03 11:14:57.258 1 WARNING os_brick.initiator.connectors.iscsi [req-0e77bf32-a29b-40d1-b359-9e115435a94a com.redhat.cinderlib-csi com.redhat.cinderlib-csi - - -] Failed to connect to iSCSI portal 192.168.1.1:3260.
-    2018-07-03 11:14:57.259 1 WARNING os_brick.initiator.connectors.iscsi [req-0e77bf32-a29b-40d1-b359-9e115435a94a com.redhat.cinderlib-csi com.redhat.cinderlib-csi - - -] Failed to login iSCSI target iqn.2008-05.com.something:smt00153500071-514f0c50023f6c01 on portal 192.168.1.1:3260 (exit code 12).: ProcessExecutionError: Unexpected error while running command.
+    2018-07-03 11:14:57.258 1 WARNING os_brick.initiator.connectors.iscsi [req-0e77bf32-a29b-40d1-b359-9e115435a94a io.ember-csi io.ember-csi - - -] Failed to connect to iSCSI portal 192.168.1.1:3260.
+    2018-07-03 11:14:57.259 1 WARNING os_brick.initiator.connectors.iscsi [req-0e77bf32-a29b-40d1-b359-9e115435a94a io.ember-csi io.ember-csi - - -] Failed to login iSCSI target iqn.2008-05.com.something:smt00153500071-514f0c50023f6c01 on portal 192.168.1.1:3260 (exit code 12).: ProcessExecutionError: Unexpected error while running command.
 ```
 
 And looking into the host's journal (where the `iscsid` daemon is running) I can see `Kmod` errors:
@@ -421,7 +419,7 @@ This seems to be cause by some kind of incompatibility between the host and the 
 
 ## Support
 
-For any questions or concerns please file an issue with the [cinderlib-csi](https://github.com/akrog/cinderlib-csi/issues) project or ping me on IRC (my handle is geguileo and I hang on the #openstack-cinder channel in Freenode).
+For any questions or concerns please file an issue with the [ember-csi](https://github.com/akrog/ember-csi/issues) project or ping me on IRC (my handle is geguileo and I hang on the #openstack-cinder channel in Freenode).
 
 
 ## TODO
@@ -436,7 +434,7 @@ There are many things that need to be done in this POC driver, and here's a non 
 - Make driver more resilient
 - Test driver in Kubernetes
 - Review some of the returned error codes
-- Support volume attributes via cinder volume types
+- Support volume attributes via volume types
 - Look into multi-attaching
 - Support read-only mode
 - Report capacity based on over provisioning values

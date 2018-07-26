@@ -1,5 +1,5 @@
-Welcome to Cinderlib CSI driver's documentation!
-======================================
+Welcome to Ember CSI plugin's documentation!
+============================================
 
 Contents:
 

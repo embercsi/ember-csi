@@ -29,7 +29,7 @@ import csi_pb2_grpc as csi
 import csi_types as types
 
 
-NAME = 'com.redhat.cinderlib-csi'
+NAME = 'io.ember-csi'
 VENDOR_VERSION = '0.0.2'
 CSI_SPEC = '0.2.0'
 
@@ -37,8 +37,8 @@ DEFAULT_ENDPOINT = '[::]:50051'
 DEFAULT_SIZE = 1.0
 DEFAULT_PERSISTENCE_CFG = {'storage': 'db',
                            'connection': 'sqlite:///db.sqlite'}
-DEFAULT_CINDERLIB_CFG = {'project_id': NAME, 'user_id': NAME,
-                         'root_helper': 'sudo'}
+DEFAULT_EMBER_CFG = {'project_id': NAME, 'user_id': NAME,
+                     'root_helper': 'sudo'}
 DEFAULT_MOUNT_FS = 'ext4'
 REFRESH_TIME = 1
 MULTIPATH_FIND_RETRIES = 3
@@ -1042,8 +1042,8 @@ def main():
     storage_nw_ip = os.environ.get('X_CSI_STORAGE_NW_IP')
     persistence_config = _load_json_config('X_CSI_PERSISTENCE_CONFIG',
                                            DEFAULT_PERSISTENCE_CFG)
-    cinderlib_config = _load_json_config('X_CSI_CINDERLIB_CONFIG',
-                                         DEFAULT_CINDERLIB_CFG)
+    cinderlib_config = _load_json_config('X_CSI_EMBER_CONFIG',
+                                         DEFAULT_EMBER_CFG)
     backend_config = _load_json_config('X_CSI_BACKEND_CONFIG')
     node_id = os.environ.get('X_CSI_NODE_ID')
     if mode != 'node' and not backend_config:
@@ -1051,7 +1051,7 @@ def main():
         exit(2)
 
     mode_msg = 'in ' + mode + ' only mode ' if mode != 'all' else ''
-    print('Starting cinderlib CSI v%s %s(cinderlib: v%s, cinder: v%s, '
+    print('Starting Ember CSI v%s %s(cinderlib: v%s, cinder: v%s, '
           'CSI spec: v%s)' %
           (VENDOR_VERSION, mode_msg, cinderlib.__version__, CINDER_VERSION,
            CSI_SPEC))

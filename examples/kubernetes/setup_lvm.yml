@@ -1,14 +1,14 @@
 - name: Create LVM backing file
-  command: truncate -s 10G /root/cinder-volumes
+  command: truncate -s 10G /root/ember-volumes
   args:
-      creates: cinder-volumes
+      creates: ember-volumes
 
-- shell: "losetup -l | awk '/cinder-volumes/ {print $1}'"
+- shell: "losetup -l | awk '/ember-volumes/ {print $1}'"
   changed_when: false
   register: existing_loop_device
 
 - name: Create loopback device
-  command: "losetup --show -f /root/cinder-volumes"
+  command: "losetup --show -f /root/ember-volumes"
   register: new_loop_device
   when: existing_loop_device.stdout == ''
  # Workaround because Ansible destroys registers when skipped
@@ -20,7 +20,7 @@
       creates: /root/lvm.pvcreate
 
 - name: "Create VG"
-  shell: "vgcreate cinder-volumes {{loop_device}} && touch /root/lvm.vgcreate"
+  shell: "vgcreate ember-volumes {{loop_device}} && touch /root/lvm.vgcreate"
   args:
       creates: /root/lvm.vgcreate
 

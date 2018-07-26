@@ -1,6 +1,6 @@
 FROM akrog/cinderlib:latest
 LABEL maintainers="Gorka Eguileor <geguileo@redhat.com>"
-LABEL description="Cinderlib CSI Plugin"
+LABEL description="Ember CSI Plugin"
 
 # We need to upgrade pyasn1 because the package for RDO is not new enough for
 # pyasn1_modules, which is used by some of the Google's libraries
@@ -10,7 +10,7 @@ RUN yum -y install xfsprogs e2fsprogs btrfs-progs && \
     pip install --no-cache-dir --upgrade 'pyasn1<0.5.0,>=0.4.1' && \
     mkdir /csi
 
-# Copy cinderlib-csi from directory directory
+# Copy Ember-csi from directory directory
 COPY . /csi
 
 RUN pip install -e /csi
@@ -24,4 +24,4 @@ EXPOSE 50051 4444
 ENV X_CSI_DEBUG_MODE=rpdb
 
 # Define default command
-CMD ["cinderlib-csi"]
+CMD ["ember-csi"]

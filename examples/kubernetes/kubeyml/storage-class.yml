@@ -5,6 +5,6 @@ metadata:
   namespace: default
   annotations:
     storageclass.kubernetes.io/is-default-class: "true"
-provisioner: com.redhat.cinderlib-csi
+provisioner: io.ember-csi
 reclaimPolicy: Delete
 volumeBindingMode: Immediate

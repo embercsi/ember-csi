@@ -8,4 +8,4 @@ spec:
   resources:
     requests:
       storage: 1Gi
-  storageClassName: cinderlib-csi-xtremio-sc
+  storageClassName: ember-csi-xtremio-sc

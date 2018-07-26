@@ -2,7 +2,7 @@
 
 This demo is based on Luis Pabon's [Kubeup repository](https://github.com/lpabon/kubeup).
 
-It deploys a Kubernetes single master cluster on CentOS 7 with 2 additional nodes using [kubeadm](http://kubernetes.io/docs/admin/kubeadm/) and cinderlib-CSI as the storage provider with an LVM loopback device as the backend.
+It deploys a Kubernetes single master cluster on CentOS 7 with 2 additional nodes using [kubeadm](http://kubernetes.io/docs/admin/kubeadm/) and Ember-CSI as the storage provider with an LVM loopback device as the backend.
 
 CSI driver is set as the default storage class, running 1 service (`StatefulSet`) with the CSI plugin running as *Controller* to manage the provisioning on *node0*, and a service (`DaemonSet`) running the plugin as *Node* mode on each of the nodes to manage local attachments.
 
@@ -112,14 +112,14 @@ Check the logs of the CSI *controller*:
 
 ```
 [vagrant@master ~]$ kubectl logs csi-controller-0 -c csi-driver
-Starting cinderlib CSI v0.0.2 in controller only mode (cinderlib: v0.2.2.dev0, cinder: v11.1.1, CSI spec: v0.2.0)
+Starting Ember CSI v0.0.2 in controller only mode (cinderlib: v0.2.2.dev0, cinder: v11.1.1, CSI spec: v0.2.0)
 Supported filesystems are: cramfs, minix, btrfs, ext2, ext3, ext4, xfs
 Running as controller with backend LVMVolumeDriver v3.0.0
-Debugging feature is ENABLED with cinderlib_csi.rpdb and OFF. Toggle it with SIGUSR1.
+Debugging feature is ENABLED with ember_csi.rpdb and OFF. Toggle it with SIGUSR1.
 Now serving on unix:///csi-data/csi.sock...
 => 2018-07-24 10:14:28.981718 GRPC [126562384]: GetPluginInfo without params
 <= 2018-07-24 10:14:28.981747 GRPC in 0s [126562384]: GetPluginInfo returns
-        name: "com.redhat.cinderlib-csi"
+        name: "io.ember-csi"
         vendor_version: "0.0.2"
         manifest {
           key: "cinder-driver"
@@ -195,14 +195,14 @@ Check the CSI *node* logs:
 
 ```
 [vagrant@master ~]$ kubectl logs csi-node-29sls -c csi-driver
-Starting cinderlib CSI v0.0.2 in node only mode (cinderlib: v0.2.2.dev0, cinder: v11.1.1, CSI spec: v0.2.0)
+Starting Ember CSI v0.0.2 in node only mode (cinderlib: v0.2.2.dev0, cinder: v11.1.1, CSI spec: v0.2.0)
 Supported filesystems are: cramfs, minix, btrfs, ext2, ext3, ext4, xfs
 Running as node
-Debugging feature is ENABLED with cinderlib_csi.rpdb and OFF. Toggle it with SIGUSR1.
+Debugging feature is ENABLED with ember_csi.rpdb and OFF. Toggle it with SIGUSR1.
 Now serving on unix:///csi-data/csi.sock...
 => 2018-07-24 10:14:04.339319 GRPC [123797944]: GetPluginInfo without params
 <= 2018-07-24 10:14:04.339360 GRPC in 0s [123797944]: GetPluginInfo returns
-        name: "com.redhat.cinderlib-csi"
+        name: "io.ember-csi"
         vendor_version: "0.0.2"
         manifest {
           key: "cinder-version"
@@ -226,14 +226,14 @@ Now serving on unix:///csi-data/csi.sock...
 
 
 [vagrant@master ~]$ kubectl logs csi-node-p7r9r -c csi-driver
-Starting cinderlib CSI v0.0.2 in node only mode (cinderlib: v0.2.2.dev0, cinder: v11.1.1, CSI spec: v0.2.0)
+Starting Ember CSI v0.0.2 in node only mode (cinderlib: v0.2.2.dev0, cinder: v11.1.1, CSI spec: v0.2.0)
 Supported filesystems are: cramfs, minix, btrfs, ext2, ext3, ext4, xfs
 Running as node
-Debugging feature is ENABLED with cinderlib_csi.rpdb and OFF. Toggle it with SIGUSR1.
+Debugging feature is ENABLED with ember_csi.rpdb and OFF. Toggle it with SIGUSR1.
 Now serving on unix:///csi-data/csi.sock...
 => 2018-07-24 10:14:24.686979 GRPC [126448056]: GetPluginInfo without params
 <= 2018-07-24 10:14:24.687173 GRPC in 0s [126448056]: GetPluginInfo returns
-        name: "com.redhat.cinderlib-csi"
+        name: "io.ember-csi"
         vendor_version: "0.0.2"
         manifest {
           key: "cinder-version"
@@ -270,13 +270,13 @@ Name:         node0
 Namespace:    default
 Labels:       <none>
 Annotations:  value={"platform":"x86_64","host":"node0","do_local_attach":false,"ip":"192.168.10.100","os_type":"linux2","multipath":true,"initiator":"iqn.1994
--05.com.redhat:6cf4bf7fddc0"}                                                                                                                                  API Version:  cinderlib.gorka.eguileor.com/v1
+-05.com.redhat:6cf4bf7fddc0"}                                                                                                                                  API Version:  ember-csi.io/v1
 Kind:         KeyValue
 Metadata:
   Creation Timestamp:  2018-07-24T10:14:16Z
   Generation:          1
   Resource Version:    760
-  Self Link:           /apis/cinderlib.gorka.eguileor.com/v1/namespaces/default/keyvalues/node0
+  Self Link:           /apis/ember-csi.io/v1/namespaces/default/keyvalues/node0
   UID:                 525d03cf-8f2a-11e8-847c-525400059da0
 Events:                <none>
 
@@ -285,13 +285,13 @@ Name:         node1
 Namespace:    default
 Labels:       <none>
 Annotations:  value={"platform":"x86_64","host":"node1","do_local_attach":false,"ip":"192.168.10.101","os_type":"linux2","multipath":true,"initiator":"iqn.1994
--05.com.redhat:1ad738f0b4e"}                                                                                                                                   API Version:  cinderlib.gorka.eguileor.com/v1
+-05.com.redhat:1ad738f0b4e"}                                                                                                                                   API Version:  ember-csi.io/v1
 Kind:         KeyValue
 Metadata:
   Creation Timestamp:  2018-07-24T10:14:03Z
   Generation:          1
   Resource Version:    735
-  Self Link:           /apis/cinderlib.gorka.eguileor.com/v1/namespaces/default/keyvalues/node1
+  Self Link:           /apis/ember-csi.io/v1/namespaces/default/keyvalues/node1
   UID:                 4a4481dc-8f2a-11e8-847c-525400059da0
 Events:                <none>
 ```
@@ -329,13 +329,13 @@ Labels:       backend_name=lvm
               volume_id=4c1b19f4-7336-4d97-b4ab-5ea70efd39d5
               volume_name=pvc-c24d470e8f2e11e8
 Annotations:  json={"ovo":{"versioned_object.version":"1.6","versioned_object.name":"Volume","versioned_object.data":{"migration_status":null,"provider_id":null,"availability_zone":"lvm","terminated_at":null,"updat...
-API Version:  cinderlib.gorka.eguileor.com/v1
+API Version:  ember-csi.io/v1
 Kind:         Volume
 Metadata:
   Creation Timestamp:  2018-07-24T10:46:02Z
   Generation:          1
   Resource Version:    3459
-  Self Link:           /apis/cinderlib.gorka.eguileor.com/v1/namespaces/default/volumes/4c1b19f4-7336-4d97-b4ab-5ea70efd39d5
+  Self Link:           /apis/ember-csi.io/v1/namespaces/default/volumes/4c1b19f4-7336-4d97-b4ab-5ea70efd39d5
   UID:                 c2791ec8-8f2e-11e8-847c-525400059da0
 Events:                <none>
 ```
@@ -361,7 +361,7 @@ Tail the CSI *controller* plugin logs to see that the plugin exports the volume:
 
 ```
 [vagrant@master ~]$ kubectl logs csi-controller-0 -fc csi-driver
-Starting cinderlib CSI v0.0.2 in controller only mode (cinderlib: v0.2.2.dev0, cinder: v11.1.1, CSI spec: v0.2.0)
+Starting Ember CSI v0.0.2 in controller only mode (cinderlib: v0.2.2.dev0, cinder: v11.1.1, CSI spec: v0.2.0)
 
 [ . . .]
 
@@ -378,7 +378,7 @@ Starting cinderlib CSI v0.0.2 in controller only mode (cinderlib: v0.2.2.dev0, c
         }
         volume_attributes {
           key: "storage.kubernetes.io/csiProvisionerIdentity"
-          value: "1532427201926-8081-com.redhat.cinderlib-csi"
+          value: "1532427201926-8081-io.ember-csi"
         }
 <= 2018-07-24 10:54:51.735242 GRPC in 2s [126565024]: ControllerPublishVolume returns
         publish_info {
@@ -392,7 +392,7 @@ Tail the CSI *node* plugin logs to see that the plugin actually attaches the vol
 
 ```
 [vagrant@master ~]$ kubectl logs csi-node-29sls -c csi-driver
-Starting cinderlib CSI v0.0.2 in node only mode (cinderlib: v0.2.2.dev0, cinder: v11.1.1, CSI spec: v0.2.0)
+Starting Ember CSI v0.0.2 in node only mode (cinderlib: v0.2.2.dev0, cinder: v11.1.1, CSI spec: v0.2.0)
 
 [ . . . ]
 
@@ -419,7 +419,7 @@ Starting cinderlib CSI v0.0.2 in node only mode (cinderlib: v0.2.2.dev0, cinder:
         }
         volume_attributes {
           key: "storage.kubernetes.io/csiProvisionerIdentity"
-          value: "1532427201926-8081-com.redhat.cinderlib-csi"
+          value: "1532427201926-8081-io.ember-csi"
         }
 => 2018-07-24 10:55:09.380330 GRPC [123799384]: NodeGetCapabilities without params
 <= 2018-07-24 10:55:09.380891 GRPC in 0s [123799384]: NodeGetCapabilities returns
@@ -444,7 +444,7 @@ Starting cinderlib CSI v0.0.2 in node only mode (cinderlib: v0.2.2.dev0, cinder:
         }
         volume_attributes {
           key: "storage.kubernetes.io/csiProvisionerIdentity"
-          value: "1532427201926-8081-com.redhat.cinderlib-csi"
+          value: "1532427201926-8081-io.ember-csi"
         }
 Retrying to get a multipathRetrying to get a multipath=> 2018-07-24 10:55:25.546019 GRPC [124162248]: NodeGetCapabilities without params
 <= 2018-07-24 10:55:25.546121 GRPC in 0s [124162248]: NodeGetCapabilities returns
@@ -469,7 +469,7 @@ Retrying to get a multipathRetrying to get a multipath=> 2018-07-24 10:55:25.546
         }
         volume_attributes {
           key: "storage.kubernetes.io/csiProvisionerIdentity"
-          value: "1532427201926-8081-com.redhat.cinderlib-csi"
+          value: "1532427201926-8081-io.ember-csi"
         }
 Retrying to get a multipath<= 2018-07-24 10:55:34.895940 GRPC in 41s [123797944]: NodeStageVolume returns nothing
 <= 2018-07-24 10:55:34.900178 GRPC in 26s [123798784]: NodeStageVolume returns nothing
@@ -498,7 +498,7 @@ Retrying to get a multipath<= 2018-07-24 10:55:34.895940 GRPC in 41s [123797944]
         }
         volume_attributes {
           key: "storage.kubernetes.io/csiProvisionerIdentity"
-          value: "1532427201926-8081-com.redhat.cinderlib-csi"
+          value: "1532427201926-8081-io.ember-csi"
         }
 <= 2018-07-24 10:55:34.995042 GRPC in 0s [123800944]: NodePublishVolume returns nothing
 ^C
@@ -526,21 +526,21 @@ Namespace:    default
 Labels:       connection_id=b58dceb8-e793-4b11-b5a5-aaf1ca56d9e2
               volume_id=4c1b19f4-7336-4d97-b4ab-5ea70efd39d5
 Annotations:  json={"ovo":{"versioned_object.version":"1.2","versioned_object.name":"VolumeAttachment","versioned_object.data":{"instance_uuid":null,"detach_time":null,"attach_time":null,"connection_info":{"connect...
-API Version:  cinderlib.gorka.eguileor.com/v1
+API Version:  ember-csi.io/v1
 Kind:         Connection
 Metadata:
   Creation Timestamp:  2018-07-24T10:54:51Z
   Generation:          1
   Resource Version:    4284
-  Self Link:           /apis/cinderlib.gorka.eguileor.com/v1/namespaces/default/connections/b58dceb8-e793-4b11-b5a5-aaf1ca56d9e2
+  Self Link:           /apis/ember-csi.io/v1/namespaces/default/connections/b58dceb8-e793-4b11-b5a5-aaf1ca56d9e2
   UID:                 fdb065e5-8f2f-11e8-847c-525400059da0
 Events:                <none>
 ```
 
-Get all the cinderlib-CSI related metadata:
+Get all the Ember-CSI related metadata:
 
 ```
-[vagrant@master ~]$ kubectl get cinderlib
+[vagrant@master ~]$ kubectl get ember
 NAME      AGE
 node0     49m
 node1     49m
