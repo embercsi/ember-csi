@@ -15,6 +15,8 @@
 
 import sys
 import os
+import recommonmark
+from recommonmark import transform as md_transform
 
 # If extensions (or modules to document with autodoc) are in another
 # directory, add these directories to sys.path here. If the directory is
@@ -31,6 +33,14 @@ project_root = os.path.dirname(cwd)
 # version is used.
 sys.path.insert(0, project_root)
 
+import modulefaker
+
+for module in ('cinderlib', 'google', 'google.protobuf', 'eventlet',
+               'kubernetes', 'grpc', 'concurrent', 'os_brick',
+               'os_brick.initiator', 'oslo_concurrency'):
+    modulefaker.fake_module(module)
+
+
 import ember_csi
 
 # -- General configuration ---------------------------------------------
@@ -45,8 +55,12 @@ extensions = ['sphinx.ext.autodoc', 'sphinx.ext.viewcode']
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 
+source_parsers = {
+   '.md': 'recommonmark.parser.CommonMarkParser',
+}
+
 # The suffix of source filenames.
-source_suffix = '.rst'
+source_suffix = ['.rst', '.md']
 
 # The encoding of source files.
 #source_encoding = 'utf-8-sig'
@@ -273,3 +287,12 @@ texinfo_documents = [
 
 # If true, do not generate a @detailmenu in the "Top" node's menu.
 #texinfo_no_detailmenu = False
+
+github_doc_root = 'https://github.com/akrog/ember-csi/tree/master/docs/'
+
+def setup(app):
+    app.add_config_value('recommonmark_config', {
+            'url_resolver': lambda url: github_doc_root + url,
+            'auto_toc_tree_section': 'Contents',
+            }, True)
+    app.add_transform(md_transform.AutoStructify)

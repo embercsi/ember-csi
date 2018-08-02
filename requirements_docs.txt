@@ -1,0 +1,5 @@
+Sphinx==1.6.5
+recommonmark==0.4.0
+git+https://github.com/akrog/modulefaker.git#egg=modulefaker
+git+https://github.com/akrog/cindermock.git
+git+https://github.com/akrog/nosbrickmock.git

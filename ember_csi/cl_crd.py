@@ -4,7 +4,7 @@ The identifier for this plugin when using it in the X_CSI_PERSISTENCE_CONFIG
 environmental variable is "crd".
 
 All Ember-CSI containers (node and controllers) must have the following
-RBACs:
+RBACs::
 
    # Allow listing and creating CRDs
    - apiGroups: ['apiextensions.k8s.io']
@@ -17,7 +17,7 @@ RBACs:
      verbs: ["*"]
 
 Our Custom Resource Objects can be listed with their singular, plural, and
-short names:
+short names::
 
     kubectl get vol
     kubectl get volume
@@ -36,7 +36,7 @@ short names:
     kubectl get keyvalues
 
 Since they are added to the all and ember categories we can also see them
-with:
+with::
 
     kubectl get all
     kubectl get ember
