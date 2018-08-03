@@ -45,3 +45,7 @@ for i in $(seq 1 ${KUBEVIRT_NUM_NODES}); do
     _ssh $i 'systemctl daemon-reload'
     _ssh $i 'systemctl restart kubelet'
 done
+
+$_kubectl delete -f https://github.com/kubevirt/kubevirt/releases/download/v0.7.0/kubevirt.yaml
+sleep 2
+$_kubectl create -f https://github.com/kubevirt/kubevirt/releases/download/v0.7.0/kubevirt.yaml
