@@ -12,6 +12,7 @@ Given the following assumptions:
 - We have modified `X_CSI_BACKEND_CONFIG` environmental variable in the `csi.yml` (example is for XtremIO).
 - Our current working directory is `kubevirt` repository's root directory.
 - We haven't created a kubevirt cluster yet.
+- The csi_up.sh scripts targets kubevirt version 0.7
 
 The following commands will create the cluster, make changes to the cluster to support CSI plugins, deploy the CSI plugin, create a PVC, and an app that uses the PVC:
 
@@ -43,3 +44,5 @@ For example to list volumes you can do:
 ```
 cluster/kubectl.sh exec -c csc -it csi-xtremio-pod csc controller list-volumes
 ```
+
+The example above created a PVC using the ember-csi driver and attached to a 'dummy' application that allowed attaching and inspecting the PVC. To launch a VM with kubevirt, you will also need to create the CDI pod and create a PVC with the correct CDI annotations. Once that is created, you should be able to create a VMI object using the newly created ember-csi backed PVC to launch a VM with Kubevirt. For more information, follow the instructions in the ['Getting started with storage'](https://github.com/kubevirt/kubevirt/blob/master/docs/devel/storage.md) document in Kubevirt.
