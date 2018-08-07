@@ -10,15 +10,19 @@ with open('HISTORY.md') as history_file:
     history = history_file.read()
 
 requirements = [
-    'cinderlib>=0.2.2',
+    'cinderlib>0.2.1',
     'grpcio==1.12.0',
     # GRPCIO v1.12.0 has broken dependencies, so we include them here
     'protobuf>=3.5.0.post1',
+    # For the CRD persistent metadata plugin
+    'kubernetes>=6.0.0,<7.0.0',
+    # Needed because some Kubernetes dependencies use version in format of 4.*
+    'setuptools==40.0.0',
 ]
 
 dependency_links = [
-    # From github until cinderlib persistence is published in pip
-    'git+https://github.com/akrog/cinderlib.git@persistence#egg=cinderlib-1',
+    # From github until cinderlib's latest code is published in pip
+    'git+https://github.com/akrog/cinderlib.git@master#egg=cinderlib-1',
 ]
 
 test_requirements = [
@@ -26,24 +30,22 @@ test_requirements = [
 ]
 
 setuptools.setup(
-    name='cinderlib-csi',
+    name='ember-csi',
     version='0.0.2',
-    description=("CSI driver supporting all Cinder drivers without needing to "
-                 "run any additional services like RabbitMQ, MariaDB, or "
-                 "Cinder service"),
+    description=("Multi-vendor CSI plugin supporting over 80 storage drivers"),
     long_description=readme + '\n---\n' + history,
     long_description_content_type='text/markdown',
     author="Gorka Eguileor",
     author_email='gorka@eguileor.com',
-    url='https://github.com/akrog/cinderlib-csi',
+    url='https://github.com/akrog/ember-csi',
     packages=setuptools.find_packages(exclude=['tmp', 'tests*']),
-    package_dir={'cinderlib_csi': 'cinderlib_csi'},
+    package_dir={'ember_csi': 'ember_csi'},
     include_package_data=True,
     dependency_links=dependency_links,
     install_requires=requirements,
     license="Apache Software License 2.0",
     zip_safe=False,
-    keywords='cinderlib_csi',
+    keywords='ember_csi',
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',
         'Intended Audience :: Developers',
@@ -55,6 +57,9 @@ setuptools.setup(
     test_suite='tests',
     tests_require=test_requirements,
     entry_points={
-        'console_scripts': ['cinderlib-csi=cinderlib_csi.cinderlib_csi:main'],
+        'console_scripts': ['ember-csi=ember_csi.ember_csi:main'],
+        'cinderlib.persistence.storage': [
+            'crd = ember_csi.cl_crd:CRDPersistence',
+        ],
     }
 )

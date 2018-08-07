@@ -2,6 +2,6 @@
 Usage
 =====
 
-To use Cinderlib CSI driver in a project::
+To use Ember CSI plugin in a project::
 
-    import cinderlib_csi
+    import ember_csi

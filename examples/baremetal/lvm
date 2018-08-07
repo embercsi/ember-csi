@@ -13,5 +13,5 @@ export CSI_MODE=all
 export CSI_ENDPOINT='[::]:50051'
 
 export X_CSI_PERSISTENCE_CONFIG="{\"storage\":\"db\",\"connection\":\"sqlite:///`realpath ../../tmp`/db.sqlite\"}"
-export X_CSI_CINDERLIB_CONFIG='{"project_id":"com.redhat.cinderlib-csi","user_id":"com.redhat.cinderlib-csi","root_helper":"sudo"}'
-export X_CSI_BACKEND_CONFIG='{"iscsi_protocol":"iscsi","iscsi_ip_address":"$IP1","iscsi_secondary_ip_addresses":["$IP2"],"volume_backend_name":"CSI","volume_driver":"cinder.volume.drivers.lvm.LVMVolumeDriver","volume_group":"cinder-volumes","iscsi_helper":"lioadm"}'
+export X_CSI_EMBER_CONFIG='{"project_id":"io.ember-csi","user_id":"io.ember-csi","root_helper":"sudo"}'
+export X_CSI_BACKEND_CONFIG='{"iscsi_protocol":"iscsi","iscsi_ip_address":"$IP1","iscsi_secondary_ip_addresses":["$IP2"],"volume_backend_name":"CSI","volume_driver":"cinder.volume.drivers.lvm.LVMVolumeDriver","volume_group":"ember-volumes","iscsi_helper":"lioadm"}'

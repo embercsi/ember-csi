@@ -3,6 +3,7 @@
 # Supports CSI v0.2.0
 # TODO(geguileo): Check that all parameters are present on received RPC calls
 from concurrent import futures
+import contextlib
 from datetime import datetime
 import functools
 import glob
@@ -12,12 +13,13 @@ import os
 import socket
 import stat
 import sys
+import threading
 import time
 import traceback
 
+import cinderlib
 from eventlet import tpool
 import grpc
-import cinderlib
 from os_brick.initiator import connector as brick_connector
 from oslo_concurrency import processutils as putils
 import pkg_resources
@@ -27,7 +29,7 @@ import csi_pb2_grpc as csi
 import csi_types as types
 
 
-NAME = 'com.redhat.cinderlib-csi'
+NAME = 'io.ember-csi'
 VENDOR_VERSION = '0.0.2'
 CSI_SPEC = '0.2.0'
 
@@ -35,16 +37,22 @@ DEFAULT_ENDPOINT = '[::]:50051'
 DEFAULT_SIZE = 1.0
 DEFAULT_PERSISTENCE_CFG = {'storage': 'db',
                            'connection': 'sqlite:///db.sqlite'}
-DEFAULT_CINDERLIB_CFG = {'project_id': NAME, 'user_id': NAME,
-                         'root_helper': 'sudo'}
+DEFAULT_EMBER_CFG = {'project_id': NAME, 'user_id': NAME,
+                     'root_helper': 'sudo'}
 DEFAULT_MOUNT_FS = 'ext4'
 REFRESH_TIME = 1
+MULTIPATH_FIND_RETRIES = 3
 
 GB = float(1024 ** 3)
 ONE_DAY_IN_SECONDS = 60 * 60 * 24
 CINDER_VERSION = pkg_resources.get_distribution('cinder').version
 NANOSECONDS = 10 ** 9
 EPOCH = datetime.utcfromtimestamp(0).replace(tzinfo=pytz.UTC)
+
+ABORT_DUPLICATES = (
+    (os.environ.get('X_CSI_ABORT_DUPLICATES') or '').upper() == 'TRUE')
+
+locks = {}
 
 
 def no_debug(f):
@@ -108,15 +116,17 @@ def logrpc(f):
     @functools.wraps(f)
     def dolog(self, request, context):
         req_id = id(request)
+        start = datetime.utcnow()
         if request.ListFields():
             msg = ' params\n%s' % tab(request)
         else:
             msg = 'out params'
-        sys.stdout.write('=> GRPC [%s]: %s with%s\n' %
-                         (req_id, f.__name__, msg))
+        sys.stdout.write('=> %s GRPC [%s]: %s with%s\n' %
+                         (start, req_id, f.__name__, msg))
         try:
             result = f(self, request, context)
         except Exception as exc:
+            end = datetime.utcnow()
             if context._state.code:
                 code = str(context._state.code)[11:]
                 details = context._state.details
@@ -125,15 +135,18 @@ def logrpc(f):
                 code = 'Unexpected exception'
                 details = exc.message
                 tback = '\n' + tab(traceback.format_exc())
-            sys.stdout.write('!! GRPC [%s]: %s on %s (%s)%s\n' %
-                             (req_id, code, f.__name__, details, tback))
+            sys.stdout.write('!! %s GRPC in %.0fs [%s]: %s on %s (%s)%s\n' %
+                             (end, (end - start).total_seconds(), req_id, code,
+                              f.__name__, details, tback))
             raise
+        end = datetime.utcnow()
         if str(result):
             str_result = '\n%s' % tab(result)
         else:
             str_result = ' nothing'
-        sys.stdout.write('<= GRPC [%s]: %s returns%s\n' %
-                         (req_id, f.__name__, str_result))
+        sys.stdout.write('<= %s GRPC in %.0fs [%s]: %s returns%s\n' %
+                         (end, (end - start).total_seconds(), req_id,
+                          f.__name__, str_result))
         return result
     return dolog
 
@@ -157,6 +170,57 @@ def require(*fields):
     return func_wrapper
 
 
+@contextlib.contextmanager
+def noop_cm():
+    yield
+
+
+class Worker(object):
+    current_workers = {}
+
+    @classmethod
+    def _unique_worker(cls, func, request_field):
+        @functools.wraps(func)
+        def wrapper(self, request, context):
+            global locks
+
+            worker_id = getattr(request, request_field)
+            my_method = func.__name__
+            my_thread = threading.current_thread().ident
+            current = (my_method, my_thread)
+
+            if ABORT_DUPLICATES:
+                lock = noop_cm()
+            else:
+                lock = locks.get(my_method)
+                if not lock:
+                    lock = locks[my_method] = threading.Lock()
+
+            with lock:
+                method, thread = cls.current_workers.setdefault(worker_id,
+                                                                current)
+
+                if (method, thread) != current:
+                    context.abort(
+                        grpc.StatusCode.ABORTED,
+                        'Cannot %s on %s while thread %s is doing %s' %
+                        (my_method, worker_id, thread, method))
+
+                try:
+                    return func(self, request, context)
+                finally:
+                    del cls.current_workers[worker_id]
+        return wrapper
+
+    @classmethod
+    def unique(cls, *args):
+        if len(args) == 1 and callable(args[0]):
+            return cls._unique_worker(args[0], 'volume_id')
+        else:
+            return functools.partial(cls._unique_worker,
+                                     request_field=args[0])
+
+
 class NodeInfo(object):
     __slots__ = ('id', 'connector_dict')
 
@@ -178,7 +242,8 @@ class NodeInfo(object):
         # For now just set multipathing and not enforcing it
         connector_dict = brick_connector.get_connector_properties(
             'sudo', storage_nw_ip, True, False)
-        kv = cinderlib.KeyValue(node_id, json.dumps(connector_dict))
+        value = json.dumps(connector_dict, separators=(',', ':'))
+        kv = cinderlib.KeyValue(node_id, value)
         cinderlib.Backend.persistence.set_key_value(kv)
         return NodeInfo(node_id, connector_dict)
 
@@ -193,6 +258,8 @@ class Identity(csi.IdentityServicer):
         [types.ServiceType.CONTROLLER_SERVICE])
     manifest = None
     MKFS = '/sbin/mkfs.'
+    DEFAULT_MKFS_ARGS = tuple()
+    MKFS_ARGS = {'ext4': ('-F',)}
 
     def __init__(self, server, cinderlib_cfg):
         if self.manifest is not None:
@@ -391,6 +458,7 @@ class Controller(csi.ControllerServicer, Identity):
     @debuggable
     @logrpc
     @require('name', 'volume_capabilities')
+    @Worker.unique('name')
     def CreateVolume(self, request, context):
         vol_size, min_size, max_size = self._calculate_size(request, context)
 
@@ -444,6 +512,7 @@ class Controller(csi.ControllerServicer, Identity):
     @debuggable
     @logrpc
     @require('volume_id')
+    @Worker.unique
     def DeleteVolume(self, request, context):
         vol = self._get_vol(request.volume_id)
         if not vol:
@@ -474,6 +543,7 @@ class Controller(csi.ControllerServicer, Identity):
     @debuggable
     @logrpc
     @require('volume_id', 'node_id', 'volume_capability')
+    @Worker.unique
     def ControllerPublishVolume(self, request, context):
         vol, node = self._get_vol_node(request, context)
 
@@ -496,6 +566,7 @@ class Controller(csi.ControllerServicer, Identity):
     @debuggable
     @logrpc
     @require('volume_id')
+    @Worker.unique
     def ControllerUnpublishVolume(self, request, context):
         vol, node = self._get_vol_node(request, context)
         for conn in vol.connections:
@@ -698,11 +769,10 @@ class Node(csi.NodeServicer, Identity):
         device = self._get_device(private_bind)
         return device, private_bind
 
-    def _format_device(self, capability, device, context):
+    def _format_device(self, fs_type, device, context):
         # We don't use the util-linux Python library to reduce dependencies
-        fs_type = capability.mount.fs_type or DEFAULT_MOUNT_FS
-        stdout, stderr = self.sudo('lsblk', '-nlfoFSTYPE', device, retries=4,
-                                   errors=[1, 32])
+        stdout, stderr = self.sudo('lsblk', '-nlfoFSTYPE', device, retries=5,
+                                   errors=[1, 32], delay=2)
         fs_types = filter(None, stdout.split())
         if fs_types:
             if fs_types[0] == fs_type:
@@ -711,7 +781,10 @@ class Node(csi.NodeServicer, Identity):
                           'Cannot stage filesystem %s on device that '
                           'already has filesystem %s' %
                           (fs_type, fs_types[0]))
-        self.sudo(self.MKFS + fs_type, device)
+        cmd = [self.MKFS + fs_type]
+        cmd.extend(self.MKFS_ARGS.get(fs_type, self.DEFAULT_MKFS_ARGS))
+        cmd.append(device)
+        self.sudo(*cmd)
 
     def _check_mount_exists(self, capability, private_bind, target, context):
         mounts = self._get_mount(private_bind)
@@ -730,15 +803,13 @@ class Node(csi.NodeServicer, Identity):
             return True
         return False
 
-    def _mount(self, capability, private_bind, target, context):
-        if self._check_mount_exists(capability, private_bind, target, context):
-            return
-
+    def _mount(self, fs_type, mount_flags, private_bind, target):
+        # Mount must only be called if it's already not mounted
         # We don't use the util-linux Python library to reduce dependencies
-        command = ['mount', '-t', capability.mount.fs_type or DEFAULT_MOUNT_FS]
-        if capability.mount.mount_flags:
+        command = ['mount', '-t', fs_type]
+        if mount_flags:
             command.append('-o')
-            command.append(','.join(capability.mount.mount_flags))
+            command.append(','.join(mount_flags))
         command.append(private_bind)
         command.append(target)
         self.sudo(*command)
@@ -763,6 +834,7 @@ class Node(csi.NodeServicer, Identity):
     @debuggable
     @logrpc
     @require('volume_id', 'staging_target_path', 'volume_capability')
+    @Worker.unique
     def NodeStageVolume(self, request, context):
         vol = self._get_vol(request.volume_id)
         if not vol:
@@ -778,7 +850,14 @@ class Node(csi.NodeServicer, Identity):
             # the persistence storage, but if we would need to deserialize it
             # with json.loads from key 'connection_info'
             conn = vol.connections[0]
-            conn.attach()
+            # Some slow systems may take a while to detect the multipath so we
+            # retry the attach.  Since we don't disconnect this will go fast
+            # through the login phase.
+            for i in range(MULTIPATH_FIND_RETRIES):
+                conn.attach()
+                if not conn.use_multipath or conn.path.startswith('/dev/dm'):
+                    break
+                sys.stdout.write('Retrying to get a multipath\n')
             # Create the private bind file
             open(private_bind, 'a').close()
             # TODO(geguileo): make path for private binds configurable
@@ -792,16 +871,20 @@ class Node(csi.NodeServicer, Identity):
                 # TODO(geguileo): Add support for NFS/QCOW2
                 self.sudo('mount', '--bind', private_bind, target)
         else:
-            self._format_device(request.volume_capability, private_bind,
-                                context)
-            self._mount(request.volume_capability, private_bind, target,
-                        context)
-
+            if not self._check_mount_exists(request.volume_capability,
+                                            private_bind, target, context):
+                fs_type = (request.volume_capability.mount.fs_type or
+                           DEFAULT_MOUNT_FS)
+                self._format_device(fs_type, private_bind, context)
+                self._mount(fs_type,
+                            request.volume_capability.mount.mount_flags,
+                            private_bind, target)
         return self.STAGE_RESP
 
     @debuggable
     @logrpc
     @require('volume_id', 'staging_target_path')
+    @Worker.unique
     def NodeUnstageVolume(self, request, context):
         # TODO(geguileo): Add support for NFS/QCOW2
         vol = self._get_vol(request.volume_id)
@@ -826,20 +909,23 @@ class Node(csi.NodeServicer, Identity):
                 context.abort(grpc.StatusCode.ABORTED,
                               'Operation pending for volume')
 
-            conn = vol.connections[0]
             if count == 2:
                 self.sudo('umount', request.staging_target_path,
                           retries=4)
-            conn.detach()
             if count > 0:
                 self.sudo('umount', private_bind, retries=4)
             os.remove(private_bind)
+
+            conn = vol.connections[0]
+            conn.detach()
+
         return self.UNSTAGE_RESP
 
     @debuggable
     @logrpc
     @require('volume_id', 'staging_target_path', 'target_path',
              'volume_capability')
+    @Worker.unique
     def NodePublishVolume(self, request, context):
         self._validate_capabilities([request.volume_capability], context)
         staging_target, is_block = self._check_path(request, context,
@@ -875,6 +961,7 @@ class Node(csi.NodeServicer, Identity):
     @debuggable
     @logrpc
     @require('volume_id', 'target_path')
+    @Worker.unique
     def NodeUnpublishVolume(self, request, context):
         device = self._get_device(request.target_path)
         if device:
@@ -955,16 +1042,16 @@ def main():
     storage_nw_ip = os.environ.get('X_CSI_STORAGE_NW_IP')
     persistence_config = _load_json_config('X_CSI_PERSISTENCE_CONFIG',
                                            DEFAULT_PERSISTENCE_CFG)
-    cinderlib_config = _load_json_config('X_CSI_CINDERLIB_CONFIG',
-                                         DEFAULT_CINDERLIB_CFG)
+    cinderlib_config = _load_json_config('X_CSI_EMBER_CONFIG',
+                                         DEFAULT_EMBER_CFG)
     backend_config = _load_json_config('X_CSI_BACKEND_CONFIG')
-    node_id = _load_json_config('X_CSI_NODE_ID')
+    node_id = os.environ.get('X_CSI_NODE_ID')
     if mode != 'node' and not backend_config:
         print('Missing required backend configuration')
         exit(2)
 
     mode_msg = 'in ' + mode + ' only mode ' if mode != 'all' else ''
-    print('Starting cinderlib CSI v%s %s(cinderlib: v%s, cinder: v%s, '
+    print('Starting Ember CSI v%s %s(cinderlib: v%s, cinder: v%s, '
           'CSI spec: v%s)' %
           (VENDOR_VERSION, mode_msg, cinderlib.__version__, CINDER_VERSION,
            CSI_SPEC))
@@ -991,8 +1078,9 @@ def main():
                                          csi_plugin.backend.get_version())
     print(msg)
 
-    print('Debugging is %s' %
-          ('ON with %s' % DEBUG_LIBRARY.__name__ if DEBUG_LIBRARY else 'OFF'))
+    print('Debugging feature is %s.' %
+          ('ENABLED with %s and OFF. Toggle it with SIGUSR1' %
+           DEBUG_LIBRARY.__name__ if DEBUG_LIBRARY else 'DISABLED'))
 
     if not server.add_insecure_port(endpoint):
         sys.stderr.write('\nERROR: Could not bind to %s\n' % endpoint)

@@ -58,9 +58,14 @@ coverage.xml
 
 # Sphinx documentation
 docs/_build/
+docs/modules.rst
+docs/ember_csi.rst
 
 # PyBuilder
 target/
 
 # pyenv python configuration file
 .python-version
+
+examples/kubernetes/kubeconfig.conf
+examples/kubernetes/site.retry
