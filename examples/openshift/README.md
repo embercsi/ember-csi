@@ -1,4 +1,4 @@
-## Deploy EMber CSI on OpenSHift v3.11 with Ceph Backend
+## Deploy Ember-CSI on OpenShift v3.11 with Ceph Backend
 
 ### Steps
 
