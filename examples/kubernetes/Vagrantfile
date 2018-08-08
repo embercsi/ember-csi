@@ -43,7 +43,8 @@ Vagrant.configure("2") do |config|
             # Workaround for issue #644 on Vagrant < v1.8.6
             # Replace the ProxyCommand with the command specified by
             # vagrant ssh-config
-            if $libvirt_host
+            req = Gem::Requirement.new('<1.8.6')
+            if req.satisfied_by?(Gem::Version.new(Vagrant::VERSION)) and not $libvirt_host.empty?
                 ansible.raw_ssh_args = "-o 'ProxyCommand=ssh #{$libvirt_host} -l #{$libvirt_user} -i #{Dir.home}/.ssh/id_rsa nc %h %p'"
             end
         end
