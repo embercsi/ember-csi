@@ -119,6 +119,9 @@ spec:
             - name: localtime
               mountPath: /etc/localtime
               mountPropagation: HostToContainer
+            - name: udev-data
+              mountPath: /run/udev
+              mountPropagation: HostToContainer
         - name: csc
           image: akrog/csc:v0.2.0
           command: ["tail"]
@@ -163,3 +166,6 @@ spec:
         - name: localtime
           hostPath:
             path: /etc/localtime
+        - name: udev-data
+          hostPath:
+            path: /run/udev
