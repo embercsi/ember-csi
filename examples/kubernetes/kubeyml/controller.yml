@@ -108,7 +108,7 @@ spec:
         - name: X_CSI_PERSISTENCE_CONFIG
           value: '{"storage":"crd"}'
         - name: X_CSI_BACKEND_CONFIG
-          value: '{"iscsi_protocol":"iscsi","iscsi_ip_address":"192.168.10.100","volume_backend_name":"lvm","volume_driver":"cinder.volume.drivers.lvm.LVMVolumeDriver","volume_group":"ember-volumes","iscsi_helper":"lioadm"}'
+          value: '{"target_protocol":"iscsi","iscsi_ip_address":"192.168.10.100","volume_backend_name":"lvm","volume_driver":"cinder.volume.drivers.lvm.LVMVolumeDriver","volume_group":"ember-volumes","target_helper":"lioadm"}'
         volumeMounts:
         - name: socket-dir
           mountPath: /csi-data
