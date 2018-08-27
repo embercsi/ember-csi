@@ -1028,11 +1028,19 @@ def _load_json_config(name, default=None):
         exit(1)
 
 def copy_system_files():
+    # Check if the archive members are files only
+    # and not devices, etc
+    def files_only(members):
+        for tarinfo in members:
+            if tarinfo.isfile() :
+                yield tarinfo
+
     archive = os.environ.get('X_CSI_SYSTEM_FILES')
     if archive is not None :
         try:
             with tarfile.open(archive, 'r') as t:
-                t.extractall('/')
+                t.extractall('/', members=files_only(t))
+		t.close()
         except Exception as exc:
             sys.stderr.write('Error expanding file %s %s\n' % (archive, exc))
             exit(2)
