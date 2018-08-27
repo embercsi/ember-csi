@@ -1,9 +1,0 @@
-#!/bin/bash
-# Workaround to tag master also as latest on Docker Hub automated builds, since
-# multiple tags are not supported.
-
-if [ "$SOURCE_BRANCH" == "master" ]
-then
-  docker tag $IMAGE_NAME $DOCKER_REPO:latest
-  docker push $DOCKER_REPO:latest
-fi
