@@ -15,7 +15,7 @@ requirements = [
     # GRPCIO v1.12.0 has broken dependencies, so we include them here
     'protobuf>=3.5.0.post1',
     # For the CRD persistent metadata plugin
-    'kubernetes>=6.0.0,<7.0.0',
+    'kubernetes==7.0.0',
     # Needed because some Kubernetes dependencies use version in format of 4.*
     'setuptools==40.0.0',
 ]
