@@ -16,6 +16,7 @@ import sys
 import threading
 import time
 import traceback
+import tarfile
 
 import cinderlib
 from eventlet import tpool
@@ -1026,6 +1027,17 @@ def _load_json_config(name, default=None):
         print('Invalid JSON data for %s' % name)
         exit(1)
 
+def copy_system_files():
+    archive = os.environ.get('X_CSI_SYSTEM_FILES')
+    if archive is not None :
+        try:
+            with tarfile.open(archive, 'r') as t:
+                t.extractall('/')
+        except Exception as exc:
+            sys.stderr.write('Error expanding file %s %s\n' % (archive, exc))
+            exit(2)
+    else :
+        sys.stdout.write('X_CSI_SYSTEM_FILES not specified.\n')
 
 def main():
     global DEFAULT_MOUNT_FS
@@ -1049,6 +1061,7 @@ def main():
     if mode != 'node' and not backend_config:
         print('Missing required backend configuration')
         exit(2)
+    copy_system_files()
 
     mode_msg = 'in ' + mode + ' only mode ' if mode != 'all' else ''
     print('Starting Ember CSI v%s %s(cinderlib: v%s, cinder: v%s, '
