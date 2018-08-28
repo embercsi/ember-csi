@@ -1028,22 +1028,23 @@ def _load_json_config(name, default=None):
         exit(1)
 
 def copy_system_files():
-    # Check if the archive members are files only
-    # and not devices, etc
+    # Minimal check of the archive for files/dirs only and not devices, etc
     def check_files(members):
         for tarinfo in members:
-            if tarinfo.isfile() :
+            if tarinfo.isdev() :
+                sys.stderr.write("Skipping %s\n" % tarinfo.name)
+            else :
                 yield tarinfo
+                sys.stdout.write("Exctracting %s\n" % tarinfo.name)
 
     archive = os.environ.get('X_CSI_SYSTEM_FILES')
-    if archive is not None :
+    if archive :
         try:
             with tarfile.open(archive, 'r') as t:
                 t.extractall('/', members=check_files(t))
-		t.close()
         except Exception as exc:
             sys.stderr.write('Error expanding file %s %s\n' % (archive, exc))
-            exit(2)
+            exit(4)
     else :
         sys.stdout.write('X_CSI_SYSTEM_FILES not specified.\n')
 

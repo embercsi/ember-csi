@@ -120,7 +120,7 @@ The CSI driver is configured via environmental variables, any value that doesn't
 
 The only role that has been tested at the moment is the default one, where Controller and Node servicer are executed in the same service (`CSI_MODE=all`), and other modes are expected to have issues at the moment.
 
-The X_CSI_SYSTEM_FILES variable should point to a tar/tar.gz/tar.bz2 file, whose contents will be extracted into '/' of the Ember CSI driver container. An operator/administrator with privilege access must create the archive before starting the pods. Care must be taken not to overwrite the container files that may be critical to its startup.
+The X_CSI_SYSTEM_FILES variable should point to a tar/tar.gz/tar.bz2 file accessible in the Ember CSI driver's filesystem. The contents of the archive will be extracted into '/'. A trusted user such as an operator/administrator with privileged access must create the archive before starting the driver.
 
 e.g.
 
