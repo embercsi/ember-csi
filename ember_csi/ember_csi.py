@@ -1034,8 +1034,8 @@ def copy_system_files():
             if tarinfo.isdev() :
                 sys.stderr.write("Skipping %s\n" % tarinfo.name)
             else :
-                yield tarinfo
                 sys.stdout.write("Exctracting %s\n" % tarinfo.name)
+                yield tarinfo
 
     archive = os.environ.get('X_CSI_SYSTEM_FILES')
     if archive :
