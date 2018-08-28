@@ -114,11 +114,23 @@ The CSI driver is configured via environmental variables, any value that doesn't
 | `X_CSI_EMBER_CONFIG`       | all        | Global `cinderlib` configuration                              | {'project_id': 'io.ember-csi', 'user_id': 'io.ember-csi', 'root_helper': 'sudo'}                         | {"project_id":"k8s project","user_id":"csi driver","root_helper":"sudo"}                                                                                                                                                                |
 | `X_CSI_BACKEND_CONFIG`     | controller | Driver configuration                                          |                                                                                                          | {"volume_backend_name": "rbd", "volume_driver": "cinder.volume.drivers.rbd.RBDDriver", "rbd_user": "cinder", "rbd_pool": "volumes", "rbd_ceph_conf": "/etc/ceph/ceph.conf", "rbd_keyring_conf": "/etc/ceph/ceph.client.cinder.keyring"} |
 | `X_CSI_DEFAULT_MOUNT_FS`   | node       | Default mount filesystem when missing in publish calls        | ext4                                                                                                     | btrfs                                                                                                                                                                                                                                   |
+| `X_CSI_SYSTEM_FILES`       | all        | All required storage driver-specific files archived in tar, tar.gz or tar.bz2 format|                                                                                    | /path/to/etc-ceph.tar.gz                                                                                                                                                                                                                |
 | `X_CSI_DEBUG_MODE`         | all        | Debug mode (rpdb, pdb) to use. Disabled by default.           |                                                                                                          | rpdb                                                                                                                                                                                                                                    |
 | `X_CSI_ABORT_DUPLICATES`   | all        | If we want to abort or queue (default) duplicated requests.   | false                                                                                                    | true                                                                                                                                                                                                                                    |
 
 The only role that has been tested at the moment is the default one, where Controller and Node servicer are executed in the same service (`CSI_MODE=all`), and other modes are expected to have issues at the moment.
 
+The X_CSI_SYSTEM_FILES variable should point to a tar/tar.gz/tar.bz2 file accessible in the Ember CSI driver's filesystem. The contents of the archive will be extracted into '/'. A trusted user such as an operator/administrator with privileged access must create the archive before starting the driver.
+
+e.g.
+
+```
+$ tar cvf ceph-files.tar /etc/ceph/ceph.conf /etc/ceph/ceph.client.cinder.keyring
+tar: Removing leading `/' from member names
+/etc/ceph/ceph.conf
+/etc/ceph/ceph.client.cinder.keyring
+$ export X_CSI_SYSTEM_FILES=`pwd`/ceph-files.tar
+```
 
 ## Starting the plugin
 
