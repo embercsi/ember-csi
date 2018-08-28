@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+
+# Push ember-csi master branches
+if [ "$SOURCE_BRANCH" == "master" ]
+then
+  for tag in master latest; do
+    echo "Pushing $tag ..."
+    docker push $DOCKER_REPO:$tag
+  done
+
+# Push ember-csi latest release with cinder stable branches
+else
+  releases=`curl https://raw.githubusercontent.com/Akrog/cinderlib/master/rdo-releases`
+  cinderlib_pinned_stable_version=`cat hooks/cinderlib-pinned-stable-version`
+  while read -r release; do
+      echo "Pushing $release ..."
+      docker push $DOCKER_REPO:$release
+
+      # Push it also with the ember-csi version tag
+      tag=ember_${SOURCE_BRANCH}-${release}-cl_${cinderlib_pinned_stable_version}
+      echo "Pushing tag $tag..."
+      docker tag $DOCKER_REPO:$release $DOCKER_REPO:$tag
+      docker push $DOCKER_REPO:$tag
+      last_release=$release
+  done <<< "$releases"
+
+  docker tag $DOCKER_REPO:$last_release $DOCKER_REPO:stable
+  docker push $DOCKER_REPO:stable
+fi
