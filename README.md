@@ -129,7 +129,7 @@ $ tar cvf ceph-files.tar /etc/ceph/ceph.conf /etc/ceph/ceph.client.cinder.keyrin
 tar: Removing leading `/' from member names
 /etc/ceph/ceph.conf
 /etc/ceph/ceph.client.cinder.keyring
-$ export `pwd`/X_CSI_SYSTEM_FILES=ceph-files.tar
+$ export X_CSI_SYSTEM_FILES=`pwd`/ceph-files.tar
 ```
 
 ## Starting the plugin
