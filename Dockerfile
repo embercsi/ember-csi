@@ -7,7 +7,7 @@ LABEL maintainers="Gorka Eguileor <geguileo@redhat.com>" \
 
 # We need to upgrade pyasn1 because the package for RDO is not new enough for
 # pyasn1_modules, which is used by some of the Google's libraries
-RUN yum -y install xfsprogs e2fsprogs btrfs-progs && \
+RUN yum -y install xfsprogs e2fsprogs btrfs-progs nmap-ncat && \
     yum clean all && \
     rm -rf /var/cache/yum && \
     pip install --no-cache-dir --upgrade 'pyasn1<0.5.0,>=0.4.1'
