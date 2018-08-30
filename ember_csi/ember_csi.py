@@ -1027,26 +1027,28 @@ def _load_json_config(name, default=None):
         print('Invalid JSON data for %s' % name)
         exit(1)
 
+
 def copy_system_files():
     # Minimal check of the archive for files/dirs only and not devices, etc
     def check_files(members):
         for tarinfo in members:
-            if tarinfo.isdev() :
+            if tarinfo.isdev():
                 sys.stderr.write("Skipping %s\n" % tarinfo.name)
-            else :
+            else:
                 sys.stdout.write("Exctracting %s\n" % tarinfo.name)
                 yield tarinfo
 
     archive = os.environ.get('X_CSI_SYSTEM_FILES')
-    if archive :
+    if archive:
         try:
             with tarfile.open(archive, 'r') as t:
                 t.extractall('/', members=check_files(t))
         except Exception as exc:
             sys.stderr.write('Error expanding file %s %s\n' % (archive, exc))
             exit(4)
-    else :
+    else:
         sys.stdout.write('X_CSI_SYSTEM_FILES not specified.\n')
+
 
 def main():
     global DEFAULT_MOUNT_FS
