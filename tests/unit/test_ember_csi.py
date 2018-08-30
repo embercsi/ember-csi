@@ -9,11 +9,9 @@ Tests for `ember_csi` module.
 """
 
 
-import sys
 import unittest
 
 from ember_csi import ember_csi
-
 
 
 class TestEmber_csi(unittest.TestCase):
@@ -24,5 +22,8 @@ class TestEmber_csi(unittest.TestCase):
     def tearDown(self):
         pass
 
-    def test_000_something(self):
-        pass
+    def test_fails_no_config(self):
+        with self.assertRaises(SystemExit) as asserted:
+            ember_csi.main()
+        exc = asserted.exception
+        self.assertEqual(2, exc.code)

@@ -1,0 +1,18 @@
+language: python
+python: 2.7
+sudo: required
+
+matrix:
+  include:
+  - name: "PEP8"
+    env: TARGET=lint
+    sudo: false
+  - name: "Unit tests"
+    env: TARGET=unit-tests
+    sudo: false
+
+before_install:
+  - pip install -r requirements_dev.txt
+  - pip install -e .
+
+script: make ${TARGET}
