@@ -60,7 +60,7 @@ statefulset.apps/csi-controller   1         1         8m
 ````
 
 ### Tear Down
-To tear down everthing we've created here, we will uninstall everything in reverse. *Warning*: Deletion using ember-csi.yml will even remove the 'ember-csi' namespace/project.
+To tear down everthing we've created here, we will uninstall everything in reverse. 
 
 ```
 $ oc delete -f app.yml 
@@ -82,4 +82,6 @@ daemonset.apps "csi-node" deleted
 storageclass.storage.k8s.io "ember-csi-sc" deleted
 $
 $
+
+Note: The namespace/project 'ember-csi' is not removed and must be removed manually.
 ```
