@@ -1,18 +1,66 @@
 language: python
 python: 2.7
-sudo: required
 
-matrix:
+git:
+  quiet: true
+
+jobs:
   include:
   - name: "PEP8"
-    env: TARGET=lint
+    stage: phase1-tests
     sudo: false
+    script: make lint
+
   - name: "Unit tests"
-    env: TARGET=unit-tests
+    stage: phase1-tests
     sudo: false
+    script: make unit-tests
 
-before_install:
-  - pip install -r requirements_dev.txt
-  - pip install -e .
+  - name: "LVM baremetal master"
+    stage: phase2-tests
+    sudo: required
+    install:
+      - sudo travis-scripts/setup-lvm.sh
+      - sudo apt-get install -y open-iscsi targetcli multipath-tools
+      - sudo pip install git+https://github.com/openstack/cinder.git
+      - sudo pip install git+https://github.com/akrog/cinderlib.git
+      - sudo pip install -e ./
+    script:
+      - sudo make ubuntu-bm-lvm
 
-script: make ${TARGET}
+  - name: "LVM baremetal latest"
+    stage: phase2-tests
+    sudo: required
+    install:
+      - sudo travis-scripts/setup-lvm.sh
+      - sudo apt-get install -y open-iscsi targetcli multipath-tools
+      - sudo pip install git+https://github.com/openstack/cinder.git
+      - sudo pip install -e ./
+    script:
+      - sudo make ubuntu-bm-lvm
+
+  - name: "Image build"
+    stage: build
+    sudo: required
+    script:
+      - echo "$DOCKER_PASSWORD" | docker login --password-stdin --username "$DOCKER_USERNAME"
+      - travis-scripts/build
+
+  # Travis-CI only supports Ubuntu, which is incompatible with our images
+  # - name: "LVM"
+  #   stage: sanity-checks
+  #   sudo: required
+  #   script:
+  #     - sudo travis-scripts/setup-lvm.sh
+  #     - sudo make ubuntu-lvm
+
+  - name: "Tag and push images"
+    stage: push
+    sudo: required
+    script:
+      - echo "$DOCKER_PASSWORD" | docker login --password-stdin --username "$DOCKER_USERNAME"
+      - travis-scripts/push
+
+# Noop, each job hast its own requirements and we don't want to install
+# requirements.txt
+install: true
