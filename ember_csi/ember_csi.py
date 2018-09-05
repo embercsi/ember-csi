@@ -232,7 +232,8 @@ class NodeInfo(object):
     @classmethod
     def get(cls, node_id):
         kv = cinderlib.Backend.persistence.get_key_values(node_id)
-        # TODO(geguileo): Fail if info is not there
+        if not kv:
+            return None
         return cls(node_id, json.loads(kv[0].value))
 
     @classmethod
