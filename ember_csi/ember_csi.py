@@ -557,8 +557,15 @@ class Controller(csi.ControllerServicer, Identity):
                     context.abort(grpc.StatusCode.FAILED_PRECONDITION,
                                   'Volume published to another node')
 
-            # TODO(geguileo): Check capabilities and readonly compatibility
-            #                 and raise ALREADY_EXISTS if not compatible
+            mode = request.volume_capability.access_mode.mode
+            if ((not request.readonly and
+                 mode == types.AccessModeType.SINGLE_NODE_READER_ONLY) or
+                    (request.readonly and
+                     mode == types.AccessModeType.SINGLE_NODE_WRITER)):  # noqa
+
+                context.abort(grpc.StatusCode.ALREADY_EXISTS,
+                              'Readonly incompatible with volume capability')
+
             conn = vol.connections[0]
         else:
             conn = vol.connect(node.connector_dict, attached_host=node.id)
