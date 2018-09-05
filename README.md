@@ -90,6 +90,8 @@ For iSCSI backends we'll want to install:
     $ sudo yum install iscsi-initiator-utils
     $ sudo yum install device-mapper-multipath
     $ sudo mpathconf --enable --with_multipathd y --user_friendly_names n --find_multipaths y
+    $ sudo yum install scsi-target-utils
+    $ sudo systemctl start tgtd
 ```
 
 
