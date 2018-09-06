@@ -34,7 +34,8 @@ jobs:
     install:
       - sudo travis-scripts/setup-lvm.sh
       - sudo apt-get install -y open-iscsi targetcli multipath-tools
-      - sudo pip install git+https://github.com/openstack/cinder.git
+      - sudo pip install git+https://github.com/openstack/cinder.git@stable/rocky
+      - sudo pip install git+https://github.com/akrog/cinderlib.git
       - sudo pip install -e ./
     script:
       - sudo make ubuntu-bm-lvm
