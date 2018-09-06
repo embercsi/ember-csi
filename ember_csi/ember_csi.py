@@ -39,7 +39,7 @@ DEFAULT_SIZE = 1.0
 DEFAULT_PERSISTENCE_CFG = {'storage': 'db',
                            'connection': 'sqlite:///db.sqlite'}
 DEFAULT_EMBER_CFG = {'project_id': NAME, 'user_id': NAME,
-                     'root_helper': 'sudo'}
+                     'root_helper': 'sudo', 'request_multipath': True}
 DEFAULT_MOUNT_FS = 'ext4'
 REFRESH_TIME = 1
 MULTIPATH_FIND_RETRIES = 3
@@ -224,6 +224,7 @@ class Worker(object):
 
 class NodeInfo(object):
     __slots__ = ('id', 'connector_dict')
+    REQUEST_MULTIPATH = True
 
     def __init__(self, node_id, connector_dict):
         self.id = node_id
@@ -243,7 +244,7 @@ class NodeInfo(object):
 
         # For now just set multipathing and not enforcing it
         connector_dict = brick_connector.get_connector_properties(
-            'sudo', storage_nw_ip, True, False)
+            'sudo', storage_nw_ip, cls.REQUEST_MULTIPATH, False)
         value = json.dumps(connector_dict, separators=(',', ':'))
         kv = cinderlib.KeyValue(node_id, value)
         cinderlib.Backend.persistence.set_key_value(kv)
@@ -1075,6 +1076,8 @@ def main():
                                            DEFAULT_PERSISTENCE_CFG)
     cinderlib_config = _load_json_config('X_CSI_EMBER_CONFIG',
                                          DEFAULT_EMBER_CFG)
+    NodeInfo.REQUEST_MULTIPATH = cinderlib_config.pop('request_multipath',
+                                                      True)
     backend_config = _load_json_config('X_CSI_BACKEND_CONFIG')
     node_id = os.environ.get('X_CSI_NODE_ID')
     if mode != 'node' and not backend_config:
