@@ -282,7 +282,9 @@ class Identity(csi.IdentityServicer):
             manifest['cinder-driver'] = type(self.backend.driver).__name__
             manifest['cinder-driver-supported'] = str(self.backend.supported)
 
-        self.INFO = types.InfoResp(name=NAME,
+	self.name = self._validate_name( (cinderlib_cfg or {}).get('project_id') or 'io.ember-csi' )
+
+        self.INFO = types.InfoResp(name=self.name,
                                    vendor_version=VENDOR_VERSION,
                                    manifest=manifest)
 
@@ -328,6 +330,17 @@ class Identity(csi.IdentityServicer):
             context.abort(grpc.StatusCode.INVALID_ARGUMENT, msg)
 
         return msg
+
+    def _validate_name(self, name):
+        domain_regex = r'(([\da-zA-Z])([_\w-]{,62})\.){,127}(([\da-zA-Z])[_\w-]{,61})?([\da-zA-Z]\.((xn\-\-[a-zA-Z\d]+)|([a-zA-Z\d]{2,})))$'
+
+        valid_domain_name_regex = re.compile(domain_regex, re.IGNORECASE)
+        name = name.lower().strip().encode('ascii')
+        if re.match(valid_domain_name_regex, name ):
+            return name
+        else:
+            return "io.ember-csi"
+
 
     @debuggable
     @logrpc
