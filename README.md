@@ -111,7 +111,7 @@ The CSI driver is configured via environmental variables, any value that doesn't
 | `X_CSI_STORAGE_NW_IP`      | node       | IP address in the Node used to connect to the storage         | IP resolved from Node's fqdn                                                                             | 192.168.1.22                                                                                                                                                                                                                            |
 | `X_CSI_NODE_ID`            | node       | ID used by this node to identify itself to the controller     | Node's fqdn                                                                                              | csi_test_node                                                                                                                                                                                                                           |
 | `X_CSI_PERSISTENCE_CONFIG` | all        | Configuration of the `cinderlib` metadata persistence plugin. | {'storage': 'db', 'connection': 'sqlite:///db.sqlite'}                                                   | {'storage': 'db', 'connection': 'mysql+pymysql://root:stackdb@192.168.1.1/cinder?charset=utf8'}                                                                                                                                         |
-| `X_CSI_EMBER_CONFIG`       | all        | Global `cinderlib` configuration                              | {'project_id': 'io.ember-csi', 'user_id': 'io.ember-csi', 'root_helper': 'sudo'}                         | {"project_id":"k8s project","user_id":"csi driver","root_helper":"sudo"}                                                                                                                                                                |
+| `X_CSI_EMBER_CONFIG`       | all        | Global `cinderlib` configuration                              | {'project_id': 'io.ember-csi', 'user_id': 'io.ember-csi', 'root_helper': 'sudo', 'plugin_name': 'io.ember-csi'} | {"project_id":"k8s project","user_id":"csi driver","root_helper":"sudo", "plugin_name": "io.ember-csi.external-ceph"}                                                                                                            |
 | `X_CSI_BACKEND_CONFIG`     | controller | Driver configuration                                          |                                                                                                          | {"volume_backend_name": "rbd", "volume_driver": "cinder.volume.drivers.rbd.RBDDriver", "rbd_user": "cinder", "rbd_pool": "volumes", "rbd_ceph_conf": "/etc/ceph/ceph.conf", "rbd_keyring_conf": "/etc/ceph/ceph.client.cinder.keyring"} |
 | `X_CSI_DEFAULT_MOUNT_FS`   | node       | Default mount filesystem when missing in publish calls        | ext4                                                                                                     | btrfs                                                                                                                                                                                                                                   |
 | `X_CSI_SYSTEM_FILES`       | all        | All required storage driver-specific files archived in tar, tar.gz or tar.bz2 format|                                                                                    | /path/to/etc-ceph.tar.gz                                                                                                                                                                                                                |
@@ -356,7 +356,7 @@ To enable logs, defaulting to INFO level, we must set the `disable_logs` key to 
 For baremetal, enablig DEBUG log levels can be done like this:
 
 ```
-    export X_CSI_EMBER_CONFIG={"project_id":"io.ember-csi","user_id":"io.ember-csi","root_helper":"sudo","disable_logs":false,"debug":true}
+    export X_CSI_EMBER_CONFIG={"project_id":"io.ember-csi","user_id":"io.ember-csi","plugin_name": "io.ember-csi","root_helper":"sudo","disable_logs":false,"debug":true}
 
 ```
 
@@ -365,7 +365,7 @@ For containers we can just add the environmental variable to a file and import i
 In both cases it should not have the `export` command:
 
 ```
-    X_CSI_EMBER_CONFIG={"project_id":"io.ember-csi","user_id":"io.ember-csi","root_helper":"sudo","disable_logs":false,"debug":true}
+    X_CSI_EMBER_CONFIG={"project_id":"io.ember-csi","user_id":"io.ember-csi","plugin_name": "io.ember-csi","root_helper":"sudo","disable_logs":false,"debug":true}
 
 ```
 
