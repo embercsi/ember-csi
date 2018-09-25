@@ -283,7 +283,7 @@ class Identity(csi.IdentityServicer):
             manifest['cinder-driver'] = type(self.backend.driver).__name__
             manifest['cinder-driver-supported'] = str(self.backend.supported)
 
-	self.name = self._validate_name( (cinderlib_cfg or {}).get('project_id') or 'io.ember-csi' )
+        self.name = self._validate_name( (cinderlib_cfg or {}).get('project_id') or 'io.ember-csi' )
 
         self.INFO = types.InfoResp(name=self.name,
                                    vendor_version=VENDOR_VERSION,
