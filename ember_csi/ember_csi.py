@@ -17,6 +17,7 @@ import threading
 import time
 import traceback
 import tarfile
+import re
 
 import cinderlib
 from eventlet import tpool
