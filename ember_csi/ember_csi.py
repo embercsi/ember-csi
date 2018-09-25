@@ -10,13 +10,14 @@ import glob
 import itertools
 import json
 import os
+import re
 import socket
 import stat
 import sys
+import tarfile
 import threading
 import time
 import traceback
-import tarfile
 
 import cinderlib
 from eventlet import tpool
@@ -38,8 +39,8 @@ DEFAULT_ENDPOINT = '[::]:50051'
 DEFAULT_SIZE = 1.0
 DEFAULT_PERSISTENCE_CFG = {'storage': 'db',
                            'connection': 'sqlite:///db.sqlite'}
-DEFAULT_EMBER_CFG = {'project_id': NAME, 'user_id': NAME,
-                     'root_helper': 'sudo'}
+DEFAULT_EMBER_CFG = {'project_id': NAME, 'user_id': NAME, 'plugin_name': NAME,
+                     'root_helper': 'sudo', 'request_multipath': True}
 DEFAULT_MOUNT_FS = 'ext4'
 REFRESH_TIME = 1
 MULTIPATH_FIND_RETRIES = 3
@@ -224,6 +225,7 @@ class Worker(object):
 
 class NodeInfo(object):
     __slots__ = ('id', 'connector_dict')
+    REQUEST_MULTIPATH = True
 
     def __init__(self, node_id, connector_dict):
         self.id = node_id
@@ -232,7 +234,8 @@ class NodeInfo(object):
     @classmethod
     def get(cls, node_id):
         kv = cinderlib.Backend.persistence.get_key_values(node_id)
-        # TODO(geguileo): Fail if info is not there
+        if not kv:
+            return None
         return cls(node_id, json.loads(kv[0].value))
 
     @classmethod
@@ -242,7 +245,7 @@ class NodeInfo(object):
 
         # For now just set multipathing and not enforcing it
         connector_dict = brick_connector.get_connector_properties(
-            'sudo', storage_nw_ip, True, False)
+            'sudo', storage_nw_ip, cls.REQUEST_MULTIPATH, False)
         value = json.dumps(connector_dict, separators=(',', ':'))
         kv = cinderlib.KeyValue(node_id, value)
         cinderlib.Backend.persistence.set_key_value(kv)
@@ -262,11 +265,11 @@ class Identity(csi.IdentityServicer):
     DEFAULT_MKFS_ARGS = tuple()
     MKFS_ARGS = {'ext4': ('-F',)}
 
-    def __init__(self, server, cinderlib_cfg):
+    def __init__(self, server, ember_config, plugin_name):
         if self.manifest is not None:
             return
 
-        self.root_helper = (cinderlib_cfg or {}).get('root_helper') or 'sudo'
+        self.root_helper = (ember_config or {}).get('root_helper') or 'sudo'
 
         manifest = {
             'cinderlib-version': cinderlib.__version__,
@@ -282,7 +285,8 @@ class Identity(csi.IdentityServicer):
             manifest['cinder-driver'] = type(self.backend.driver).__name__
             manifest['cinder-driver-supported'] = str(self.backend.supported)
 
-        self.INFO = types.InfoResp(name=NAME,
+        self.plugin_name = self._validate_name(plugin_name)
+        self.INFO = types.InfoResp(name=self.plugin_name,
                                    vendor_version=VENDOR_VERSION,
                                    manifest=manifest)
 
@@ -328,6 +332,13 @@ class Identity(csi.IdentityServicer):
             context.abort(grpc.StatusCode.INVALID_ARGUMENT, msg)
 
         return msg
+
+    def _validate_name(self, name):
+        if name is not None:
+            if re.match(r'^[A-Za-z]{2,6}(\.[A-Za-z0-9-]{1,63})+$', name):
+                return name
+
+        return NAME
 
     @debuggable
     @logrpc
@@ -386,12 +397,13 @@ class Controller(csi.ControllerServicer, Identity):
     DELETE_SNAP_RESP = types.DeleteSnapResp()
 
     def __init__(self, server, persistence_config, backend_config,
-                 cinderlib_config=None, default_size=DEFAULT_SIZE, **kwargs):
+                 ember_config=None, default_size=DEFAULT_SIZE, **kwargs):
         self.default_size = default_size
+        plugin_name = ember_config.pop('plugin_name', None)
         cinderlib.setup(persistence_config=persistence_config,
-                        **cinderlib_config)
+                        **ember_config)
         self.backend = cinderlib.Backend(**backend_config)
-        Identity.__init__(self, server, cinderlib_config)
+        Identity.__init__(self, server, ember_config, plugin_name)
         csi.add_ControllerServicer_to_server(self, server)
 
     def _get_size(self, what, request, default):
@@ -556,8 +568,15 @@ class Controller(csi.ControllerServicer, Identity):
                     context.abort(grpc.StatusCode.FAILED_PRECONDITION,
                                   'Volume published to another node')
 
-            # TODO(geguileo): Check capabilities and readonly compatibility
-            #                 and raise ALREADY_EXISTS if not compatible
+            mode = request.volume_capability.access_mode.mode
+            if ((not request.readonly and
+                 mode == types.AccessModeType.SINGLE_NODE_READER_ONLY) or
+                    (request.readonly and
+                     mode == types.AccessModeType.SINGLE_NODE_WRITER)):  # noqa
+
+                context.abort(grpc.StatusCode.ALREADY_EXISTS,
+                              'Readonly incompatible with volume capability')
+
             conn = vol.connections[0]
         else:
             conn = vol.connect(node.connector_dict, attached_host=node.id)
@@ -729,13 +748,14 @@ class Node(csi.NodeServicer, Identity):
     NODE_PUBLISH_RESP = types.NodePublishResp()
     NODE_UNPUBLISH_RESP = types.NodeUnpublishResp()
 
-    def __init__(self, server, persistence_config=None, cinderlib_config=None,
+    def __init__(self, server, persistence_config=None, ember_config=None,
                  node_id=None, storage_nw_ip=None, **kwargs):
         if persistence_config:
-            cinderlib_config['fail_on_missing_backend'] = False
+            ember_config['fail_on_missing_backend'] = False
+            plugin_name = ember_config.pop('plugin_name', None)
             cinderlib.setup(persistence_config=persistence_config,
-                            **cinderlib_config)
-            Identity.__init__(self, server, cinderlib_config)
+                            **ember_config)
+            Identity.__init__(self, server, ember_config, plugin_name)
 
         node_id = node_id or socket.getfqdn()
         self.node_id = types.IdResp(node_id=node_id)
@@ -984,12 +1004,12 @@ class Node(csi.NodeServicer, Identity):
 
 class All(Controller, Node):
     def __init__(self, server, persistence_config, backend_config,
-                 cinderlib_config=None, default_size=DEFAULT_SIZE,
+                 ember_config=None, default_size=DEFAULT_SIZE,
                  node_id=None, storage_nw_ip=None):
         Controller.__init__(self, server,
                             persistence_config=persistence_config,
                             backend_config=backend_config,
-                            cinderlib_config=cinderlib_config,
+                            ember_config=ember_config,
                             default_size=default_size)
         Node.__init__(self, server, node_id=node_id,
                       storage_nw_ip=storage_nw_ip)
@@ -1065,8 +1085,10 @@ def main():
     storage_nw_ip = os.environ.get('X_CSI_STORAGE_NW_IP')
     persistence_config = _load_json_config('X_CSI_PERSISTENCE_CONFIG',
                                            DEFAULT_PERSISTENCE_CFG)
-    cinderlib_config = _load_json_config('X_CSI_EMBER_CONFIG',
-                                         DEFAULT_EMBER_CFG)
+    ember_config = _load_json_config('X_CSI_EMBER_CONFIG',
+                                     DEFAULT_EMBER_CFG)
+    NodeInfo.REQUEST_MULTIPATH = ember_config.pop('request_multipath',
+                                                  True)
     backend_config = _load_json_config('X_CSI_BACKEND_CONFIG')
     node_id = os.environ.get('X_CSI_NODE_ID')
     if mode != 'node' and not backend_config:
@@ -1092,7 +1114,7 @@ def main():
     csi_plugin = server_class(server=server,
                               persistence_config=persistence_config,
                               backend_config=backend_config,
-                              cinderlib_config=cinderlib_config,
+                              ember_config=ember_config,
                               storage_nw_ip=storage_nw_ip,
                               node_id=node_id)
     msg = 'Running as %s' % mode
