@@ -334,7 +334,7 @@ class Identity(csi.IdentityServicer):
         return msg
 
     def _validate_name(self, name):
-        if re.match('^[A-Za-z]{2,6}(\.[A-Za-z0-9-]{1,63})+$', name):
+        if re.match(r'^[A-Za-z]{2,6}(\.[A-Za-z0-9-]{1,63})+$', name):
             return name
 
         return NAME
