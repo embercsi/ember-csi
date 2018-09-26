@@ -286,7 +286,6 @@ class Identity(csi.IdentityServicer):
             manifest['cinder-driver-supported'] = str(self.backend.supported)
 
         self.plugin_name = self._validate_name(plugin_name)
-        print self.plugin_name + "-------------------------------------------------"
         self.INFO = types.InfoResp(name=self.plugin_name,
                                    vendor_version=VENDOR_VERSION,
                                    manifest=manifest)
