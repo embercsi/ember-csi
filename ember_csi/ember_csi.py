@@ -265,11 +265,11 @@ class Identity(csi.IdentityServicer):
     DEFAULT_MKFS_ARGS = tuple()
     MKFS_ARGS = {'ext4': ('-F',)}
 
-    def __init__(self, server, ember_config, plugin_name):
+    def __init__(self, server, cinderlib_cfg, plugin_name):
         if self.manifest is not None:
             return
 
-        self.root_helper = (ember_config or {}).get('root_helper') or 'sudo'
+        self.root_helper = (cinderlib_cfg or {}).get('root_helper') or 'sudo'
 
         manifest = {
             'cinderlib-version': cinderlib.__version__,
@@ -334,8 +334,7 @@ class Identity(csi.IdentityServicer):
         return msg
 
     def _validate_name(self, name):
-        if name is not None:
-            if re.match(r'^[A-Za-z]{2,6}(\.[A-Za-z0-9-]{1,63})+$', name):
+        if name and re.match(r'^[A-Za-z]{2,6}(\.[A-Za-z0-9-]{1,63})+$', name):
                 return name
 
         return NAME
