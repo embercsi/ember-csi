@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
+. "$DIR/set-tags"
+
+set -ev
+
+for tag_info_string in $TAGS; do
+  IFS=';' read -a tag_info <<< "$tag_info_string"
+  echo "Building ember-csi ${tag_info[1]} with cinderlib ${tag_info[0]} using $DOCKER_FILE..."
+  docker build --build-arg CINDERLIB_TAG=${tag_info[0]} -t ${tag_info[1]} -f $DOCKER_FILE .
+  echo "Pusing ember-csi ${tag_info[1]} ..."
+  docker push ${tag_info[1]}
+done
