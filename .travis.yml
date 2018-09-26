@@ -44,7 +44,7 @@ jobs:
     stage: build
     sudo: required
     script:
-      - echo "$DOCKER_PASSWORD" | docker login --password-stdin --username "$DOCKER_USERNAME"
+      - echo "$DOCKER_PASSWORD" | docker login --username "$DOCKER_USERNAME" --password-stdin
       - travis-scripts/build
 
   # Travis-CI only supports Ubuntu, which is incompatible with our images
