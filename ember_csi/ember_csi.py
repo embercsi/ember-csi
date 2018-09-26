@@ -17,6 +17,7 @@ import threading
 import time
 import traceback
 import tarfile
+import re
 
 import cinderlib
 from eventlet import tpool
@@ -38,7 +39,7 @@ DEFAULT_ENDPOINT = '[::]:50051'
 DEFAULT_SIZE = 1.0
 DEFAULT_PERSISTENCE_CFG = {'storage': 'db',
                            'connection': 'sqlite:///db.sqlite'}
-DEFAULT_EMBER_CFG = {'project_id': NAME, 'user_id': NAME,
+DEFAULT_EMBER_CFG = {'project_id': NAME, 'user_id': NAME, 'plugin_name': NAME,
                      'root_helper': 'sudo', 'request_multipath': True}
 DEFAULT_MOUNT_FS = 'ext4'
 REFRESH_TIME = 1
@@ -264,7 +265,7 @@ class Identity(csi.IdentityServicer):
     DEFAULT_MKFS_ARGS = tuple()
     MKFS_ARGS = {'ext4': ('-F',)}
 
-    def __init__(self, server, cinderlib_cfg):
+    def __init__(self, server, cinderlib_cfg, plugin_name):
         if self.manifest is not None:
             return
 
@@ -284,7 +285,8 @@ class Identity(csi.IdentityServicer):
             manifest['cinder-driver'] = type(self.backend.driver).__name__
             manifest['cinder-driver-supported'] = str(self.backend.supported)
 
-        self.INFO = types.InfoResp(name=NAME,
+        self.plugin_name = self._validate_name( plugin_name )
+        self.INFO = types.InfoResp(name=self.plugin_name,
                                    vendor_version=VENDOR_VERSION,
                                    manifest=manifest)
 
@@ -330,6 +332,16 @@ class Identity(csi.IdentityServicer):
             context.abort(grpc.StatusCode.INVALID_ARGUMENT, msg)
 
         return msg
+
+    def _validate_name(self, name):
+        domain_regex = r'(([\da-zA-Z])([_\w-]{,62})\.){,127}(([\da-zA-Z])[_\w-]{,61})?([\da-zA-Z]\.((xn\-\-[a-zA-Z\d]+)|([a-zA-Z\d]{2,})))$'
+
+        valid_domain_name_regex = re.compile(domain_regex, re.IGNORECASE)
+        name = name[:63].lower().strip().encode('ascii')
+        if re.match(valid_domain_name_regex, name):
+            return name
+        else:
+            return NAME
 
     @debuggable
     @logrpc
@@ -390,10 +402,11 @@ class Controller(csi.ControllerServicer, Identity):
     def __init__(self, server, persistence_config, backend_config,
                  cinderlib_config=None, default_size=DEFAULT_SIZE, **kwargs):
         self.default_size = default_size
+        self.plugin_name = cinderlib_config.get('plugin_name')
         cinderlib.setup(persistence_config=persistence_config,
                         **cinderlib_config)
         self.backend = cinderlib.Backend(**backend_config)
-        Identity.__init__(self, server, cinderlib_config)
+        Identity.__init__(self, server, cinderlib_config, self.plugin_name)
         csi.add_ControllerServicer_to_server(self, server)
 
     def _get_size(self, what, request, default):
@@ -742,9 +755,10 @@ class Node(csi.NodeServicer, Identity):
                  node_id=None, storage_nw_ip=None, **kwargs):
         if persistence_config:
             cinderlib_config['fail_on_missing_backend'] = False
+            self.plugin_name = cinderlib_config.get('plugin_name')
             cinderlib.setup(persistence_config=persistence_config,
                             **cinderlib_config)
-            Identity.__init__(self, server, cinderlib_config)
+            Identity.__init__(self, server, cinderlib_config, self.plugin_name)
 
         node_id = node_id or socket.getfqdn()
         self.node_id = types.IdResp(node_id=node_id)
