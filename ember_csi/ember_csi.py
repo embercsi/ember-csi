@@ -286,6 +286,7 @@ class Identity(csi.IdentityServicer):
             manifest['cinder-driver-supported'] = str(self.backend.supported)
 
         self.plugin_name = self._validate_name(plugin_name)
+        print self.plugin_name + "-------------------------------------------------"
         self.INFO = types.InfoResp(name=self.plugin_name,
                                    vendor_version=VENDOR_VERSION,
                                    manifest=manifest)
@@ -334,8 +335,9 @@ class Identity(csi.IdentityServicer):
         return msg
 
     def _validate_name(self, name):
-        if re.match(r'^[A-Za-z]{2,6}(\.[A-Za-z0-9-]{1,63})+$', name):
-            return name
+        if name is not None:
+            if re.match(r'^[A-Za-z]{2,6}(\.[A-Za-z0-9-]{1,63})+$', name):
+                return name
 
         return NAME
 
