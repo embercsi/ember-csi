@@ -1085,9 +1085,9 @@ def main():
     persistence_config = _load_json_config('X_CSI_PERSISTENCE_CONFIG',
                                            DEFAULT_PERSISTENCE_CFG)
     ember_config = _load_json_config('X_CSI_EMBER_CONFIG',
-                                         DEFAULT_EMBER_CFG)
+                                    DEFAULT_EMBER_CFG)
     NodeInfo.REQUEST_MULTIPATH = ember_config.pop('request_multipath',
-                                                      True)
+                                                 True)
     backend_config = _load_json_config('X_CSI_BACKEND_CONFIG')
     node_id = os.environ.get('X_CSI_NODE_ID')
     if mode != 'node' and not backend_config:
