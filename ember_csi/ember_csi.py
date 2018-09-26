@@ -10,14 +10,14 @@ import glob
 import itertools
 import json
 import os
+import re
 import socket
 import stat
 import sys
+import tarfile
 import threading
 import time
 import traceback
-import tarfile
-import re
 
 import cinderlib
 from eventlet import tpool
@@ -265,11 +265,11 @@ class Identity(csi.IdentityServicer):
     DEFAULT_MKFS_ARGS = tuple()
     MKFS_ARGS = {'ext4': ('-F',)}
 
-    def __init__(self, server, cinderlib_cfg, plugin_name):
+    def __init__(self, server, ember_config, plugin_name):
         if self.manifest is not None:
             return
 
-        self.root_helper = (cinderlib_cfg or {}).get('root_helper') or 'sudo'
+        self.root_helper = (ember_config or {}).get('root_helper') or 'sudo'
 
         manifest = {
             'cinderlib-version': cinderlib.__version__,
@@ -285,7 +285,7 @@ class Identity(csi.IdentityServicer):
             manifest['cinder-driver'] = type(self.backend.driver).__name__
             manifest['cinder-driver-supported'] = str(self.backend.supported)
 
-        self.plugin_name = self._validate_name( plugin_name )
+        self.plugin_name = self._validate_name(plugin_name)
         self.INFO = types.InfoResp(name=self.plugin_name,
                                    vendor_version=VENDOR_VERSION,
                                    manifest=manifest)
@@ -334,14 +334,10 @@ class Identity(csi.IdentityServicer):
         return msg
 
     def _validate_name(self, name):
-        domain_regex = r'(([\da-zA-Z])([_\w-]{,62})\.){,127}(([\da-zA-Z])[_\w-]{,61})?([\da-zA-Z]\.((xn\-\-[a-zA-Z\d]+)|([a-zA-Z\d]{2,})))$'
-
-        valid_domain_name_regex = re.compile(domain_regex, re.IGNORECASE)
-        name = name[:63].lower().strip().encode('ascii')
-        if re.match(valid_domain_name_regex, name):
+        if re.match('^[A-Za-z]{2,6}(\.[A-Za-z0-9-]{1,63})+$', name):
             return name
-        else:
-            return NAME
+
+        return NAME
 
     @debuggable
     @logrpc
@@ -400,13 +396,13 @@ class Controller(csi.ControllerServicer, Identity):
     DELETE_SNAP_RESP = types.DeleteSnapResp()
 
     def __init__(self, server, persistence_config, backend_config,
-                 cinderlib_config=None, default_size=DEFAULT_SIZE, **kwargs):
+                 ember_config=None, default_size=DEFAULT_SIZE, **kwargs):
         self.default_size = default_size
-        self.plugin_name = cinderlib_config.get('plugin_name')
+        plugin_name = ember_config.pop('plugin_name', None)
         cinderlib.setup(persistence_config=persistence_config,
-                        **cinderlib_config)
+                        **ember_config)
         self.backend = cinderlib.Backend(**backend_config)
-        Identity.__init__(self, server, cinderlib_config, self.plugin_name)
+        Identity.__init__(self, server, ember_config, plugin_name)
         csi.add_ControllerServicer_to_server(self, server)
 
     def _get_size(self, what, request, default):
@@ -751,14 +747,14 @@ class Node(csi.NodeServicer, Identity):
     NODE_PUBLISH_RESP = types.NodePublishResp()
     NODE_UNPUBLISH_RESP = types.NodeUnpublishResp()
 
-    def __init__(self, server, persistence_config=None, cinderlib_config=None,
+    def __init__(self, server, persistence_config=None, ember_config=None,
                  node_id=None, storage_nw_ip=None, **kwargs):
         if persistence_config:
-            cinderlib_config['fail_on_missing_backend'] = False
-            self.plugin_name = cinderlib_config.get('plugin_name')
+            ember_config['fail_on_missing_backend'] = False
+            plugin_name = ember_config.pop('plugin_name', None)
             cinderlib.setup(persistence_config=persistence_config,
-                            **cinderlib_config)
-            Identity.__init__(self, server, cinderlib_config, self.plugin_name)
+                            **ember_config)
+            Identity.__init__(self, server, ember_config, plugin_name)
 
         node_id = node_id or socket.getfqdn()
         self.node_id = types.IdResp(node_id=node_id)
@@ -1007,12 +1003,12 @@ class Node(csi.NodeServicer, Identity):
 
 class All(Controller, Node):
     def __init__(self, server, persistence_config, backend_config,
-                 cinderlib_config=None, default_size=DEFAULT_SIZE,
+                 ember_config=None, default_size=DEFAULT_SIZE,
                  node_id=None, storage_nw_ip=None):
         Controller.__init__(self, server,
                             persistence_config=persistence_config,
                             backend_config=backend_config,
-                            cinderlib_config=cinderlib_config,
+                            ember_config=ember_config,
                             default_size=default_size)
         Node.__init__(self, server, node_id=node_id,
                       storage_nw_ip=storage_nw_ip)
@@ -1088,9 +1084,9 @@ def main():
     storage_nw_ip = os.environ.get('X_CSI_STORAGE_NW_IP')
     persistence_config = _load_json_config('X_CSI_PERSISTENCE_CONFIG',
                                            DEFAULT_PERSISTENCE_CFG)
-    cinderlib_config = _load_json_config('X_CSI_EMBER_CONFIG',
+    ember_config = _load_json_config('X_CSI_EMBER_CONFIG',
                                          DEFAULT_EMBER_CFG)
-    NodeInfo.REQUEST_MULTIPATH = cinderlib_config.pop('request_multipath',
+    NodeInfo.REQUEST_MULTIPATH = ember_config.pop('request_multipath',
                                                       True)
     backend_config = _load_json_config('X_CSI_BACKEND_CONFIG')
     node_id = os.environ.get('X_CSI_NODE_ID')
@@ -1117,7 +1113,7 @@ def main():
     csi_plugin = server_class(server=server,
                               persistence_config=persistence_config,
                               backend_config=backend_config,
-                              cinderlib_config=cinderlib_config,
+                              ember_config=ember_config,
                               storage_nw_ip=storage_nw_ip,
                               node_id=node_id)
     msg = 'Running as %s' % mode
