@@ -6,3 +6,6 @@ RUN apt-get update \
 
 COPY Vagrantfile /var/tmp
 COPY bootstrap.sh /var/tmp
+
+WORKDIR /var/tmp
+CMD ["vagrant", "up" ]
