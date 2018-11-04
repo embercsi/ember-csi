@@ -8,7 +8,8 @@ step=$2
 
 if [[ "$command" = "start" ]]; then
 	if [[ "$step" = "1" ]]; then
-		vagrant up
+#		vagrant up
+		ansible-playbook -i hosts playbooks/create-vm/tasks/up.yml
 	elif [[ "$step" = "2" ]]; then
 		docker build -t lioramilbaum/ubuntu .
 		docker run -it --privileged=true -v ~/.vagrant.d:/root/.vagrant.d lioramilbaum/ubuntu
@@ -24,7 +25,8 @@ if [[ "$command" = "start" ]]; then
 	fi
 elif [[ "$command" = "end" ]]; then
 	if [[ "$step" = "1" ]]; then
-		vagrant destroy --force
+#		vagrant destroy --force
+		ansible-playbook -i hosts playbooks/create-vm/tasks/destroy.yml
 	elif [[ "$step" = "2" ]]; then
 		docker rm $(docker ps -aq)
 		docker rmi $(docker images -q)

@@ -1,0 +1,17 @@
+---
+# tasks file for create-vm
+
+- hosts: all
+  connection: local
+
+  tasks:
+  - name: destroy vm
+    virt:
+        name: foo
+        state: destroyed
+        uri: 'qemu:///system'
+  - name: undefine vm
+    virt:
+        name: foo
+        command: undefine
+        uri: 'qemu:///system'
