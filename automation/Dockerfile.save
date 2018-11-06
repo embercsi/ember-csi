@@ -1,0 +1,13 @@
+FROM kubevirt/libvirt
+
+RUN yum -y install vim ansible git libguestfs-tools-c \
+&& yum clean all
+
+RUN vagrant plugin install vagrant-vbguest
+
+ADD playbooks/ /var/tmp/
+
+WORKDIR /var/tmp
+RUN git clone https://github.com/lioramilbaum/ember-csi.git
+
+CMD ansible-playbook -i hosts create-vm/tasks/up.yml
