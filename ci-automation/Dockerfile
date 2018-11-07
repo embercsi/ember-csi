@@ -8,5 +8,5 @@ RUN apt-get update \
 && vagrant box add centos/7 --provider virtualbox
 
 WORKDIR /root/ember-csi
-ENV VAGRANT_VAGRANTFILE automation/Vagrantfile
+ENV VAGRANT_VAGRANTFILE ci-automation/Vagrantfile
 CMD ["vagrant", "up" ]

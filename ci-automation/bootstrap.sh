@@ -8,4 +8,4 @@ rpm -V --nomode $PKGS
 systemctl start docker.service
 yum install -y python2-pip
 rpm -V python2-pip
-pip install --upgrade -r /vagrant/automation/requirements.txt
+pip install --upgrade -r /vagrant/ci-automation/requirements.txt
