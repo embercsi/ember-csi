@@ -8,5 +8,4 @@ if [[ "$command" = "start" ]]; then
 	docker run -it --privileged=true -v $(pwd)/../:/root/ember-csi lioramilbaum/ubuntu
 elif [[ "$command" = "end" ]]; then
 	docker rm $(docker ps -aq)
-	docker rmi $(docker images -q)
 fi
