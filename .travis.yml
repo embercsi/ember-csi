@@ -26,7 +26,7 @@ jobs:
       - sudo pip install git+https://github.com/akrog/cinderlib.git
       - sudo pip install -e ./
     script:
-      - sudo make ubuntu-bm-lvm
+      - sudo make centos-bm-lvm
 
   - name: "LVM baremetal latest"
     stage: phase2-tests
@@ -38,13 +38,13 @@ jobs:
       - sudo pip install git+https://github.com/akrog/cinderlib.git
       - sudo pip install -e ./
     script:
-      - sudo make ubuntu-bm-lvm
+      - sudo make centos-bm-lvm
 
   - name: "Image build"
     stage: build
     sudo: required
     script:
-      - echo "$DOCKER_PASSWORD" | docker login --password-stdin --username "$DOCKER_USERNAME"
+      - echo "$DOCKER_PASSWORD" | docker login --username "$DOCKER_USERNAME" --password-stdin
       - travis-scripts/build
 
   # Travis-CI only supports Ubuntu, which is incompatible with our images
@@ -53,7 +53,7 @@ jobs:
   #   sudo: required
   #   script:
   #     - sudo travis-scripts/setup-lvm.sh
-  #     - sudo make ubuntu-lvm
+  #     - sudo make centos-lvm
 
   - name: "Tag and push images"
     stage: push
