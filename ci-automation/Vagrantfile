@@ -1,0 +1,6 @@
+Vagrant.configure("2") do |config|
+  config.vm.box = "centos/7"
+  config.vm.synced_folder "/root/ember-csi", "/vagrant"
+  config.vm.provision "shell",path: "ci-automation/bootstrap.sh"
+  config.vm.provision "shell",path: "ci-automation/tests.sh"
+end
