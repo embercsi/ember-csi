@@ -5,4 +5,4 @@ cd /vagrant
 make lint
 make unit-tests
 travis-scripts/setup-lvm.sh
-make centos-lvm
+make centos-bm-lvm

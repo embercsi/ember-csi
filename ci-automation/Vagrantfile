@@ -1,6 +1,21 @@
-Vagrant.configure("2") do |config|
+Vagrant.configure(2) do |config|
   config.vm.box = "centos/7"
-  config.vm.synced_folder "/root/ember-csi", "/vagrant"
+# config.vm.synced_folder "/root/ember-csi", "/vagrant"
   config.vm.provision "shell",path: "ci-automation/bootstrap.sh"
   config.vm.provision "shell",path: "ci-automation/tests.sh"
+
+  config.vm.define "devstack" do |admin|
+    admin.vm.provider :libvirt do |domain|
+     domain.memory = 4096
+     domain.cpus = 1
+     domain.nested = true
+     domain.volume_cache = 'none'
+    end
+    admin.vm.provider :libvirt do |libvirt|
+     libvirt.driver = "kvm"
+     libvirt.uri = "qemu:///system"
+     libvirt.connect_via_ssh = false
+     libvirt.username = "root"
+    end
+  end
 end
