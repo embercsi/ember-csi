@@ -1,11 +1,6 @@
-FROM centos:7
+FROM hrishikesh/libvirtd
 
-RUN yum install -y openssh-clients rsync qemu libvirt libvirt-devel ruby-devel gcc qemu-kvm \
-&& yum clean all \
-&& yum install -y https://releases.hashicorp.com/vagrant/2.2.0/vagrant_2.2.0_x86_64.rpm \
+RUN yum -y install rsync openssh-clients libvirt-client libxslt-devel libxml2-devel libvirt-devel libguestfs-tools-c ruby-devel gcc \
+&& yum -y install https://releases.hashicorp.com/vagrant/2.2.0/vagrant_2.2.0_x86_64.rpm \
 && vagrant box add centos/7 --provider libvirt \
 && vagrant plugin install vagrant-libvirt
-
-WORKDIR /root/ember-csi
-ENV VAGRANT_VAGRANTFILE ci-automation/Vagrantfile
-CMD ["vagrant", "up", "--provider", "libvirt" ]
