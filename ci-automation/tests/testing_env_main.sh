@@ -1,21 +1,27 @@
 #!/usr/bin/env bash
 
+on_destroy() {
+  	vagrant destroy --force
+}
+
 on_exit() {
     echo "$?"
-		vagrant destroy --force
+    on_destroy
     exit
+}
+
+on_up() {
+    trap 'on_exit' SIGTERM SIGINT SIGHUP EXIT
+  	vagrant up --provider=libvirt
 }
 
 command=$1
 export VAGRANT_VAGRANTFILE=ci-automation/tests/Vagrantfile
 
 if [[ "$command" = "up" ]]; then
-	vagrant up --provider=libvirt
-	trap 'on_exit' SIGTERM SIGINT SIGHUP
+  on_up
 elif [[ "$command" = "destroy" ]]; then
-	vagrant destroy --force
+  on_destroy
 else
 	vagrant $command
 fi
-
-exit

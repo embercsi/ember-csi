@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 
-echo "Container UP - start"
+set -e
+
+echo "Spin testing env - begin"
 cd /root/ember-csi/ci-automation
 vagrant up --provider libvirt
-echo "Container UP - end"
+echo "Spin testing env - end"
 
 exit
