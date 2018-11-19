@@ -2,12 +2,10 @@
 
 set -e
 
-PKGS=(epel-release git gcc python-devel lvm2 docker)
+PKGS=(epel-release)
+yum install -y "${PKGS[@]}"
+rpm -V --nomode "${PKGS[@]}"
+PKGS=(git gcc python-devel lvm2 docker python2-pip)
 yum install -y "${PKGS[@]}"
 rpm -V --nomode "${PKGS[@]}"
 systemctl start docker.service
-yum install -y python2-pip
-rpm -V python2-pip
-pip install --upgrade -r /vagrant/ci-automation/requirements.txt
-
-exit
