@@ -1,0 +1,4 @@
+---
+tests:
+  playbooks:
+    - location: ci-automation/playbooks/tests/flake8.yml
