@@ -266,7 +266,7 @@ class Volume(CRD):
     @classmethod
     def _get_labels(cls, volume):
         return {
-            'backend_name': getattr(volume, objects.BACKEND_NAME_VOLUME_FIELD),
+            'backend_name': getattr(volume, volume.backend.id),
             'volume_id': volume.id,
             'volume_name': volume.name,
         }
