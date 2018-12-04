@@ -10,7 +10,7 @@ LABEL maintainers="Gorka Eguileor <geguileo@redhat.com>" \
 RUN yum -y install xfsprogs e2fsprogs btrfs-progs nmap-ncat && \
     yum clean all && \
     rm -rf /var/cache/yum && \
-    pip install --no-cache-dir --upgrade 'pyasn1<0.5.0,>=0.4.1'
+    pip install --no-cache-dir --upgrade 'pyasn1<0.5.0,>=0.4.1' future
 
 # Copy Ember-csi from directory directory
 COPY . /csi
