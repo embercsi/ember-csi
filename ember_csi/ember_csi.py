@@ -17,6 +17,7 @@
 # TODO(geguileo): Check that all parameters are present on received RPC calls
 from __future__ import absolute_import
 from concurrent import futures
+import importlib
 import sys
 import tarfile
 import time
@@ -27,13 +28,12 @@ import grpc
 from ember_csi import common
 from ember_csi import config
 from ember_csi import constants
-from ember_csi import csi_v0_2_0
 from ember_csi import workarounds
 
 
 def main():
     config.validate()
-    server_class = getattr(csi_v0_2_0, config.MODE.title())
+    server_class = _get_csi_server_class(class_name=config.MODE.title())
     copy_system_files()
 
     mode_msg = 'in ' + config.MODE + ' mode ' if config.MODE != 'all' else ''
@@ -42,7 +42,7 @@ def main():
                               mode_msg,
                               cinderlib.__version__,
                               constants.CINDER_VERSION,
-                              constants.CSI_SPEC))
+                              config.CSI_SPEC))
 
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     workarounds.grpc_eventlet(server)
@@ -80,6 +80,13 @@ def main():
             time.sleep(constants.ONE_DAY_IN_SECONDS)
     except KeyboardInterrupt:
         server.stop(0)
+
+
+def _get_csi_server_class(class_name):
+    module_name = 'ember_csi.v%s.csi' % config.CSI_SPEC.replace('.', '_')
+    module = importlib.import_module(module_name)
+    server_class = getattr(module, class_name)
+    return server_class
 
 
 def copy_system_files():
