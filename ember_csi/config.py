@@ -14,12 +14,14 @@
 #    under the License.
 
 from __future__ import absolute_import
+from distutils import version
 import glob
 import json
 import os
 import socket
 import sys
 
+from ember_csi import constants
 from ember_csi import defaults
 
 
@@ -42,6 +44,7 @@ def _get_system_fs_types():
     return result
 
 
+CSI_SPEC = os.environ.get('X_CSI_SPEC_VERSION', defaults.SPEC_VERSION)
 ABORT_DUPLICATES = (
     (os.environ.get('X_CSI_ABORT_DUPLICATES') or '').upper() == 'TRUE')
 DEBUG_MODE = str(os.environ.get('X_CSI_DEBUG_MODE') or '').upper()
@@ -65,6 +68,8 @@ SUPPORTED_FS_TYPES = _get_system_fs_types()
 
 
 def validate():
+    global CSI_SPEC
+
     if MODE not in ('controller', 'node', 'all'):
         sys.stderr.write('Invalid mode value (%s)\n' % MODE)
         exit(1)
@@ -77,3 +82,21 @@ def validate():
         sys.stderr.write('Invalid default mount filesystem %s\n' %
                          DEFAULT_MOUNT_FS)
         exit(1)
+
+    # Accept spaces and a v prefix on CSI spec version
+    spec_version = CSI_SPEC.strip()
+    if spec_version.startswith('v'):
+        spec_version = spec_version[1:]
+
+    # Support both x, x.y, and x.y.z versioning, but convert it to x.y.z
+    spec_version = version.StrictVersion(spec_version)
+    spec_version = '%s.%s.%s' % spec_version.version
+
+    if spec_version not in constants.SUPPORTED_SPEC_VERSIONS:
+        sys.stderr.write('CSI spec %s not in supported versions: %s.\n' %
+                         (CSI_SPEC,
+                          ', '.join(constants.SUPPORTED_SPEC_VERSIONS)))
+        exit(5)
+
+    # Store version in x.y.z formatted string
+    CSI_SPEC = spec_version

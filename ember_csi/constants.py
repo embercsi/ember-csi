@@ -28,7 +28,6 @@ CINDER_VERSION = pkg_resources.get_distribution('cinder').version
 REFRESH_TIME = 1
 VENDOR_VERSION = '0.0.2'
 MULTIPATH_FIND_RETRIES = 3
-
 VENDOR_VERSION = '0.0.2'
-# Supports CSI v0.2.0
-CSI_SPEC = '0.2.0'
+
+SUPPORTED_SPEC_VERSIONS = ('0.2.0',)

@@ -33,8 +33,8 @@ from ember_csi import common
 from ember_csi import config
 from ember_csi import constants
 from ember_csi import defaults
-from ember_csi import csi_pb2_grpc as csi
-from ember_csi import csi_types as types
+from ember_csi.v0_2_0 import csi_pb2_grpc as csi
+from ember_csi.v0_2_0 import csi_types as types
 
 
 class NodeInfo(object):
