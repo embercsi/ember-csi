@@ -10,7 +10,7 @@ LABEL maintainers="Gorka Eguileor <geguileo@redhat.com>" \
 RUN yum -y install xfsprogs e2fsprogs btrfs-progs && \
     yum clean all && \
     rm -rf /var/cache/yum && \
-    pip install --no-cache-dir --upgrade --process-dependency-links 'pyasn1<0.5.0,>=0.4.1' ember-csi
+    pip install --no-cache-dir --upgrade --process-dependency-links 'pyasn1<0.5.0,>=0.4.1' future ember-csi
 
 # This is the default port, but if we change it via CSI_ENDPOINT then this will
 # no longer be relevant.
