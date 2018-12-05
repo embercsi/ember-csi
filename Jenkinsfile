@@ -11,7 +11,7 @@ createDslContainers podName: dslPodName,
   node(dslPodName){
     stage("pre-flight"){
       deleteDir()
-      git branch: "${BRANCH_NAME}", url: 'https://github.com/embercsi/ember-csi.git'
+      checkout scm
     }
 
     stage("Parse Configuration"){
