@@ -26,6 +26,7 @@ class EnumWrapper(object):
         except AttributeError:
             return self._enum.Value(name)
 
+
 InfoResp = csi_pb2.GetPluginInfoResponse
 
 Capability = csi_pb2.PluginCapability
