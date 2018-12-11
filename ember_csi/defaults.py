@@ -17,8 +17,9 @@ NAME = 'io.ember-csi'
 ENDPOINT = '[::]:50051'
 MODE = 'all'
 PERSISTENCE_CFG = {'storage': 'db', 'connection': 'sqlite:///db.sqlite'}
+ROOT_HELPER = 'sudo'
 EMBER_CFG = {'project_id': NAME, 'user_id': NAME, 'plugin_name': NAME,
-             'root_helper': 'sudo', 'request_multipath': True}
+             'root_helper': ROOT_HELPER, 'request_multipath': True}
 REQUEST_MULTIPATH = True
 MOUNT_FS = 'ext4'
 MKFS = '/sbin/mkfs.'

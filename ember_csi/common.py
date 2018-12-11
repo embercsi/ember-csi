@@ -17,11 +17,14 @@ from __future__ import absolute_import
 import contextlib
 from datetime import datetime
 import functools
+import json
 import sys
 import threading
 import traceback
 
+import cinderlib
 import grpc
+from os_brick.initiator import connector as brick_connector
 import pytz
 
 from ember_csi import config
@@ -191,3 +194,39 @@ def require(*fields):
             return f(self, request, context)
         return checker
     return func_wrapper
+
+
+class NodeInfo(object):
+    __slots__ = ('id', 'connector_dict')
+
+    def __init__(self, node_id, connector_dict):
+        self.id = node_id
+        self.connector_dict = connector_dict
+
+    @classmethod
+    def get(cls, node_id):
+        kv = cinderlib.Backend.persistence.get_key_values(node_id)
+        if not kv:
+            return None
+        return cls(node_id, json.loads(kv[0].value))
+
+    @classmethod
+    def set(cls, node_id, storage_nw_ip):
+        # For now just set multipathing and not enforcing it
+        connector_dict = brick_connector.get_connector_properties(
+            'sudo', storage_nw_ip, config.REQUEST_MULTIPATH, False)
+        value = json.dumps(connector_dict, separators=(',', ':'))
+        kv = cinderlib.KeyValue(node_id, value)
+        cinderlib.Backend.persistence.set_key_value(kv)
+        return NodeInfo(node_id, connector_dict)
+
+
+class EnumWrapper(object):
+    def __init__(self, enum):
+        self._enum = enum
+
+    def __getattr__(self, name):
+        try:
+            return getattr(self._enum, name)
+        except AttributeError:
+            return self._enum.Value(name)

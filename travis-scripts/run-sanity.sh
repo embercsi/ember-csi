@@ -34,7 +34,7 @@ for tag_info_string in $TAGS; do
   echo -e "\n\n Ember-CSI startup logs:"
   docker logs ember
 
-  $DIR/csi-sanity-v2 --csi.endpoint=127.0.0.1:50051 --test.timeout 15m --ginkgo.v --ginkgo.progress
+  $DIR/csi-sanity-v0.2.0 --csi.endpoint=127.0.0.1:50051 --test.timeout 15m --ginkgo.v --ginkgo.progress
 
   docker rm -f  ember
 done
