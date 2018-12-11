@@ -130,21 +130,6 @@ class ControllerStub(object):
         request_serializer=csi__pb2.ControllerGetCapabilitiesRequest.SerializeToString,
         response_deserializer=csi__pb2.ControllerGetCapabilitiesResponse.FromString,
         )
-    self.CreateSnapshot = channel.unary_unary(
-        '/csi.v0.Controller/CreateSnapshot',
-        request_serializer=csi__pb2.CreateSnapshotRequest.SerializeToString,
-        response_deserializer=csi__pb2.CreateSnapshotResponse.FromString,
-        )
-    self.DeleteSnapshot = channel.unary_unary(
-        '/csi.v0.Controller/DeleteSnapshot',
-        request_serializer=csi__pb2.DeleteSnapshotRequest.SerializeToString,
-        response_deserializer=csi__pb2.DeleteSnapshotResponse.FromString,
-        )
-    self.ListSnapshots = channel.unary_unary(
-        '/csi.v0.Controller/ListSnapshots',
-        request_serializer=csi__pb2.ListSnapshotsRequest.SerializeToString,
-        response_deserializer=csi__pb2.ListSnapshotsResponse.FromString,
-        )
 
 
 class ControllerServicer(object):
@@ -207,27 +192,6 @@ class ControllerServicer(object):
     context.set_details('Method not implemented!')
     raise NotImplementedError('Method not implemented!')
 
-  def CreateSnapshot(self, request, context):
-    # missing associated documentation comment in .proto file
-    pass
-    context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-    context.set_details('Method not implemented!')
-    raise NotImplementedError('Method not implemented!')
-
-  def DeleteSnapshot(self, request, context):
-    # missing associated documentation comment in .proto file
-    pass
-    context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-    context.set_details('Method not implemented!')
-    raise NotImplementedError('Method not implemented!')
-
-  def ListSnapshots(self, request, context):
-    # missing associated documentation comment in .proto file
-    pass
-    context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-    context.set_details('Method not implemented!')
-    raise NotImplementedError('Method not implemented!')
-
 
 def add_ControllerServicer_to_server(servicer, server):
   rpc_method_handlers = {
@@ -270,21 +234,6 @@ def add_ControllerServicer_to_server(servicer, server):
           servicer.ControllerGetCapabilities,
           request_deserializer=csi__pb2.ControllerGetCapabilitiesRequest.FromString,
           response_serializer=csi__pb2.ControllerGetCapabilitiesResponse.SerializeToString,
-      ),
-      'CreateSnapshot': grpc.unary_unary_rpc_method_handler(
-          servicer.CreateSnapshot,
-          request_deserializer=csi__pb2.CreateSnapshotRequest.FromString,
-          response_serializer=csi__pb2.CreateSnapshotResponse.SerializeToString,
-      ),
-      'DeleteSnapshot': grpc.unary_unary_rpc_method_handler(
-          servicer.DeleteSnapshot,
-          request_deserializer=csi__pb2.DeleteSnapshotRequest.FromString,
-          response_serializer=csi__pb2.DeleteSnapshotResponse.SerializeToString,
-      ),
-      'ListSnapshots': grpc.unary_unary_rpc_method_handler(
-          servicer.ListSnapshots,
-          request_deserializer=csi__pb2.ListSnapshotsRequest.FromString,
-          response_serializer=csi__pb2.ListSnapshotsResponse.SerializeToString,
       ),
   }
   generic_handler = grpc.method_handlers_generic_handler(

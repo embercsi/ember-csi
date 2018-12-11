@@ -15,3 +15,5 @@ tools/
 .*.sw?
 Dockerfile
 Dockerfile-master
+csi_proto/
+travis-scripts/

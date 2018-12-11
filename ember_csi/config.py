@@ -14,6 +14,7 @@
 #    under the License.
 
 from __future__ import absolute_import
+import collections
 from distutils import version
 import glob
 import json
@@ -61,8 +62,10 @@ EMBER_CONFIG = _load_json_config('X_CSI_EMBER_CONFIG',
 REQUEST_MULTIPATH = EMBER_CONFIG.pop('request_multipath',
                                      defaults.REQUEST_MULTIPATH)
 BACKEND_CONFIG = _load_json_config('X_CSI_BACKEND_CONFIG')
-NODE_ID = os.environ.get('X_CSI_NODE_ID')
+NODE_ID = os.environ.get('X_CSI_NODE_ID') or socket.getfqdn()
 DEFAULT_MOUNT_FS = os.environ.get('X_CSI_DEFAULT_MOUNT_FS', defaults.MOUNT_FS)
+NODE_TOPOLOGY = os.environ.get('X_CSI_NODE_TOPOLOGY')
+TOPOLOGIES = os.environ.get('X_CSI_TOPOLOGIES')
 
 SUPPORTED_FS_TYPES = _get_system_fs_types()
 
@@ -89,6 +92,8 @@ def validate():
         spec_version = spec_version[1:]
 
     # Support both x, x.y, and x.y.z versioning, but convert it to x.y.z
+    if '.' not in spec_version:
+        spec_version += '.0'
     spec_version = version.StrictVersion(spec_version)
     spec_version = '%s.%s.%s' % spec_version.version
 
@@ -100,3 +105,62 @@ def validate():
 
     # Store version in x.y.z formatted string
     CSI_SPEC = spec_version
+
+    _set_topology_config()
+
+
+def _set_topology_config():
+    global NODE_TOPOLOGY
+    global TOPOLOGIES
+
+    if not (TOPOLOGIES or NODE_TOPOLOGY):
+        return
+
+    if CSI_SPEC == '0.2.0':
+        sys.stderr.write('Topology not supported on spec v0.2.0')
+        exit(7)
+
+    # Decode topology using ordered dicts to determine the hierarchy
+    decoder = json.JSONDecoder(object_pairs_hook=collections.OrderedDict)
+    if TOPOLOGIES:
+        try:
+            TOPOLOGIES = decoder.decode(TOPOLOGIES)
+        except Exception:
+            sys.stderr.write('Topology information is not valid JSON: %s.\n' %
+                             TOPOLOGIES)
+            exit(6)
+        if not isinstance(TOPOLOGIES, list):
+            sys.stderr.write('Topologies must be a list.\n')
+            exit(20)
+
+    if NODE_TOPOLOGY:
+        try:
+            NODE_TOPOLOGY = decoder.decode(NODE_TOPOLOGY)
+        except Exception:
+            sys.stderr.write(
+                'Node Topology information is not valid JSON: %s.\n' %
+                NODE_TOPOLOGY)
+            exit(10)
+
+    if MODE == 'node':
+        if TOPOLOGIES:
+            sys.stderr.write('Warning: Ignoring Controller topology\n')
+            if not NODE_TOPOLOGY:
+                sys.stderr.write('Missing node topology\n')
+                exit(8)
+
+    elif MODE == 'controller':
+        if NODE_TOPOLOGY:
+            sys.stderr.write('Warning: Ignoring Node topology\n')
+            if not TOPOLOGIES:
+                sys.stderr.write('Missing controller topologies\n')
+                exit(9)
+
+    else:
+        if not TOPOLOGIES:
+            sys.stderr.write('Warning: Setting topologies to node topology\n')
+            TOPOLOGIES = [NODE_TOPOLOGY]
+        elif not NODE_TOPOLOGY:
+            sys.stderr.write('Warning: Setting node topology to first '
+                             'controller topology\n')
+            NODE_TOPOLOGY = TOPOLOGIES[0]
