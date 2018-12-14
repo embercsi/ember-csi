@@ -713,3 +713,200 @@ class NodeBase(IdentityBase):
     @common.logrpc
     def NodeGetCapabilities(self, request, context):
         return self.NODE_CAPABILITIES_RESP
+
+
+class TopologyBase(object):
+    TOPOLOGIES = None
+    # These 3 attributes are defined in __init__ if we have topologies
+    # TOPOLOGY_HIERA = None
+    # TOPOLOGY_LEVELS = None
+    # TOPOLOGY_LEVELS_SET = None
+
+    def _init_topology(self, constraint_type):
+        if config.TOPOLOGIES:
+            self.TOPOLOGY_HIERA = []
+            self.TOPOLOGIES = []
+            self.TOPOLOGY_LEVELS = []
+            if constraint_type not in self.PLUGIN_CAPABILITIES:
+                self.PLUGIN_CAPABILITIES.append(constraint_type)
+
+            for topology in config.TOPOLOGIES:
+
+                topo = tuple((k.lower(), v) for k, v in topology.items())
+                topology = self.TYPES.Topology(segments=topology)
+
+                if len(topo) >= len(self.TOPOLOGY_LEVELS):
+                    for k, v in topo[len(self.TOPOLOGY_LEVELS):]:
+                        self.TOPOLOGY_LEVELS.append(k)
+
+                replace = None
+                for i, t in enumerate(self.TOPOLOGY_HIERA):
+                    if t[:len(topo)] == topo:
+                        sys.stderr.write('Warning: Ignoring topology %s. Is '
+                                         'included in %s' % (t, topo))
+                        replace = i
+                        break
+                    elif topo[:len(t)] == t:
+                        sys.stderr.write('Warning: Ignoring topology %s. Is '
+                                         'included in %s' % (topo, t))
+                        break
+                else:
+                    self.TOPOLOGY_HIERA.append(topo)
+                    self.TOPOLOGIES.append(topology)
+
+                if replace is not None:
+                    self.TOPOLOGY_HIERA[i] = topo
+                    self.TOPOLOGIES[i] = topology
+
+            sys.stdout.write("topology: %s" % self.TOPOLOGY_HIERA)
+            self.TOPOLOGY_LEVELS_SET = set(self.TOPOLOGY_LEVELS)
+
+    def _topology_is_accessible(self, topology, context):
+        topo = []
+        unused_domains = set(topology.keys())
+
+        for domain in self.TOPOLOGY_LEVELS:
+            if domain not in topology:
+                break
+            topo.append((domain, topology[domain]))
+            unused_domains.remove(domain)
+
+        # We used the domains in hierarchical order, if there is any known
+        # domain in the request we haven't used, then there was one level that
+        # was missing.
+        if unused_domains.intersection(self.TOPOLOGY_LEVELS_SET):
+            context.abort(grpc.StatusCode.INVALID_ARGUMENT,
+                          'Missing domain topology in request.')
+
+        for t in self.TOPOLOGY_HIERA:
+            if topo == t[:len(topo)]:
+                return True
+        return False
+
+    def _validate_accessible_requirements(self, topology_req, context):
+        requisite = getattr(topology_req, 'requisite', None)
+        preferred = getattr(topology_req, 'preferred', None)
+        if not (requisite or preferred):
+            context.abort(grpc.StatusCode.INVALID_ARGUMENT,
+                          'Need topology requisite and/or preferred field')
+
+        # preferrend must be a subset of requisite
+        if requisite and preferred:
+            for p in preferred:
+                if p not in requisite:
+                    context.abort(grpc.StatusCode.INVALID_ARGUMENT,
+                                  'All preferred topologies must be in '
+                                  'requisite topologies')
+
+        to_check = requisite or preferred
+        for topology in to_check:
+            if self._topology_is_accessible(topology, context):
+                return
+        context.abort(grpc.StatusCode.INVALID_ARGUMENT,
+                      'None of the requested topologies are accessible.')
+
+    def _validate_accessibility(self, request, context):
+        if not self.TOPOLOGIES:
+            return
+
+        # Used by CreateVolume
+        if (hasattr(request, 'accessibility_requirements') and
+                request.HasField('accessibility_requirements')):
+            self._validate_accessible_requirements(
+                request.accessibility_requirements, context)
+
+        # Used by GetCapacity
+        if (hasattr(request, 'accessible_topology') and
+                request.HasField('accessible_topology')):
+            # TODO(geguileo): Check request.accessible_topology for GetCapacity
+            if not self._topology_is_accessible(request.accessible_topology,
+                                                context):
+                context.abort(grpc.StatusCode.INVALID_ARGUMENT,
+                              'Topology is not accessible.')
+
+
+class SnapshotBase(object):
+    def _get_snap(self, snapshot_id=None, always_list=False, **filters):
+        res = self.persistence.get_snapshots(
+            snapshot_id=snapshot_id, **filters)
+        if (not always_list and
+                (res and len(res) == 1 and (snapshot_id or filters))):
+            return res[0]
+        return res
+
+    def _create_from_snap(self, snap_id, vol_size, name, context):
+        src_snap = self._get_snap(snap_id)
+        if not src_snap:
+            context.abort(grpc.StatusCode.NOT_FOUND,
+                          'Snapshot %s does not exist' % snap_id)
+        if src_snap.status != 'available':
+            context.abort(grpc.StatusCode.INVALID_ARGUMENT,
+                          'Snapshot %s is not available' % snap_id)
+        if src_snap.volume_size > vol_size:
+            context.abort(grpc.StatusCode.OUT_OF_RANGE,
+                          'Snapshot %s is bigger than requested volume' %
+                          snap_id)
+        vol = src_snap.create_volume(name=name)
+        return vol
+
+    # Inheriting classes must implement
+    # def _convert_snapshot_type(self, snap):
+    @common.debuggable
+    @common.logrpc
+    @common.require('name', 'source_volume_id')
+    @common.Worker.unique('name')
+    def CreateSnapshot(self, request, context):
+        snap = self._get_snap(snapshot_name=request.name)
+
+        # If we have multiple references there's something wrong, either the
+        # same DB used for multiple purposes and there is a collision name, or
+        # there's been a race condition, so we cannot be idempotent, create a
+        # new snapshot.
+        if isinstance(snap, cinderlib.Snapshot):
+            if request.source_volume_id != snap.volume_id:
+                context.abort(grpc.StatusCode.ALREADY_EXISTS,
+                              'Snapshot %s from %s exists for volume %s' %
+                              (request.name, request.source_volume_id,
+                               snap.volume_id))
+            print('Snapshot %s exists with id %s' % (request.name, snap.id))
+        else:
+            vol = self._get_vol(request.source_volume_id)
+            if not vol:
+                context.abort(grpc.StatusCode.NOT_FOUND,
+                              'Volume %s does not exist' % request.volume_id)
+            snap = vol.create_snapshot(name=request.name)
+        snapshot = self._convert_snapshot_type(snap)
+        return self.TYPES.CreateSnapResp(snapshot=snapshot)
+
+    @common.debuggable
+    @common.logrpc
+    @common.require('snapshot_id')
+    @common.Worker.unique('snapshot_id')
+    def DeleteSnapshot(self, request, context):
+        snap = self._get_snap(request.snapshot_id)
+        if snap:
+            snap.delete()
+        return self.DELETE_SNAP_RESP
+
+    @common.debuggable
+    @common.logrpc
+    def ListSnapshots(self, request, context):
+        if not (request.source_volume_id or request.snapshot_id):
+            vols = self._get_vol()
+            snaps = []
+            for v in vols:
+                snaps.extend(self._get_snap(volume_id=v.id, always_list=True))
+        else:
+            snaps = self._get_snap(snapshot_id=request.snapshot_id,
+                                   volume_id=request.source_volume_id,
+                                   always_list=True)
+
+        selected, token = self._paginate(request, context, snaps)
+
+        entries = [
+            self.TYPES.SnapEntry(snapshot=self._convert_snapshot_type(snap))
+            for snap in selected]
+        fields = {'entries': entries}
+        if token:
+            fields['next_token'] = token
+        return self.TYPES.ListSnapResp(**fields)

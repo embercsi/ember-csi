@@ -17,9 +17,7 @@ from __future__ import absolute_import
 from builtins import int
 import os
 import stat
-import sys
 
-import cinderlib
 from google.protobuf import timestamp_pb2
 import grpc
 
@@ -31,7 +29,7 @@ from ember_csi.v1_0_0 import csi_pb2_grpc as csi
 from ember_csi.v1_0_0 import csi_types as types
 
 
-class Controller(base.ControllerBase):
+class Controller(base.TopologyBase, base.SnapshotBase, base.ControllerBase):
     CSI = csi
     TYPES = types
     PROBE_RESP = types.ProbeResp(ready=types.Bool(value=True))
@@ -45,127 +43,13 @@ class Controller(base.ControllerBase):
                          types.CtrlCapabilityType.CLONE_VOLUME,
                          # types.CtrlCapabilityType.PUBLISH_READONLY,
                          )
-    TOPOLOGIES = None
-    # These 3 attributes are defined in __init__ if we have topologies
-    # TOPOLOGY_HIERA = None
-    # TOPOLOGY_LEVELS = None
-    # TOPOLOGY_LEVELS_SET = None
 
     def __init__(self, server, persistence_config, backend_config,
                  ember_config=None, **kwargs):
-        topo_capab = self.TYPES.ServiceType.VOLUME_ACCESSIBILITY_CONSTRAINTS
-        if config.TOPOLOGIES:
-            self.TOPOLOGY_HIERA = []
-            self.TOPOLOGIES = []
-            self.TOPOLOGY_LEVELS = []
-            if topo_capab not in self.PLUGIN_CAPABILITIES:
-                self.PLUGIN_CAPABILITIES.append(topo_capab)
-
-            for topology in config.TOPOLOGIES:
-
-                topo = tuple((k.lower(), v) for k, v in topology.items())
-                topology = self.TYPES.Topology(segments=topology)
-
-                if len(topo) >= len(self.TOPOLOGY_LEVELS):
-                    for k, v in topo[len(self.TOPOLOGY_LEVELS):]:
-                        self.TOPOLOGY_LEVELS.append(k)
-
-                replace = None
-                for i, t in enumerate(self.TOPOLOGY_HIERA):
-                    if t[:len(topo)] == topo:
-                        sys.stderr.write('Warning: Ignoring topology %s. Is '
-                                         'included in %s' % (t, topo))
-                        replace = i
-                        break
-                    elif topo[:len(t)] == t:
-                        sys.stderr.write('Warning: Ignoring topology %s. Is '
-                                         'included in %s' % (topo, t))
-                        break
-                else:
-                    self.TOPOLOGY_HIERA.append(topo)
-                    self.TOPOLOGIES.append(topology)
-
-                if replace is not None:
-                    self.TOPOLOGY_HIERA[i] = topo
-                    self.TOPOLOGIES[i] = topology
-
-            sys.stdout.write("topology: %s" % self.TOPOLOGY_HIERA)
-            self.TOPOLOGY_LEVELS_SET = set(self.TOPOLOGY_LEVELS)
-
+        self._init_topology(types.ServiceType.VOLUME_ACCESSIBILITY_CONSTRAINTS)
         super(Controller, self).__init__(server, persistence_config,
                                          backend_config, ember_config,
                                          **kwargs)
-
-    def _topology_is_accessible(self, topology, context):
-        topo = []
-        unused_domains = set(topology.keys())
-
-        for domain in self.TOPOLOGY_LEVELS:
-            if domain not in topology:
-                break
-            topo.append((domain, topology[domain]))
-            unused_domains.remove(domain)
-
-        # We used the domains in hierarchical order, if there is any known
-        # domain in the request we haven't used, then there was one level that
-        # was missing.
-        if unused_domains.intersection(self.TOPOLOGY_LEVELS_SET):
-            context.abort(grpc.StatusCode.INVALID_ARGUMENT,
-                          'Missing domain topology in request.')
-
-        for t in self.TOPOLOGY_HIERA:
-            if topo == t[:len(topo)]:
-                return True
-        return False
-
-    def _validate_accessible_requirements(self, topology_req, context):
-        requisite = getattr(topology_req, 'requisite', None)
-        preferred = getattr(topology_req, 'preferred', None)
-        if not (requisite or preferred):
-            context.abort(grpc.StatusCode.INVALID_ARGUMENT,
-                          'Need topology requisite and/or preferred field')
-
-        # preferrend must be a subset of requisite
-        if requisite and preferred:
-            for p in preferred:
-                if p not in requisite:
-                    context.abort(grpc.StatusCode.INVALID_ARGUMENT,
-                                  'All preferred topologies must be in '
-                                  'requisite topologies')
-
-        to_check = requisite or preferred
-        for topology in to_check:
-            if self._topology_is_accessible(topology, context):
-                return
-        context.abort(grpc.StatusCode.INVALID_ARGUMENT,
-                      'None of the requested topologies are accessible.')
-
-    def _validate_accessibility(self, request, context):
-        if not self.TOPOLOGIES:
-            return
-
-        # Used by CreateVolume
-        if (hasattr(request, 'accessibility_requirements') and
-                request.HasField('accessibility_requirements')):
-            self._validate_accessible_requirements(
-                request.accessibility_requirements, context)
-
-        # Used by GetCapacity
-        if (hasattr(request, 'accessible_topology') and
-                request.HasField('accessible_topology')):
-            # TODO(geguileo): Check request.accessible_topology for GetCapacity
-            if not self._topology_is_accessible(request.accessible_topology,
-                                                context):
-                context.abort(grpc.StatusCode.INVALID_ARGUMENT,
-                              'Topology is not accessible.')
-
-    def _get_snap(self, snapshot_id=None, always_list=False, **filters):
-        res = self.persistence.get_snapshots(
-            snapshot_id=snapshot_id, **filters)
-        if (not always_list and
-                (res and len(res) == 1 and (snapshot_id or filters))):
-            return res[0]
-        return res
 
     # CreateVolume implemented on base Controller class which requires
     # _validate_requirements, _create_volume, and _convert_volume_type
@@ -173,21 +57,6 @@ class Controller(base.ControllerBase):
     def _validate_requirements(self, request, context):
         super(Controller, self)._validate_requirements(request, context)
         self._validate_accessibility(request, context)
-
-    def _create_from_snap(self, snap_id, vol_size, name, context):
-        src_snap = self._get_snap(snap_id)
-        if not src_snap:
-            context.abort(grpc.StatusCode.NOT_FOUND,
-                          'Snapshot %s does not exist' % snap_id)
-        if src_snap.status != 'available':
-            context.abort(grpc.StatusCode.INVALID_ARGUMENT,
-                          'Snapshot %s is not available' % snap_id)
-        if src_snap.volume_size > vol_size:
-            context.abort(grpc.StatusCode.OUT_OF_RANGE,
-                          'Snapshot %s is bigger than requested volume' %
-                          snap_id)
-        vol = src_snap.create_volume(name=name)
-        return vol
 
     def _create_from_vol(self, vol_id, vol_size, name, context):
         src_vol = self._get_vol(volume_id=vol_id)
@@ -251,6 +120,8 @@ class Controller(base.ControllerBase):
     def _controller_publish_results(self, connection_info):
         return types.CtrlPublishResp(publish_context=connection_info)
 
+    # ControllerUnpublishVolume implemented on base Controller class.
+
     @common.debuggable
     @common.logrpc
     @common.require('volume_id', 'volume_capabilities')
@@ -285,6 +156,7 @@ class Controller(base.ControllerBase):
 
     # ControllerGetCapabilities implemented on base Controller class using the
     # CTRL_CAPABILITIES attribute.
+
     def _convert_snapshot_type(self, snap):
         creation_time = timestamp_pb2.Timestamp()
         created_at = snap.created_at.replace(tzinfo=None)
@@ -297,65 +169,6 @@ class Controller(base.ControllerBase):
             creation_time=creation_time,
             ready_to_use=True)
         return snapshot
-
-    @common.debuggable
-    @common.logrpc
-    @common.require('name', 'source_volume_id')
-    @common.Worker.unique('name')
-    def CreateSnapshot(self, request, context):
-        snap = self._get_snap(snapshot_name=request.name)
-
-        # If we have multiple references there's something wrong, either the
-        # same DB used for multiple purposes and there is a collision name, or
-        # there's been a race condition, so we cannot be idempotent, create a
-        # new snapshot.
-        if isinstance(snap, cinderlib.Snapshot):
-            if request.source_volume_id != snap.volume_id:
-                context.abort(grpc.StatusCode.ALREADY_EXISTS,
-                              'Snapshot %s from %s exists for volume %s' %
-                              (request.name, request.source_volume_id,
-                               snap.volume_id))
-            print('Snapshot %s exists with id %s' % (request.name, snap.id))
-        else:
-            vol = self._get_vol(request.source_volume_id)
-            if not vol:
-                context.abort(grpc.StatusCode.NOT_FOUND,
-                              'Volume %s does not exist' % request.volume_id)
-            snap = vol.create_snapshot(name=request.name)
-        snapshot = self._convert_snapshot_type(snap)
-        return types.CreateSnapResp(snapshot=snapshot)
-
-    @common.debuggable
-    @common.logrpc
-    @common.require('snapshot_id')
-    @common.Worker.unique('snapshot_id')
-    def DeleteSnapshot(self, request, context):
-        snap = self._get_snap(request.snapshot_id)
-        if snap:
-            snap.delete()
-        return self.DELETE_SNAP_RESP
-
-    @common.debuggable
-    @common.logrpc
-    def ListSnapshots(self, request, context):
-        if not (request.source_volume_id or request.snapshot_id):
-            vols = self._get_vol()
-            snaps = []
-            for v in vols:
-                snaps.extend(self._get_snap(volume_id=v.id, always_list=True))
-        else:
-            snaps = self._get_snap(snapshot_id=request.snapshot_id,
-                                   volume_id=request.source_volume_id,
-                                   always_list=True)
-
-        selected, token = self._paginate(request, context, snaps)
-
-        entries = [types.SnapEntry(snapshot=self._convert_snapshot_type(snap))
-                   for snap in selected]
-        fields = {'entries': entries}
-        if token:
-            fields['next_token'] = token
-        return types.ListSnapResp(**fields)
 
 
 class Node(base.NodeBase):
