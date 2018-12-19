@@ -280,8 +280,9 @@ class Volume(CRD):
 
     @classmethod
     def _get_labels(cls, volume):
+        # On controllers volume.backend is a backend object, a string on nodes
         return {
-            'backend_name': getattr(volume, volume.backend.id),
+            'backend_name': getattr(volume.backend, 'id', volume.backend),
             'volume_id': volume.id,
             'volume_name': volume.name,
         }
