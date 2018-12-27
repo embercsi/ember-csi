@@ -19,6 +19,7 @@ from distutils import version
 import glob
 import json
 import os
+import re
 import socket
 import sys
 
@@ -61,6 +62,7 @@ EMBER_CONFIG = _load_json_config('X_CSI_EMBER_CONFIG',
                                  defaults.EMBER_CFG)
 REQUEST_MULTIPATH = EMBER_CONFIG.pop('request_multipath',
                                      defaults.REQUEST_MULTIPATH)
+PLUGIN_NAME = EMBER_CONFIG.pop('plugin_name', None) or defaults.NAME
 BACKEND_CONFIG = _load_json_config('X_CSI_BACKEND_CONFIG')
 NODE_ID = os.environ.get('X_CSI_NODE_ID') or socket.getfqdn()
 DEFAULT_MOUNT_FS = os.environ.get('X_CSI_DEFAULT_MOUNT_FS', defaults.MOUNT_FS)
@@ -80,6 +82,10 @@ def validate():
     if MODE != 'node' and not BACKEND_CONFIG:
         print('Missing required backend configuration')
         exit(2)
+
+    if not re.match(r'^[A-Za-z]{2,6}(\.[A-Za-z0-9-]{1,63})+$', PLUGIN_NAME):
+        sys.stderr.write('Invalid plugin name %s' % PLUGIN_NAME)
+        exit(11)
 
     if DEFAULT_MOUNT_FS not in SUPPORTED_FS_TYPES:
         sys.stderr.write('Invalid default mount filesystem %s\n' %

@@ -69,7 +69,7 @@ class IdentityBase(object):
     MKFS_ARGS = {'ext4': ('-F',)}
     PLUGIN_CAPABILITIES = []
 
-    def __init__(self, server, cinderlib_cfg, plugin_name):
+    def __init__(self, server, cinderlib_cfg):
         # Skip if we've already been initialized (happens on class All)
         if self.manifest is not None:
             return
@@ -97,9 +97,8 @@ class IdentityBase(object):
             manifest['cinder-driver'] = type(self.backend.driver).__name__
             manifest['cinder-driver-supported'] = str(self.backend.supported)
 
-        self.plugin_name = self._validate_name(plugin_name)
         self.INFO = self.TYPES.InfoResp(
-            name=self.plugin_name,
+            name=config.PLUGIN_NAME,
             vendor_version=constants.VENDOR_VERSION,
             manifest=manifest)
         # NOTE(geguileo): For now let's only support single reader/writer modes
@@ -198,11 +197,10 @@ class IdentityBase(object):
 class ControllerBase(IdentityBase):
     def __init__(self, server, persistence_config, backend_config,
                  ember_config=None, **kwargs):
-        plugin_name = ember_config.pop('plugin_name', None)
         cinderlib.setup(persistence_config=persistence_config,
                         **ember_config)
         self.backend = cinderlib.Backend(**backend_config)
-        IdentityBase.__init__(self, server, ember_config, plugin_name)
+        IdentityBase.__init__(self, server, ember_config)
         self.CSI.add_ControllerServicer_to_server(self, server)
 
         self.DELETE_RESP = self.TYPES.DeleteResp()
@@ -462,10 +460,9 @@ class NodeBase(IdentityBase):
         # not to fail when there's no backend configured.
         if persistence_config:
             ember_config['fail_on_missing_backend'] = False
-            plugin_name = ember_config.pop('plugin_name', None)
             cinderlib.setup(persistence_config=persistence_config,
                             **ember_config)
-            IdentityBase.__init__(self, server, ember_config, plugin_name)
+            IdentityBase.__init__(self, server, ember_config)
 
         self.node_info = common.NodeInfo.set(node_id, storage_nw_ip)
         self.CSI.add_NodeServicer_to_server(self, server)
