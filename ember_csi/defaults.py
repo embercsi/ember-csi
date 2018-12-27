@@ -16,7 +16,7 @@
 NAME = 'io.ember-csi'
 ENDPOINT = '[::]:50051'
 MODE = 'all'
-PERSISTENCE_CFG = {'storage': 'db', 'connection': 'sqlite:///db.sqlite'}
+PERSISTENCE_CFG = {'storage': 'crd', 'namespace': 'default'}
 ROOT_HELPER = 'sudo'
 EMBER_CFG = {'project_id': NAME, 'user_id': NAME, 'plugin_name': NAME,
              'root_helper': ROOT_HELPER, 'request_multipath': True}
