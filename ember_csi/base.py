@@ -14,6 +14,7 @@
 #    under the License.
 
 from __future__ import absolute_import
+from distutils import version
 import itertools
 import json
 import os
@@ -74,6 +75,7 @@ class IdentityBase(object):
         if self.manifest is not None:
             return
 
+        self.csi_version = version.StrictVersion(config.CSI_SPEC)
         self.PLUGIN_CAPABILITIES.append(
             self.TYPES.ServiceType.CONTROLLER_SERVICE)
         caps = [self.TYPES.Capability(service=self.TYPES.Service(type=t))
@@ -108,6 +110,8 @@ class IdentityBase(object):
 
         self.CSI.add_IdentityServicer_to_server(self, server)
         self.manifest = manifest
+        self.PROBE_KV = cinderlib.objects.KeyValue('%s-%s-%s' % (
+            config.PLUGIN_NAME, config.MODE, 'probe'), '0')
 
     def _unsupported_mode(self, capability):
         return capability.access_mode.mode not in self.SUPPORTED_ACCESS
@@ -155,16 +159,35 @@ class IdentityBase(object):
     @common.debuggable
     @common.logrpc
     def Probe(self, request, context):
-        failure = False
-        # check configuration
-        # check_persistence
-        if self.backend:
-            # check driver
-            pass
+        # Proving may take a couple of seconds, and attacher sidecar prior to
+        # v0.4 will fail due to small timeout.
+        if self.csi_version < '1.0.0':
+            return self.PROBE_RESP
 
-        if failure:
+        try:
+            self.PROBE_KV.value = str((int(self.PROBE_KV.value) + 1) % 1000)
+            self.persistence.set_key_value(self.PROBE_KV)
+            res = self.persistence.get_key_values(self.PROBE_KV.key)
+            if not res or res[0].value != self.PROBE_KV.value:
+                context.abort(grpc.StatusCode.FAILED_PRECONDITION,
+                              'Storing metadata persistence value failed')
+        except Exception:
             context.abort(grpc.StatusCode.FAILED_PRECONDITION,
-                          'Persistence is not accessible')
+                          'Error accessing metadata persistence')
+
+        if self.backend:
+            try:
+                # Check driver is OK
+                self.backend.driver.check_for_setup_error()
+            except Exception:
+                context.abort(grpc.StatusCode.FAILED_PRECONDITION,
+                              'Driver check setup error failed')
+            try:
+                # Use stats gathering to further confirm it's working fine
+                self.backend.stats(refresh=True)
+            except Exception:
+                context.abort(grpc.StatusCode.FAILED_PRECONDITION,
+                              'Driver failed to return the stats')
 
         return self.PROBE_RESP
 
