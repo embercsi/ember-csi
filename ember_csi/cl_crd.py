@@ -203,11 +203,12 @@ class CRD(object):
 
         Creates labels to facilitate filtering when retrieving them.
         """
+        json_data = resource.to_jsons(simplified=True)
         cro = {'kind': cls.kind,
                'apiVersion': cls.api_version,
                'metadata': {'labels': cls._get_labels(resource),
                             'name': resource.id,
-                            'annotations': {'json': resource.jsons}}}
+                            'annotations': {'json': json_data}}}
         cls._set_dict_resource_version(resource, cro)
         res = cls._apply(resource.id, cro, is_new)
         cls._set_resource_version(resource, res)
