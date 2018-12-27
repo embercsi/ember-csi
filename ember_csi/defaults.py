@@ -25,3 +25,4 @@ MOUNT_FS = 'ext4'
 MKFS = '/sbin/mkfs.'
 VOLUME_SIZE = 1.0
 SPEC_VERSION = '0.2.0'
+CRD_NAMESPACE = 'default'

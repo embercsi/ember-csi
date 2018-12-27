@@ -67,6 +67,7 @@ from cinderlib import objects
 from cinderlib.persistence import base
 import kubernetes as k8s
 
+from ember_csi import defaults
 from ember_csi import workarounds
 
 
@@ -84,7 +85,7 @@ class CRD(object):
     """
     CRD_VERSION = 'v1'
     DOMAIN = 'ember-csi.io'
-    NAMESPACE = 'default'
+    NAMESPACE = defaults.CRD_NAMESPACE
     RESOURCE_VERSION_ATTR = '__resource_version'
 
     @classmethod
@@ -375,9 +376,11 @@ class CRDPersistence(base.PersistenceDriverBase):
     This is an opinionated implementation that takes into account our specific
     use case.
     """
-    def __init__(self, **kwargs):
+    def __init__(self, namespace=None, **kwargs):
         # Create fake DB for drivers
         self.fake_db = base.DB(self)
+        if namespace:
+            CRD.NAMESPACE = namespace
         CRD.ensure_crds_exist()
         super(CRDPersistence, self).__init__()
 
