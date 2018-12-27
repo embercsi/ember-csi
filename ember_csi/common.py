@@ -147,7 +147,7 @@ def setup_debug():
     if config.DEBUG_MODE not in ('', 'PDB', 'RPDB'):
         sys.stderr.write('Invalid X_CSI_DEBUG_MODE %s (valid values are PDB '
                          'and RPDB)\n' % config.DEBUG_MODE)
-        exit(3)
+        exit(constants.ERROR_DEBUG_MODE)
 
     if not config.DEBUG_MODE:
         return None, no_debug

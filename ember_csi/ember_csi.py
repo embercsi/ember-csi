@@ -65,7 +65,7 @@ def main():
 
     if not server.add_insecure_port(config.ENDPOINT):
         sys.stderr.write('\nERROR: Could not bind to %s\n' % config.ENDPOINT)
-        exit(1)
+        exit(constants.ERROR_BIND_PORT)
 
     server.start()
     print('Now serving on %s...' % config.ENDPOINT)
@@ -101,7 +101,7 @@ def copy_system_files():
                 t.extractall('/', members=check_files(t))
         except Exception as exc:
             sys.stderr.write('Error expanding file %s %s\n' % (archive, exc))
-            exit(4)
+            exit(constants.ERROR_TAR)
     else:
         sys.stdout.write('X_CSI_SYSTEM_FILES not specified.\n')
 

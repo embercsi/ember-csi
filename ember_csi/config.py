@@ -36,7 +36,7 @@ def _load_json_config(name, default=None):
         return json.loads(value)
     except Exception:
         print('Invalid JSON data for %s' % name)
-        exit(1)
+        exit(constants.ERROR_JSON)
 
 
 def _get_system_fs_types():
@@ -77,20 +77,20 @@ def validate():
 
     if MODE not in ('controller', 'node', 'all'):
         sys.stderr.write('Invalid mode value (%s)\n' % MODE)
-        exit(1)
+        exit(constants.ERROR_MODE)
 
     if MODE != 'node' and not BACKEND_CONFIG:
         print('Missing required backend configuration')
-        exit(2)
+        exit(constants.ERROR_MISSING_BACKEND)
 
     if not re.match(r'^[A-Za-z]{2,6}(\.[A-Za-z0-9-]{1,63})+$', PLUGIN_NAME):
         sys.stderr.write('Invalid plugin name %s' % PLUGIN_NAME)
-        exit(11)
+        exit(constants.ERROR_PLUGIN_NAME)
 
     if DEFAULT_MOUNT_FS not in SUPPORTED_FS_TYPES:
         sys.stderr.write('Invalid default mount filesystem %s\n' %
                          DEFAULT_MOUNT_FS)
-        exit(1)
+        exit(constants.ERROR_FS_TYPE)
 
     # Accept spaces and a v prefix on CSI spec version
     spec_version = CSI_SPEC.strip()
@@ -107,7 +107,7 @@ def validate():
         sys.stderr.write('CSI spec %s not in supported versions: %s.\n' %
                          (CSI_SPEC,
                           ', '.join(constants.SUPPORTED_SPEC_VERSIONS)))
-        exit(5)
+        exit(constants.ERROR_CSI_SPEC)
 
     # Store version in x.y.z formatted string
     CSI_SPEC = spec_version
@@ -124,7 +124,7 @@ def _set_topology_config():
 
     if CSI_SPEC == '0.2.0':
         sys.stderr.write('Topology not supported on spec v0.2.0')
-        exit(7)
+        exit(constants.ERROR_TOPOLOGY_UNSUPPORTED)
 
     # Decode topology using ordered dicts to determine the hierarchy
     decoder = json.JSONDecoder(object_pairs_hook=collections.OrderedDict)
@@ -134,10 +134,10 @@ def _set_topology_config():
         except Exception:
             sys.stderr.write('Topology information is not valid JSON: %s.\n' %
                              TOPOLOGIES)
-            exit(6)
+            exit(constants.ERROR_TOPOLOGY_JSON)
         if not isinstance(TOPOLOGIES, list):
             sys.stderr.write('Topologies must be a list.\n')
-            exit(20)
+            exit(constants.ERROR_TOPOLOGY_LIST)
 
     if NODE_TOPOLOGY:
         try:
@@ -146,21 +146,21 @@ def _set_topology_config():
             sys.stderr.write(
                 'Node Topology information is not valid JSON: %s.\n' %
                 NODE_TOPOLOGY)
-            exit(10)
+            exit(constants.ERROR_TOPOLOGY_JSON)
 
     if MODE == 'node':
         if TOPOLOGIES:
             sys.stderr.write('Warning: Ignoring Controller topology\n')
             if not NODE_TOPOLOGY:
                 sys.stderr.write('Missing node topology\n')
-                exit(8)
+                exit(constants.ERROR_TOPOLOGY_MISSING)
 
     elif MODE == 'controller':
         if NODE_TOPOLOGY:
             sys.stderr.write('Warning: Ignoring Node topology\n')
             if not TOPOLOGIES:
                 sys.stderr.write('Missing controller topologies\n')
-                exit(9)
+                exit(constants.ERROR_TOPOLOGY_MISSING)
 
     else:
         if not TOPOLOGIES:
