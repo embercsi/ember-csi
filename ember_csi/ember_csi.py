@@ -22,7 +22,6 @@ import sys
 import tarfile
 import time
 
-import cinderlib
 import grpc
 
 from ember_csi import common
@@ -36,13 +35,8 @@ def main():
     server_class = _get_csi_server_class(class_name=config.MODE.title())
     copy_system_files()
 
-    mode_msg = 'in ' + config.MODE + ' mode ' if config.MODE != 'all' else ''
-    print('Starting Ember CSI v%s %s(cinderlib: v%s, cinder: v%s, '
-          'CSI spec: v%s)' % (constants.VENDOR_VERSION,
-                              mode_msg,
-                              cinderlib.__version__,
-                              constants.CINDER_VERSION,
-                              config.CSI_SPEC))
+    print('Starting Ember CSI v%s (cinder: v%s, CSI spec: v%s)' % (
+        constants.VENDOR_VERSION, constants.CINDER_VERSION, config.CSI_SPEC))
 
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     workarounds.grpc_eventlet(server)
@@ -53,6 +47,7 @@ def main():
                               storage_nw_ip=config.STORAGE_NW_IP,
                               node_id=config.NODE_ID)
 
+    print('Persistence module: %s' % type(csi_plugin.persistence).__name__)
     msg = 'Running as %s' % config.MODE
     if config.MODE != 'node':
         driver_name = type(csi_plugin.backend.driver).__name__
