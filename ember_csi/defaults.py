@@ -20,6 +20,28 @@ PERSISTENCE_CFG = {'storage': 'crd', 'namespace': 'default'}
 ROOT_HELPER = 'sudo'
 EMBER_CFG = {'project_id': NAME, 'user_id': NAME, 'plugin_name': NAME,
              'root_helper': ROOT_HELPER, 'request_multipath': True}
+
+LOG_LEVELS = ('amqp=WARN,amqplib=WARN,boto=WARN,qpid=WARN,sqlalchemy=WARN,'
+              'suds=WARN,oslo.messaging=WARN,oslo_messaging=WARN,iso8601=WARN,'
+              'requests.packages.urllib3.connectionpool=WARN,'
+              'urllib3.connectionpool=WARN,websocket=WARN,'
+              'requests.packages.urllib3.util.retry=WARN,'
+              'urllib3.util.retry=WARN,keystonemiddleware=WARN,'
+              'routes.middleware=WARN,stevedore=WARN,taskflow=WARN,'
+              'keystoneauth=WARN,oslo.cache=WARN,dogpile.core.dogpile=WARN,'
+              'cinderlib=WARN,cinder=WARN,os_brick=WARN')
+
+DEBUG_LOG_LEVELS = ('amqp=WARN,amqplib=WARN,boto=WARN,qpid=WARN,'
+                    'sqlalchemy=WARN,suds=INFO,oslo.messaging=INFO,'
+                    'oslo_messaging=INFO,iso8601=WARN,'
+                    'requests.packages.urllib3.connectionpool=WARN,'
+                    'urllib3.connectionpool=WARN,websocket=WARN,'
+                    'requests.packages.urllib3.util.retry=WARN,'
+                    'urllib3.util.retry=WARN,keystonemiddleware=WARN,'
+                    'routes.middleware=WARN,stevedore=WARN,taskflow=WARN,'
+                    'keystoneauth=WARN,oslo.cache=INFO,'
+                    'dogpile.core.dogpile=INFO')
+
 REQUEST_MULTIPATH = True
 MOUNT_FS = 'ext4'
 MKFS = '/sbin/mkfs.'

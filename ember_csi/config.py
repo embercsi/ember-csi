@@ -21,10 +21,15 @@ import json
 import os
 import re
 import socket
-import sys
+
+from oslo_context import context as context_utils
+from oslo_log import log as logging
 
 from ember_csi import constants
 from ember_csi import defaults
+
+
+LOG = logging.getLogger(__name__)
 
 
 def _load_json_config(name, default=None):
@@ -35,7 +40,7 @@ def _load_json_config(name, default=None):
     try:
         return json.loads(value)
     except Exception:
-        print('Invalid JSON data for %s' % name)
+        LOG.exception('Invalid JSON data for %s' % name)
         exit(constants.ERROR_JSON)
 
 
@@ -75,21 +80,21 @@ SUPPORTED_FS_TYPES = _get_system_fs_types()
 def validate():
     global CSI_SPEC
 
+    _set_logging_config()
     if MODE not in ('controller', 'node', 'all'):
-        sys.stderr.write('Invalid mode value (%s)\n' % MODE)
+        LOG.error('Invalid mode value (%s)' % MODE)
         exit(constants.ERROR_MODE)
 
     if MODE != 'node' and not BACKEND_CONFIG:
-        print('Missing required backend configuration')
+        LOG.error('Missing required backend configuration')
         exit(constants.ERROR_MISSING_BACKEND)
 
     if not re.match(r'^[A-Za-z]{2,6}(\.[A-Za-z0-9-]{1,63})+$', PLUGIN_NAME):
-        sys.stderr.write('Invalid plugin name %s' % PLUGIN_NAME)
+        LOG.error('Invalid plugin name %s' % PLUGIN_NAME)
         exit(constants.ERROR_PLUGIN_NAME)
 
     if DEFAULT_MOUNT_FS not in SUPPORTED_FS_TYPES:
-        sys.stderr.write('Invalid default mount filesystem %s\n' %
-                         DEFAULT_MOUNT_FS)
+        LOG.error('Invalid default mount filesystem %s' % DEFAULT_MOUNT_FS)
         exit(constants.ERROR_FS_TYPE)
 
     # Accept spaces and a v prefix on CSI spec version
@@ -104,15 +109,30 @@ def validate():
     spec_version = '%s.%s.%s' % spec_version.version
 
     if spec_version not in constants.SUPPORTED_SPEC_VERSIONS:
-        sys.stderr.write('CSI spec %s not in supported versions: %s.\n' %
-                         (CSI_SPEC,
-                          ', '.join(constants.SUPPORTED_SPEC_VERSIONS)))
+        LOG.error('CSI spec %s not in supported versions: %s' %
+                  (CSI_SPEC, ', '.join(constants.SUPPORTED_SPEC_VERSIONS)))
         exit(constants.ERROR_CSI_SPEC)
 
     # Store version in x.y.z formatted string
     CSI_SPEC = spec_version
 
     _set_topology_config()
+
+
+def _set_logging_config():
+    context_utils.generate_request_id = lambda: '-'
+    context_utils.get_current().request_id = '-'
+
+    EMBER_CONFIG.setdefault(
+        'logging_context_format_string',
+        '%(asctime)s %(levelname)s %(name)s [%(request_id)s] %(message)s')
+    EMBER_CONFIG.setdefault('disable_logs', False)
+
+    if EMBER_CONFIG.get('debug'):
+        log_levels = defaults.DEBUG_LOG_LEVELS
+    else:
+        log_levels = defaults.LOG_LEVELS
+    EMBER_CONFIG.setdefault('default_log_levels', log_levels)
 
 
 def _set_topology_config():
@@ -123,7 +143,7 @@ def _set_topology_config():
         return
 
     if CSI_SPEC == '0.2.0':
-        sys.stderr.write('Topology not supported on spec v0.2.0')
+        LOG.error('Topology not supported on spec v0.2.0')
         exit(constants.ERROR_TOPOLOGY_UNSUPPORTED)
 
     # Decode topology using ordered dicts to determine the hierarchy
@@ -132,41 +152,39 @@ def _set_topology_config():
         try:
             TOPOLOGIES = decoder.decode(TOPOLOGIES)
         except Exception:
-            sys.stderr.write('Topology information is not valid JSON: %s.\n' %
-                             TOPOLOGIES)
+            LOG.error('Topology information is not valid JSON: %s' %
+                      TOPOLOGIES)
             exit(constants.ERROR_TOPOLOGY_JSON)
         if not isinstance(TOPOLOGIES, list):
-            sys.stderr.write('Topologies must be a list.\n')
+            LOG.error('Topologies must be a list.')
             exit(constants.ERROR_TOPOLOGY_LIST)
 
     if NODE_TOPOLOGY:
         try:
             NODE_TOPOLOGY = decoder.decode(NODE_TOPOLOGY)
         except Exception:
-            sys.stderr.write(
-                'Node Topology information is not valid JSON: %s.\n' %
-                NODE_TOPOLOGY)
+            LOG.error('Node Topology information is not valid JSON: %s' %
+                      NODE_TOPOLOGY)
             exit(constants.ERROR_TOPOLOGY_JSON)
 
     if MODE == 'node':
         if TOPOLOGIES:
-            sys.stderr.write('Warning: Ignoring Controller topology\n')
+            LOG.warn('Ignoring Controller topology')
             if not NODE_TOPOLOGY:
-                sys.stderr.write('Missing node topology\n')
+                LOG.error('Missing node topology\n')
                 exit(constants.ERROR_TOPOLOGY_MISSING)
 
     elif MODE == 'controller':
         if NODE_TOPOLOGY:
-            sys.stderr.write('Warning: Ignoring Node topology\n')
+            LOG.warn('Ignoring Node topology')
             if not TOPOLOGIES:
-                sys.stderr.write('Missing controller topologies\n')
+                LOG.error('Missing controller topologies')
                 exit(constants.ERROR_TOPOLOGY_MISSING)
 
     else:
         if not TOPOLOGIES:
-            sys.stderr.write('Warning: Setting topologies to node topology\n')
+            LOG.warn('Setting topologies to node topology')
             TOPOLOGIES = [NODE_TOPOLOGY]
         elif not NODE_TOPOLOGY:
-            sys.stderr.write('Warning: Setting node topology to first '
-                             'controller topology\n')
+            LOG.warn('Setting node topology to first controller topology')
             NODE_TOPOLOGY = TOPOLOGIES[0]

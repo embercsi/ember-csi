@@ -19,7 +19,6 @@ import itertools
 import json
 import os
 import stat
-import sys
 import re
 import time
 
@@ -27,11 +26,15 @@ import cinderlib
 from cinderlib import exception
 import grpc
 from oslo_concurrency import processutils as putils
+from oslo_log import log as logging
 
 from ember_csi import common
 from ember_csi import config
 from ember_csi import constants
 from ember_csi import defaults
+
+
+LOG = logging.getLogger(__name__)
 
 
 # Workaround for https://bugs.python.org/issue672115
@@ -320,7 +323,7 @@ class ControllerBase(IdentityBase):
         # there's been a race condition, so we cannot be idempotent, create a
         # new volume.
         if isinstance(vol, cinderlib.Volume):
-            print('Volume %s exists with id %s' % (request.name, vol.id))
+            LOG.debug('Volume %s exists with id %s' % (request.name, vol.id))
             if not (min_size <= vol.size <= max_size):
                 context.abort(grpc.StatusCode.ALREADY_EXISTS,
                               'Volume already exists but is incompatible')
@@ -331,7 +334,7 @@ class ControllerBase(IdentityBase):
 
         else:
             # Create volume
-            print('Creating volume')
+            LOG.debug('Creating volume %s' % request.name)
             vol = self._create_volume(request.name, vol_size, request, context)
 
         if vol.status != 'available':
@@ -347,7 +350,7 @@ class ControllerBase(IdentityBase):
     def DeleteVolume(self, request, context):
         vol = self._get_vol(request.volume_id)
         if not vol:
-            print('Volume not found')
+            LOG.debug('Volume %s not found' % request.volume_id)
             return self.DELETE_RESP
 
         if vol.status == 'in-use':
@@ -363,7 +366,7 @@ class ControllerBase(IdentityBase):
             self._wait(vol, ('deleted',))
 
         if vol.status != 'deleted':
-            print('Deleting volume')
+            LOG.debug('Deleting volume %s' % request.volume_id)
             try:
                 vol.delete()
             except Exception as exc:
@@ -618,7 +621,7 @@ class NodeBase(IdentityBase):
                 conn.attach()
                 if not conn.use_multipath or conn.path.startswith('/dev/dm'):
                     break
-                sys.stdout.write('Retrying to get a multipath\n')
+                LOG.debug('Retrying to get a multipath')
             # Create the private bind file
             open(private_bind, 'a').close()
             # TODO(geguileo): make path for private binds configurable
@@ -762,13 +765,13 @@ class TopologyBase(object):
                 replace = None
                 for i, t in enumerate(self.TOPOLOGY_HIERA):
                     if t[:len(topo)] == topo:
-                        sys.stderr.write('Warning: Ignoring topology %s. Is '
-                                         'included in %s' % (t, topo))
+                        LOG.warn('Ignoring topology %s. Is included in %s' % (
+                            t, topo))
                         replace = i
                         break
                     elif topo[:len(t)] == t:
-                        sys.stderr.write('Warning: Ignoring topology %s. Is '
-                                         'included in %s' % (topo, t))
+                        LOG.warn('Ignoring topology %s. Is included in %s' % (
+                            topo, t))
                         break
                 else:
                     self.TOPOLOGY_HIERA.append(topo)
@@ -778,7 +781,7 @@ class TopologyBase(object):
                     self.TOPOLOGY_HIERA[i] = topo
                     self.TOPOLOGIES[i] = topology
 
-            sys.stdout.write("topology: %s" % self.TOPOLOGY_HIERA)
+            LOG.debug("topology: %s" % self.TOPOLOGY_HIERA)
             self.TOPOLOGY_LEVELS_SET = set(self.TOPOLOGY_LEVELS)
 
     def _topology_is_accessible(self, topology, context):
@@ -888,7 +891,8 @@ class SnapshotBase(object):
                               'Snapshot %s from %s exists for volume %s' %
                               (request.name, request.source_volume_id,
                                snap.volume_id))
-            print('Snapshot %s exists with id %s' % (request.name, snap.id))
+            LOG.debug('Snapshot %s exists with id %s' % (request.name,
+                                                         snap.id))
         else:
             vol = self._get_vol(request.source_volume_id)
             if not vol:
