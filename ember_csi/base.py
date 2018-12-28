@@ -90,7 +90,6 @@ class IdentityBase(object):
                             defaults.ROOT_HELPER)
 
         manifest = {
-            'cinderlib-version': cinderlib.__version__,
             'cinder-version': constants.CINDER_VERSION,
         }
         self.persistence = cinderlib.Backend.persistence
