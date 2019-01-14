@@ -46,9 +46,6 @@ class Controller(base.ControllerBase):
     # DeleteVolume implemented on base Controller class
 
     # ControllerPublishVolume implemented on base Controller class.
-    # Requires _controller_publish_results method.
-    def _controller_publish_results(self, connection_info):
-        return types.CtrlPublishResp(publish_info=connection_info)
 
     @common.debuggable
     @common.logrpc

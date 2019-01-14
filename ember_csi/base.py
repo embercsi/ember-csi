@@ -16,7 +16,6 @@
 from __future__ import absolute_import
 from distutils import version
 import itertools
-import json
 import os
 import stat
 import re
@@ -399,11 +398,9 @@ class ControllerBase(IdentityBase):
                 context.abort(grpc.StatusCode.ALREADY_EXISTS,
                               'Readonly incompatible with volume capability')
 
-            conn = vol.connections[0]
         else:
-            conn = vol.connect(node.connector_dict, attached_host=node.id)
-        connection_info = {'connection_info': json.dumps(conn.connection_info)}
-        return self._controller_publish_results(connection_info)
+            vol.connect(node.connector_dict, attached_host=node.id)
+        return self.TYPES.CtrlPublishResp()
 
     @common.debuggable
     @common.logrpc
@@ -609,9 +606,6 @@ class NodeBase(IdentityBase):
 
         device, private_bind = self._get_vol_device(vol.id)
         if not device:
-            # For now we don't really require the publish_info/publish_context,
-            # since we share the persistence storage, but if we would need to
-            # deserialize it with json.loads from key 'connection_info'
             conn = vol.connections[0]
             # Some slow systems may take a while to detect the multipath so we
             # retry the attach.  Since we don't disconnect this will go fast
