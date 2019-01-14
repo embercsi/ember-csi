@@ -9,6 +9,7 @@ LABEL maintainers="Gorka Eguileor <geguileo@redhat.com>" \
 # pyasn1_modules, which is used by some of the Google's libraries
 RUN yum -y install xfsprogs e2fsprogs btrfs-progs python2-future && \
     mkdir -p /var/lib/ember-csi/{vols,locks} && \
+    touch /var/lib/ember-csi/ssh_known_hosts && \
     yum clean all && \
     rm -rf /var/cache/yum && \
     pip install --no-cache-dir --upgrade --process-dependency-links 'pyasn1<0.5.0,>=0.4.1' future ember-csi
