@@ -21,8 +21,10 @@ ROOT_HELPER = 'sudo'
 STATE_PATH = '/var/lib/ember-csi'
 VOL_BINDS_DIR = STATE_PATH + '/vols'
 LOCKS_DIR = STATE_PATH + '/locks'
+REQUEST_MULTIPATH = False
 EMBER_CFG = {'project_id': NAME, 'user_id': NAME, 'plugin_name': NAME,
-             'root_helper': ROOT_HELPER, 'request_multipath': True,
+             'root_helper': ROOT_HELPER,
+             'request_multipath': REQUEST_MULTIPATH,
              'file_locks_path': LOCKS_DIR, 'state_path': STATE_PATH}
 
 LOG_LEVELS = ('amqp=WARN,amqplib=WARN,boto=WARN,qpid=WARN,sqlalchemy=WARN,'
@@ -46,7 +48,6 @@ DEBUG_LOG_LEVELS = ('amqp=WARN,amqplib=WARN,boto=WARN,qpid=WARN,'
                     'keystoneauth=WARN,oslo.cache=INFO,'
                     'dogpile.core.dogpile=INFO')
 
-REQUEST_MULTIPATH = True
 MOUNT_FS = 'ext4'
 MKFS = '/sbin/mkfs.'
 VOLUME_SIZE = 1.0
