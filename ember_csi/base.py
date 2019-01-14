@@ -513,7 +513,7 @@ class NodeBase(IdentityBase):
         return self._get_split_file('/proc/self/mountinfo')
 
     def _vol_private_location(self, volume_id):
-        private_bind = os.path.join(os.getcwd(), volume_id)
+        private_bind = os.path.join(defaults.VOL_BINDS_DIR, volume_id)
         return private_bind
 
     def _get_mount(self, private_bind):

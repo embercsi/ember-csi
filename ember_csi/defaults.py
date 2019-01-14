@@ -18,8 +18,12 @@ ENDPOINT = '[::]:50051'
 MODE = 'all'
 PERSISTENCE_CFG = {'storage': 'crd', 'namespace': 'default'}
 ROOT_HELPER = 'sudo'
+STATE_PATH = '/var/lib/ember-csi'
+VOL_BINDS_DIR = STATE_PATH + '/vols'
+LOCKS_DIR = STATE_PATH + '/locks'
 EMBER_CFG = {'project_id': NAME, 'user_id': NAME, 'plugin_name': NAME,
-             'root_helper': ROOT_HELPER, 'request_multipath': True}
+             'root_helper': ROOT_HELPER, 'request_multipath': True,
+             'file_locks_path': LOCKS_DIR, 'state_path': STATE_PATH}
 
 LOG_LEVELS = ('amqp=WARN,amqplib=WARN,boto=WARN,qpid=WARN,sqlalchemy=WARN,'
               'suds=WARN,oslo.messaging=WARN,oslo_messaging=WARN,iso8601=WARN,'

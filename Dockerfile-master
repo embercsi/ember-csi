@@ -18,6 +18,7 @@ RUN yum -y install targetcli iscsi-initiator-utils device-mapper-multipath epel-
     # Apply cinderlib patch
     cd cinder && git fetch https://git.openstack.org/openstack/cinder refs/changes/69/620669/10 && git checkout FETCH_HEAD && cd .. && \
     pip install --no-cache-dir cinder/ && \
+    mkdir -p /var/lib/ember-csi/{vols,locks} && \
     rm -rf cinder && \
     yum -y remove git python-devel gcc && \
     yum clean all && \
