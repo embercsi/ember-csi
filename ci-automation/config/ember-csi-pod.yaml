@@ -1,0 +1,26 @@
+kind: List
+items:
+  - apiVersion: "v1"
+    kind: "Pod"
+    metadata:
+      annotations:
+        alpha.image.policy.openshift.io/resolve-names: '*'
+      generateName: ember-csi-1-
+      labels:
+        app: ember-csi
+        env: test
+    spec:
+      containers:
+        - name: ember-csi
+          image: ember-csi:latest
+          securityContext:
+            privileged: true
+          readinessProbe:
+            exec:
+              command:
+              - test
+              - -e
+              - /var/tmp/vagrant-vm-up
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            failureThreshold: 50

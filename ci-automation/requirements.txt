@@ -1,0 +1,7 @@
+pip
+setuptools
+PyYAML
+decorator
+grpcio==1.15.0
+pyyaml
+ipaddress

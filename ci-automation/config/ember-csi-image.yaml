@@ -1,0 +1,35 @@
+kind: List
+items:
+  - apiVersion: "v1"
+    kind: ImageStream
+    metadata:
+      annotations:
+        openshift.io/display-name: ember-csi
+      name: ember-csi
+      labels:
+        app: ember-csi
+        env: test
+  - apiVersion: "v1"
+    kind: "BuildConfig"
+    metadata:
+      name: "ember-csi"
+      labels:
+        app: ember-csi
+        env: test
+    spec:
+      source:
+        type: "Docker"
+        git:
+          uri: "https://github.com/no-name-yet/systemd-libvirt-centos-vm.git"
+          ref: master
+        contextDir: "centos-vm-libvirt"
+      strategy:
+        type: Docker
+        dockerStrategy:
+          from:
+            kind: DockerImage
+            name: quay.io/pod_utils/systemd-libvirt:latest
+      output:
+        to:
+          kind: "ImageStreamTag"
+          name: "ember-csi:latest"

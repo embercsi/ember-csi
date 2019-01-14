@@ -71,4 +71,5 @@ target/
 examples/kubernetes/kubeconfig.conf
 examples/kubernetes/site.retry
 
+.vagrant
 *.class
