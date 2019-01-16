@@ -69,7 +69,7 @@ spec:
       value: '{"storage":"crd"}'
     - name: X_CSI_BACKEND_CONFIG
       value: '{"volume_backend_name":"xtremio","volume_driver":"cinder.volume.drivers.dell_emc.xtremio.XtremIOISCSIDriver","san_ip":"192.168.1.2","xtremio_cluster_name":"cluster-name","san_login":"user","san_password":"toomanysecrets"}'
-    image: akrog/ember-csi:master
+    image: embercsi/ember-csi:master
     imagePullPolicy: Always
     securityContext:
       privileged: true
@@ -96,7 +96,7 @@ spec:
       mountPropagation: Bidirectional
       name: modules-dir
   - name: csc
-    image: akrog/csc:v0.2.0
+    image: embercsi/csc:v0.2.0
     imagePullPolicy: IfNotPresent
     command: ["tail"]
     args: ["-f", "/dev/null"]
