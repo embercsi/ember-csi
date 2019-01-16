@@ -26,6 +26,7 @@ import cinderlib
 import grpc
 from os_brick.initiator import connector as brick_connector
 import pytz
+import six
 
 from ember_csi import config
 from ember_csi import constants
@@ -167,9 +168,10 @@ DEBUG_LIBRARY, debuggable = setup_debug()
 
 
 def date_to_nano(date):
-    # Don't use str or six.text_type, as they truncate
-    return repr((date - constants.EPOCH).total_seconds() *
-                constants.NANOSECONDS)
+    nanosecs = int((date - constants.EPOCH).total_seconds() *
+                   constants.NANOSECONDS)
+    res = six.text_type(nanosecs)
+    return res
 
 
 def nano_to_date(nanoseconds):
