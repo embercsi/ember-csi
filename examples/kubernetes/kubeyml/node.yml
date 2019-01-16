@@ -54,7 +54,10 @@ spec:
         app: csi-node
     spec:
       serviceAccount: csi-node-sa
+      # Required by iSCSI
       hostNetwork: true
+      # Required by multipath detach
+      hostIPC: true
       containers:
         - name: driver-registrar
           # image: quay.io/k8scsi/driver-registrar:v0.2.0
@@ -80,6 +83,9 @@ spec:
           env:
             - name: PYTHONUNBUFFERED
               value: '0'
+            - name: X_CSI_SPEC_VERSION
+              # value: v0.2
+              value: v0.3
             - name: CSI_ENDPOINT
               value: unix:///csi-data/csi.sock
             - name: CSI_MODE
@@ -123,6 +129,12 @@ spec:
             - name: udev-data
               mountPath: /run/udev
               mountPropagation: HostToContainer
+            # Required to preserve the node targets between restarts
+            - name: iscsi-info
+              mountPath: /var/lib/iscsi
+              mountPropagation: Bidirectional
+            # In a real deployment we should be mounting container's
+            # /var/lib-ember-csi on the host
         # - name: csc
         #   image: akrog/csc:v0.2.0
         #   command: ["tail"]
@@ -170,3 +182,6 @@ spec:
         - name: udev-data
           hostPath:
             path: /run/udev
+        - name: iscsi-info
+          hostPath:
+            path: /var/lib/iscsi

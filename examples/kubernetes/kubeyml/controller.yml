@@ -66,6 +66,8 @@ spec:
       serviceAccount: csi-controller-sa
       # iSCSI only the very latest Open-iSCSI supports namespaces
       hostNetwork: true
+      # Required by multipath detach (some drivers clone volumes dd-ing)
+      hostIPC: true
       # Pin the controller to node0, where we created the LVM backend
       nodeSelector:
         kubernetes.io/hostname: node0
@@ -86,6 +88,8 @@ spec:
         args:
         - --v=5
         - --csi-address=/csi-data/csi.sock
+        # If we were using attacher >= 0.4
+        # - --timeout=120s
         volumeMounts:
         - mountPath: /csi-data
           name: socket-dir
@@ -106,6 +110,7 @@ spec:
               apiVersion: v1
               fieldPath: spec.nodeName
         - name: X_CSI_SPEC_VERSION
+          # value: v0.2
           value: v0.3
         - name: CSI_MODE
           value: controller
@@ -143,6 +148,12 @@ spec:
         - name: udev-data
           mountPath: /run/udev
           mountPropagation: HostToContainer
+        # Required to preserve the node targets between restarts
+        - name: iscsi-info
+          mountPath: /var/lib/iscsi
+          mountPropagation: Bidirectional
+        # In a real deployment we should be mounting container's
+        # /var/lib-ember-csi on the host
       # - name: csc
       #   image: akrog/csc:v0.2.0
       #   command: ["tail"]
@@ -186,3 +197,6 @@ spec:
       - name: udev-data
         hostPath:
           path: /run/udev
+      - name: iscsi-info
+        hostPath:
+          path: /var/lib/iscsi
