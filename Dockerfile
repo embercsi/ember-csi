@@ -5,12 +5,16 @@ LABEL maintainers="Gorka Eguileor <geguileo@redhat.com>" \
       description="Ember CSI Plugin" \
       version=${VERSION}
 
+ENV PYTHONUNBUFFERED=true
+
 # We need to upgrade pyasn1 because the package for RDO is not new enough for
 # pyasn1_modules, which is used by some of the Google's libraries
 RUN yum -y install xfsprogs e2fsprogs btrfs-progs nmap-ncat python2-future && \
+    mkdir -p /var/lib/ember-csi/{vols,locks} && \
+    touch /var/lib/ember-csi/ssh_known_hosts && \
+    pip install --no-cache-dir --upgrade 'pyasn1<0.5.0,>=0.4.1' future && \
     yum clean all && \
-    rm -rf /var/cache/yum && \
-    pip install --no-cache-dir --upgrade 'pyasn1<0.5.0,>=0.4.1' future
+    rm -rf /var/cache/yum
 
 # Copy Ember-csi from directory directory
 COPY . /csi

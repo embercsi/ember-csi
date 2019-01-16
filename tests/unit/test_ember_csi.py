@@ -26,4 +26,4 @@ class TestEmber_csi(unittest.TestCase):
         with self.assertRaises(SystemExit) as asserted:
             ember_csi.main()
         exc = asserted.exception
-        self.assertEqual(2, exc.code)
+        self.assertEqual(3, exc.code)

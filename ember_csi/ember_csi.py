@@ -18,12 +18,11 @@
 from __future__ import absolute_import
 from concurrent import futures
 import importlib
-import sys
 import tarfile
 import time
 
-import cinderlib
 import grpc
+from oslo_log import log as logging
 
 from ember_csi import common
 from ember_csi import config
@@ -31,18 +30,16 @@ from ember_csi import constants
 from ember_csi import workarounds
 
 
+LOG = logging.getLogger(__name__)
+
+
 def main():
     config.validate()
     server_class = _get_csi_server_class(class_name=config.MODE.title())
     copy_system_files()
 
-    mode_msg = 'in ' + config.MODE + ' mode ' if config.MODE != 'all' else ''
-    print('Starting Ember CSI v%s %s(cinderlib: v%s, cinder: v%s, '
-          'CSI spec: v%s)' % (constants.VENDOR_VERSION,
-                              mode_msg,
-                              cinderlib.__version__,
-                              constants.CINDER_VERSION,
-                              config.CSI_SPEC))
+    LOG.info('Starting Ember CSI v%s (cinder: v%s, CSI spec: v%s)' % (
+        constants.VENDOR_VERSION, constants.CINDER_VERSION, config.CSI_SPEC))
 
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     workarounds.grpc_eventlet(server)
@@ -53,27 +50,29 @@ def main():
                               storage_nw_ip=config.STORAGE_NW_IP,
                               node_id=config.NODE_ID)
 
+    LOG.info('Persistence module: %s' % type(csi_plugin.persistence).__name__)
     msg = 'Running as %s' % config.MODE
     if config.MODE != 'node':
         driver_name = type(csi_plugin.backend.driver).__name__
         msg += ' with backend %s v%s' % (driver_name,
                                          csi_plugin.backend.get_version())
-    print(msg)
+    LOG.info(msg)
 
     if common.DEBUG_LIBRARY:
         debug_msg = ('ENABLED with %s and OFF. Toggle it with SIGUSR1' %
                      common.DEBUG_LIBRARY.__name__)
     else:
         debug_msg = 'DISABLED'
-    print('Debugging feature is %s.' % debug_msg)
-    print('Supported filesystems: %s' % ', '.join(config.SUPPORTED_FS_TYPES))
+    LOG.info('Debugging feature is %s.' % debug_msg)
+    LOG.info('Supported filesystems: %s' % (
+        ', '.join(config.SUPPORTED_FS_TYPES)))
 
     if not server.add_insecure_port(config.ENDPOINT):
-        sys.stderr.write('\nERROR: Could not bind to %s\n' % config.ENDPOINT)
-        exit(1)
+        LOG.error('ERROR: Could not bind to %s' % config.ENDPOINT)
+        exit(constants.ERROR_BIND_PORT)
 
     server.start()
-    print('Now serving on %s...' % config.ENDPOINT)
+    LOG.info('Now serving on %s...' % config.ENDPOINT)
 
     try:
         while True:
@@ -94,9 +93,9 @@ def copy_system_files():
     def check_files(members):
         for tarinfo in members:
             if tarinfo.isdev():
-                sys.stderr.write("Skipping %s\n" % tarinfo.name)
+                LOG.debug("Skipping %s" % tarinfo.name)
             else:
-                sys.stdout.write("Exctracting %s\n" % tarinfo.name)
+                LOG.info("Extracting %s\n" % tarinfo.name)
                 yield tarinfo
 
     archive = config.SYSTEM_FILES
@@ -105,10 +104,10 @@ def copy_system_files():
             with tarfile.open(archive, 'r') as t:
                 t.extractall('/', members=check_files(t))
         except Exception as exc:
-            sys.stderr.write('Error expanding file %s %s\n' % (archive, exc))
-            exit(4)
+            LOG.error('Error expanding file %s %s' % (archive, exc))
+            exit(constants.ERROR_TAR)
     else:
-        sys.stdout.write('X_CSI_SYSTEM_FILES not specified.\n')
+        LOG.debug('X_CSI_SYSTEM_FILES not specified.\n')
 
 
 if __name__ == '__main__':

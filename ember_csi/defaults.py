@@ -16,12 +16,40 @@
 NAME = 'io.ember-csi'
 ENDPOINT = '[::]:50051'
 MODE = 'all'
-PERSISTENCE_CFG = {'storage': 'db', 'connection': 'sqlite:///db.sqlite'}
+PERSISTENCE_CFG = {'storage': 'crd', 'namespace': 'default'}
 ROOT_HELPER = 'sudo'
+STATE_PATH = '/var/lib/ember-csi'
+VOL_BINDS_DIR = STATE_PATH + '/vols'
+LOCKS_DIR = STATE_PATH + '/locks'
+REQUEST_MULTIPATH = False
 EMBER_CFG = {'project_id': NAME, 'user_id': NAME, 'plugin_name': NAME,
-             'root_helper': ROOT_HELPER, 'request_multipath': True}
-REQUEST_MULTIPATH = True
+             'root_helper': ROOT_HELPER,
+             'request_multipath': REQUEST_MULTIPATH,
+             'file_locks_path': LOCKS_DIR, 'state_path': STATE_PATH}
+
+LOG_LEVELS = ('amqp=WARN,amqplib=WARN,boto=WARN,qpid=WARN,sqlalchemy=WARN,'
+              'suds=WARN,oslo.messaging=WARN,oslo_messaging=WARN,iso8601=WARN,'
+              'requests.packages.urllib3.connectionpool=WARN,'
+              'urllib3.connectionpool=WARN,websocket=WARN,'
+              'requests.packages.urllib3.util.retry=WARN,'
+              'urllib3.util.retry=WARN,keystonemiddleware=WARN,'
+              'routes.middleware=WARN,stevedore=WARN,taskflow=WARN,'
+              'keystoneauth=WARN,oslo.cache=WARN,dogpile.core.dogpile=WARN,'
+              'cinderlib=WARN,cinder=WARN,os_brick=WARN')
+
+DEBUG_LOG_LEVELS = ('amqp=WARN,amqplib=WARN,boto=WARN,qpid=WARN,'
+                    'sqlalchemy=WARN,suds=INFO,oslo.messaging=INFO,'
+                    'oslo_messaging=INFO,iso8601=WARN,'
+                    'requests.packages.urllib3.connectionpool=WARN,'
+                    'urllib3.connectionpool=WARN,websocket=WARN,'
+                    'requests.packages.urllib3.util.retry=WARN,'
+                    'urllib3.util.retry=WARN,keystonemiddleware=WARN,'
+                    'routes.middleware=WARN,stevedore=WARN,taskflow=WARN,'
+                    'keystoneauth=WARN,oslo.cache=INFO,'
+                    'dogpile.core.dogpile=INFO')
+
 MOUNT_FS = 'ext4'
 MKFS = '/sbin/mkfs.'
 VOLUME_SIZE = 1.0
 SPEC_VERSION = '0.2.0'
+CRD_NAMESPACE = 'default'

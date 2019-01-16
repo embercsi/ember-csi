@@ -18,18 +18,22 @@ import contextlib
 from datetime import datetime
 import functools
 import json
-import sys
 import threading
 import traceback
 
 import cinderlib
 import grpc
 from os_brick.initiator import connector as brick_connector
+from oslo_context import context as context_utils
+from oslo_log import log as logging
 import pytz
 import six
 
 from ember_csi import config
 from ember_csi import constants
+
+
+LOG = logging.getLogger(__name__)
 
 
 @contextlib.contextmanager
@@ -88,14 +92,15 @@ def logrpc(f):
 
     @functools.wraps(f)
     def dolog(self, request, context):
-        req_id = id(request)
+        context_utils.get_current().request_id = 'req-%s' % id(request)
+
         start = datetime.utcnow()
+        LOG.info('=> GRPC %s' % f.__name__)
         if request.ListFields():
-            msg = ' params\n%s' % tab(request)
+            msg = ' params:\n%s' % tab(request)
         else:
             msg = 'out params'
-        sys.stdout.write('=> %s GRPC [%s]: %s with%s\n' %
-                         (start, req_id, f.__name__, msg))
+        LOG.debug('With%s' % msg)
         try:
             result = f(self, request, context)
         except Exception as exc:
@@ -108,18 +113,16 @@ def logrpc(f):
                 code = 'Unexpected exception'
                 details = exc.message
                 tback = '\n' + tab(traceback.format_exc())
-            sys.stdout.write('!! %s GRPC in %.0fs [%s]: %s on %s (%s)%s\n' %
-                             (end, (end - start).total_seconds(), req_id, code,
-                              f.__name__, details, tback))
+            LOG.error('!! GRPC %s failed in %.0fs with %s (%s)%s' %
+                      (f.__name__, (end - start).total_seconds(), code,
+                       details, tback))
             raise
         end = datetime.utcnow()
-        if str(result):
-            str_result = '\n%s' % tab(result)
-        else:
-            str_result = ' nothing'
-        sys.stdout.write('<= %s GRPC in %.0fs [%s]: %s returns%s\n' %
-                         (end, (end - start).total_seconds(), req_id,
-                          f.__name__, str_result))
+
+        LOG.info('<= GRPC %s served in %.0fs' % (
+            f.__name__, (end - start).total_seconds()))
+        str_result = tab(result) if str(result) else 'nothing'
+        LOG.debug('Returns:\n%s' % tab(str_result))
         return result
     return dolog
 
@@ -142,12 +145,12 @@ def setup_debug():
     def toggle_debug(signum, stack):
         global DEBUG_ON
         DEBUG_ON = not DEBUG_ON
-        sys.stdout.write('Debugging is %s\n' % ('ON' if DEBUG_ON else 'OFF'))
+        LOG.info('Debugging is %s\n' % ('ON' if DEBUG_ON else 'OFF'))
 
     if config.DEBUG_MODE not in ('', 'PDB', 'RPDB'):
-        sys.stderr.write('Invalid X_CSI_DEBUG_MODE %s (valid values are PDB '
-                         'and RPDB)\n' % config.DEBUG_MODE)
-        exit(3)
+        LOG.error('Invalid X_CSI_DEBUG_MODE %s (valid values are PDB and '
+                  'RPDB)' % config.DEBUG_MODE)
+        exit(constants.ERROR_DEBUG_MODE)
 
     if not config.DEBUG_MODE:
         return None, no_debug

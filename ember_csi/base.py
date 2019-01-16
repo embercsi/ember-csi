@@ -14,11 +14,10 @@
 #    under the License.
 
 from __future__ import absolute_import
+from distutils import version
 import itertools
-import json
 import os
 import stat
-import sys
 import re
 import time
 
@@ -26,11 +25,15 @@ import cinderlib
 from cinderlib import exception
 import grpc
 from oslo_concurrency import processutils as putils
+from oslo_log import log as logging
 
 from ember_csi import common
 from ember_csi import config
 from ember_csi import constants
 from ember_csi import defaults
+
+
+LOG = logging.getLogger(__name__)
 
 
 # Workaround for https://bugs.python.org/issue672115
@@ -69,11 +72,12 @@ class IdentityBase(object):
     MKFS_ARGS = {'ext4': ('-F',)}
     PLUGIN_CAPABILITIES = []
 
-    def __init__(self, server, cinderlib_cfg, plugin_name):
+    def __init__(self, server, cinderlib_cfg):
         # Skip if we've already been initialized (happens on class All)
         if self.manifest is not None:
             return
 
+        self.csi_version = version.StrictVersion(config.CSI_SPEC)
         self.PLUGIN_CAPABILITIES.append(
             self.TYPES.ServiceType.CONTROLLER_SERVICE)
         caps = [self.TYPES.Capability(service=self.TYPES.Service(type=t))
@@ -85,7 +89,6 @@ class IdentityBase(object):
                             defaults.ROOT_HELPER)
 
         manifest = {
-            'cinderlib-version': cinderlib.__version__,
             'cinder-version': constants.CINDER_VERSION,
         }
         self.persistence = cinderlib.Backend.persistence
@@ -97,9 +100,8 @@ class IdentityBase(object):
             manifest['cinder-driver'] = type(self.backend.driver).__name__
             manifest['cinder-driver-supported'] = str(self.backend.supported)
 
-        self.plugin_name = self._validate_name(plugin_name)
         self.INFO = self.TYPES.InfoResp(
-            name=self.plugin_name,
+            name=config.PLUGIN_NAME,
             vendor_version=constants.VENDOR_VERSION,
             manifest=manifest)
         # NOTE(geguileo): For now let's only support single reader/writer modes
@@ -109,6 +111,8 @@ class IdentityBase(object):
 
         self.CSI.add_IdentityServicer_to_server(self, server)
         self.manifest = manifest
+        self.PROBE_KV = cinderlib.objects.KeyValue('%s-%s-%s' % (
+            config.PLUGIN_NAME, config.MODE, 'probe'), '0')
 
     def _unsupported_mode(self, capability):
         return capability.access_mode.mode not in self.SUPPORTED_ACCESS
@@ -156,16 +160,35 @@ class IdentityBase(object):
     @common.debuggable
     @common.logrpc
     def Probe(self, request, context):
-        failure = False
-        # check configuration
-        # check_persistence
-        if self.backend:
-            # check driver
-            pass
+        # Proving may take a couple of seconds, and attacher sidecar prior to
+        # v0.4 will fail due to small timeout.
+        if self.csi_version < '1.0.0':
+            return self.PROBE_RESP
 
-        if failure:
+        try:
+            self.PROBE_KV.value = str((int(self.PROBE_KV.value) + 1) % 1000)
+            self.persistence.set_key_value(self.PROBE_KV)
+            res = self.persistence.get_key_values(self.PROBE_KV.key)
+            if not res or res[0].value != self.PROBE_KV.value:
+                context.abort(grpc.StatusCode.FAILED_PRECONDITION,
+                              'Storing metadata persistence value failed')
+        except Exception:
             context.abort(grpc.StatusCode.FAILED_PRECONDITION,
-                          'Persistence is not accessible')
+                          'Error accessing metadata persistence')
+
+        if self.backend:
+            try:
+                # Check driver is OK
+                self.backend.driver.check_for_setup_error()
+            except Exception:
+                context.abort(grpc.StatusCode.FAILED_PRECONDITION,
+                              'Driver check setup error failed')
+            try:
+                # Use stats gathering to further confirm it's working fine
+                self.backend.stats(refresh=True)
+            except Exception:
+                context.abort(grpc.StatusCode.FAILED_PRECONDITION,
+                              'Driver failed to return the stats')
 
         return self.PROBE_RESP
 
@@ -198,11 +221,10 @@ class IdentityBase(object):
 class ControllerBase(IdentityBase):
     def __init__(self, server, persistence_config, backend_config,
                  ember_config=None, **kwargs):
-        plugin_name = ember_config.pop('plugin_name', None)
         cinderlib.setup(persistence_config=persistence_config,
                         **ember_config)
         self.backend = cinderlib.Backend(**backend_config)
-        IdentityBase.__init__(self, server, ember_config, plugin_name)
+        IdentityBase.__init__(self, server, ember_config)
         self.CSI.add_ControllerServicer_to_server(self, server)
 
         self.DELETE_RESP = self.TYPES.DeleteResp()
@@ -299,7 +321,7 @@ class ControllerBase(IdentityBase):
         # there's been a race condition, so we cannot be idempotent, create a
         # new volume.
         if isinstance(vol, cinderlib.Volume):
-            print('Volume %s exists with id %s' % (request.name, vol.id))
+            LOG.debug('Volume %s exists with id %s' % (request.name, vol.id))
             if not (min_size <= vol.size <= max_size):
                 context.abort(grpc.StatusCode.ALREADY_EXISTS,
                               'Volume already exists but is incompatible')
@@ -310,7 +332,7 @@ class ControllerBase(IdentityBase):
 
         else:
             # Create volume
-            print('Creating volume')
+            LOG.debug('Creating volume %s' % request.name)
             vol = self._create_volume(request.name, vol_size, request, context)
 
         if vol.status != 'available':
@@ -326,7 +348,7 @@ class ControllerBase(IdentityBase):
     def DeleteVolume(self, request, context):
         vol = self._get_vol(request.volume_id)
         if not vol:
-            print('Volume not found')
+            LOG.debug('Volume %s not found' % request.volume_id)
             return self.DELETE_RESP
 
         if vol.status == 'in-use':
@@ -342,7 +364,7 @@ class ControllerBase(IdentityBase):
             self._wait(vol, ('deleted',))
 
         if vol.status != 'deleted':
-            print('Deleting volume')
+            LOG.debug('Deleting volume %s' % request.volume_id)
             try:
                 vol.delete()
             except Exception as exc:
@@ -376,11 +398,9 @@ class ControllerBase(IdentityBase):
                 context.abort(grpc.StatusCode.ALREADY_EXISTS,
                               'Readonly incompatible with volume capability')
 
-            conn = vol.connections[0]
         else:
-            conn = vol.connect(node.connector_dict, attached_host=node.id)
-        connection_info = {'connection_info': json.dumps(conn.connection_info)}
-        return self._controller_publish_results(connection_info)
+            vol.connect(node.connector_dict, attached_host=node.id)
+        return self.TYPES.CtrlPublishResp()
 
     @common.debuggable
     @common.logrpc
@@ -462,10 +482,9 @@ class NodeBase(IdentityBase):
         # not to fail when there's no backend configured.
         if persistence_config:
             ember_config['fail_on_missing_backend'] = False
-            plugin_name = ember_config.pop('plugin_name', None)
             cinderlib.setup(persistence_config=persistence_config,
                             **ember_config)
-            IdentityBase.__init__(self, server, ember_config, plugin_name)
+            IdentityBase.__init__(self, server, ember_config)
 
         self.node_info = common.NodeInfo.set(node_id, storage_nw_ip)
         self.CSI.add_NodeServicer_to_server(self, server)
@@ -491,7 +510,7 @@ class NodeBase(IdentityBase):
         return self._get_split_file('/proc/self/mountinfo')
 
     def _vol_private_location(self, volume_id):
-        private_bind = os.path.join(os.getcwd(), volume_id)
+        private_bind = os.path.join(defaults.VOL_BINDS_DIR, volume_id)
         return private_bind
 
     def _get_mount(self, private_bind):
@@ -587,9 +606,6 @@ class NodeBase(IdentityBase):
 
         device, private_bind = self._get_vol_device(vol.id)
         if not device:
-            # For now we don't really require the publish_info/publish_context,
-            # since we share the persistence storage, but if we would need to
-            # deserialize it with json.loads from key 'connection_info'
             conn = vol.connections[0]
             # Some slow systems may take a while to detect the multipath so we
             # retry the attach.  Since we don't disconnect this will go fast
@@ -598,7 +614,7 @@ class NodeBase(IdentityBase):
                 conn.attach()
                 if not conn.use_multipath or conn.path.startswith('/dev/dm'):
                     break
-                sys.stdout.write('Retrying to get a multipath\n')
+                LOG.debug('Retrying to get a multipath')
             # Create the private bind file
             open(private_bind, 'a').close()
             # TODO(geguileo): make path for private binds configurable
@@ -742,13 +758,13 @@ class TopologyBase(object):
                 replace = None
                 for i, t in enumerate(self.TOPOLOGY_HIERA):
                     if t[:len(topo)] == topo:
-                        sys.stderr.write('Warning: Ignoring topology %s. Is '
-                                         'included in %s' % (t, topo))
+                        LOG.warn('Ignoring topology %s. Is included in %s' % (
+                            t, topo))
                         replace = i
                         break
                     elif topo[:len(t)] == t:
-                        sys.stderr.write('Warning: Ignoring topology %s. Is '
-                                         'included in %s' % (topo, t))
+                        LOG.warn('Ignoring topology %s. Is included in %s' % (
+                            topo, t))
                         break
                 else:
                     self.TOPOLOGY_HIERA.append(topo)
@@ -758,7 +774,7 @@ class TopologyBase(object):
                     self.TOPOLOGY_HIERA[i] = topo
                     self.TOPOLOGIES[i] = topology
 
-            sys.stdout.write("topology: %s" % self.TOPOLOGY_HIERA)
+            LOG.debug("topology: %s" % self.TOPOLOGY_HIERA)
             self.TOPOLOGY_LEVELS_SET = set(self.TOPOLOGY_LEVELS)
 
     def _topology_is_accessible(self, topology, context):
@@ -868,7 +884,8 @@ class SnapshotBase(object):
                               'Snapshot %s from %s exists for volume %s' %
                               (request.name, request.source_volume_id,
                                snap.volume_id))
-            print('Snapshot %s exists with id %s' % (request.name, snap.id))
+            LOG.debug('Snapshot %s exists with id %s' % (request.name,
+                                                         snap.id))
         else:
             vol = self._get_vol(request.source_volume_id)
             if not vol:

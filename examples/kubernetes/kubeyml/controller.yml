@@ -66,12 +66,15 @@ spec:
       serviceAccount: csi-controller-sa
       # iSCSI only the very latest Open-iSCSI supports namespaces
       hostNetwork: true
+      # Required by multipath detach (some drivers clone volumes dd-ing)
+      hostIPC: true
       # Pin the controller to node0, where we created the LVM backend
       nodeSelector:
         kubernetes.io/hostname: node0
       containers:
       - name: external-provisioner
-        image: quay.io/k8scsi/csi-provisioner:v0.2.1
+        # image: quay.io/k8scsi/csi-provisioner:v0.2.1
+        image: quay.io/k8scsi/csi-provisioner:v0.3.1
         args:
         - --v=5
         - --provisioner=io.ember-csi
@@ -80,10 +83,13 @@ spec:
         - mountPath: /csi-data
           name: socket-dir
       - name: external-attacher
-        image: quay.io/k8scsi/csi-attacher:v0.2.0
+        # image: quay.io/k8scsi/csi-attacher:v0.2.0
+        image: quay.io/k8scsi/csi-attacher:v0.3.0
         args:
         - --v=5
         - --csi-address=/csi-data/csi.sock
+        # If we were using attacher >= 0.4
+        # - --timeout=120s
         volumeMounts:
         - mountPath: /csi-data
           name: socket-dir
@@ -103,12 +109,15 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: spec.nodeName
+        - name: X_CSI_SPEC_VERSION
+          # value: v0.2
+          value: v0.3
         - name: CSI_MODE
           value: controller
         - name: X_CSI_PERSISTENCE_CONFIG
           value: '{"storage":"crd"}'
         - name: X_CSI_BACKEND_CONFIG
-          value: '{"target_protocol":"iscsi","iscsi_ip_address":"192.168.10.100","volume_backend_name":"lvm","volume_driver":"cinder.volume.drivers.lvm.LVMVolumeDriver","volume_group":"ember-volumes","target_helper":"lioadm"}'
+          value: '{"target_protocol":"iscsi","iscsi_ip_address":"192.168.10.100","volume_backend_name":"lvm","volume_driver":"cinder.volume.drivers.lvm.LVMVolumeDriver","volume_group":"ember-volumes","target_helper":"lioadm","use_multipath_for_image_xfer":false}'
         volumeMounts:
         - name: socket-dir
           mountPath: /csi-data
@@ -139,16 +148,22 @@ spec:
         - name: udev-data
           mountPath: /run/udev
           mountPropagation: HostToContainer
-      - name: csc
-        image: akrog/csc:v0.2.0
-        command: ["tail"]
-        args: ["-f", "/dev/null"]
-        env:
-          - name: CSI_ENDPOINT
-            value: unix:///csi-data/csi.sock
-        volumeMounts:
-          - name: socket-dir
-            mountPath: /csi-data
+        # Required to preserve the node targets between restarts
+        - name: iscsi-info
+          mountPath: /var/lib/iscsi
+          mountPropagation: Bidirectional
+        # In a real deployment we should be mounting container's
+        # /var/lib-ember-csi on the host
+      # - name: csc
+      #   image: akrog/csc:v0.2.0
+      #   command: ["tail"]
+      #   args: ["-f", "/dev/null"]
+      #   env:
+      #     - name: CSI_ENDPOINT
+      #       value: unix:///csi-data/csi.sock
+      #   volumeMounts:
+      #     - name: socket-dir
+      #       mountPath: /csi-data
       volumes:
       - name: socket-dir
         emptyDir:
@@ -182,3 +197,6 @@ spec:
       - name: udev-data
         hostPath:
           path: /run/udev
+      - name: iscsi-info
+        hostPath:
+          path: /var/lib/iscsi

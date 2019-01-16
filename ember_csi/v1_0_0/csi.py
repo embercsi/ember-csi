@@ -116,9 +116,6 @@ class Controller(base.TopologyBase, base.SnapshotBase, base.ControllerBase):
     # DeleteVolume implemented on base Controller class
 
     # ControllerPublishVolume implemented on base Controller class.
-    # Requires _controller_publish_results method.
-    def _controller_publish_results(self, connection_info):
-        return types.CtrlPublishResp(publish_context=connection_info)
 
     # ControllerUnpublishVolume implemented on base Controller class.
 
