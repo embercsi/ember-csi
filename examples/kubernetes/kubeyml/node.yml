@@ -75,7 +75,7 @@ spec:
           - mountPath: /csi-data
             name: socket-dir
         - name: csi-driver
-          image: akrog/ember-csi:master
+          image: embercsi/ember-csi:master
           securityContext:
             privileged: true
             allowPrivilegeEscalation: true
