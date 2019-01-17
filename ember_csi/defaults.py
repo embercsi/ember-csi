@@ -53,4 +53,4 @@ MKFS = '/sbin/mkfs.'
 VOLUME_SIZE = 1.0
 SPEC_VERSION = '0.2.0'
 CRD_NAMESPACE = 'default'
-WORKERS = 10
+WORKERS = 30
