@@ -4,6 +4,15 @@ openshiftNamespace = 'ember-csi'
 openshiftServiceAccount = 'jenkins'
 ansibleExecutorTag = 'v1.1.2'
 
+
+def clean() {
+    String objectTypes="ImageStream,Build,BuildConfig,Pod"
+    openshiftDeleteResourceByLabels(
+        types: objectTypes,
+        keys: "app",
+        values: "ember-csi")
+}
+
 createDslContainers podName: dslPodName,
                     dockerRepoURL: dockerRepoURL,
                     openshiftNamespace: openshiftNamespace,
@@ -49,11 +58,22 @@ createDslContainers podName: dslPodName,
           [app: 'ember-csi']
         )
         if (podSelector.count() > 0) {
-          podSelector.untilEach {
-            it.object().status.containerStatuses.every { cont ->
-              cont.ready
+          try {
+            timeout(time: 30, unit: 'SECONDS') {
+              podSelector.untilEach {
+                it.object().status.containerStatuses.every {
+                  pod -> pod.ready
+                }
+              }
             }
+          } catch(err) {
+            echo "TEST environment pod is not ready - timeout reached"
+            currentBuild.result = 'ABORTED'
+            clean()
+            error('Stopping early…')
+            return
           }
+
           podSelector.withEach {
             def podName = it.object().metadata.name
             println("Working in pod: $podName")
@@ -61,7 +81,7 @@ createDslContainers podName: dslPodName,
             openshiftExec(
              pod: podName,
              command: 'bash',
-             arguments: ["-c", "cd /etc/systemd/system/vagrant-vm.service.d/ && vagrant rsync && vagrant ssh -c 'sh -x /vagrant/workDir/PR_submitted_CI_ci-automation-2/ci-automation/tests.sh'"],
+             arguments: ["-c", "cd /etc/systemd/system/vagrant-vm.service.d/ && vagrant rsync && vagrant ssh -c 'sh -x /vagrant/workDir/${JOB_NAME}_${BRANCH_NAME}/ci-automation/tests.sh'"],
             )
           }
         }
@@ -72,11 +92,7 @@ createDslContainers podName: dslPodName,
     }
 
     stage('Clean') {
-      String objectTypes="ImageStream,Build,BuildConfig,Pod"
-      openshiftDeleteResourceByLabels(
-          types: objectTypes,
-          keys: "app",
-          values: "ember-csi")
+      clean()
     }
   }
 }
