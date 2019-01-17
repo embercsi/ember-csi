@@ -10,7 +10,7 @@ items:
     spec:
       containers:
         - name: ember-csi
-          image: quay.io/pod_utils/systemd-libvirt-centos-vm:latest
+          image: quay.io/pod_utils/systemd-libvirt-centos-vm:1.0
           securityContext:
             privileged: true
           readinessProbe:
