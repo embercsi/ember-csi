@@ -67,6 +67,7 @@ EMBER_CONFIG = _load_json_config('X_CSI_EMBER_CONFIG',
                                  defaults.EMBER_CFG)
 REQUEST_MULTIPATH = EMBER_CONFIG.pop('request_multipath',
                                      defaults.REQUEST_MULTIPATH)
+WORKERS = EMBER_CONFIG.pop('grpc_workers', defaults.WORKERS)
 PLUGIN_NAME = EMBER_CONFIG.pop('plugin_name', None) or defaults.NAME
 BACKEND_CONFIG = _load_json_config('X_CSI_BACKEND_CONFIG')
 NODE_ID = os.environ.get('X_CSI_NODE_ID') or socket.getfqdn()
@@ -79,6 +80,7 @@ SUPPORTED_FS_TYPES = _get_system_fs_types()
 
 def validate():
     global CSI_SPEC
+    global WORKERS
 
     _set_logging_config()
     if MODE not in ('controller', 'node', 'all'):
@@ -96,6 +98,10 @@ def validate():
     if DEFAULT_MOUNT_FS not in SUPPORTED_FS_TYPES:
         LOG.error('Invalid default mount filesystem %s' % DEFAULT_MOUNT_FS)
         exit(constants.ERROR_FS_TYPE)
+
+    if not isinstance(WORKERS, int) or not WORKERS:
+        LOG.error('grpc_workers must be a positive integer number')
+        exit(constants.ERROR_WORKERS)
 
     # Accept spaces and a v prefix on CSI spec version
     spec_version = CSI_SPEC.strip()
