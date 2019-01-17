@@ -38,10 +38,13 @@ def main():
     server_class = _get_csi_server_class(class_name=config.MODE.title())
     copy_system_files()
 
-    LOG.info('Starting Ember CSI v%s (cinder: v%s, CSI spec: v%s)' % (
-        constants.VENDOR_VERSION, constants.CINDER_VERSION, config.CSI_SPEC))
+    LOG.info('Starting Ember CSI v%s with %d workers (cinder: v%s, '
+             'CSI spec: v%s)' %
+             (constants.VENDOR_VERSION, config.WORKERS,
+              constants.CINDER_VERSION, config.CSI_SPEC))
 
-    server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
+    server = grpc.server(
+        futures.ThreadPoolExecutor(max_workers=config.WORKERS))
     workarounds.grpc_eventlet(server)
     csi_plugin = server_class(server=server,
                               persistence_config=config.PERSISTENCE_CONFIG,
