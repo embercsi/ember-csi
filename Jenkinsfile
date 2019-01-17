@@ -4,6 +4,14 @@ openshiftNamespace = 'ember-csi'
 openshiftServiceAccount = 'jenkins'
 ansibleExecutorTag = 'v1.1.2'
 
+def clean() {
+    String objectTypes="Pod"
+    openshiftDeleteResourceByLabels(
+        types: objectTypes,
+        keys: "app",
+        values: "ember-csi")
+}
+
 createDslContainers podName: dslPodName,
                     dockerRepoURL: dockerRepoURL,
                     openshiftNamespace: openshiftNamespace,
@@ -13,6 +21,7 @@ createDslContainers podName: dslPodName,
   node(dslPodName){
 
     stage("pre-flight"){
+      clean()
       deleteDir()
       checkout scm
     }
@@ -24,14 +33,7 @@ createDslContainers podName: dslPodName,
 
     stage("Deploy Infra"){
       openshiftCreateResource(
-          yaml: readFile("ci-automation/config/ember-csi-image.yaml"),
-          verbose: true
-      )
-      openshiftBuild(buildConfig: 'ember-csi', showBuildLogs: 'true')
-
-      openshiftCreateResource(
           yaml: readFile("ci-automation/config/ember-csi-pod.yaml"),
-          verbose: true
       )
     }
 
@@ -50,18 +52,25 @@ createDslContainers podName: dslPodName,
         )
         if (podSelector.count() > 0) {
           podSelector.untilEach {
-            it.object().status.containerStatuses.every { cont ->
-              cont.ready
+            echo "pod: ${it.name()} ${it.object().status}"
+            it.object().status.containerStatuses.every {
+              pod -> pod.ready
             }
           }
+
           podSelector.withEach {
             def podName = it.object().metadata.name
             println("Working in pod: $podName")
-            def response = openshift.rsync("${WORKSPACE}","$podName:/etc/systemd/system/vagrant-vm.service.d/workDir")
             openshiftExec(
              pod: podName,
              command: 'bash',
-             arguments: ["-c", "cd /etc/systemd/system/vagrant-vm.service.d/ && vagrant rsync && vagrant ssh -c 'sh -x /vagrant/workDir/PR_submitted_CI_ci-automation-2/ci-automation/tests.sh'"],
+             arguments: ["-c", "mkdir -p /etc/systemd/system/vagrant-vm.service.d/workDir/workspace"],
+            )
+            def response = openshift.rsync("${WORKSPACE}","$podName:/etc/systemd/system/vagrant-vm.service.d/workDir/workspace")
+            openshiftExec(
+             pod: podName,
+             command: 'bash',
+             arguments: ["-c", "cd /etc/systemd/system/vagrant-vm.service.d/ && vagrant rsync && vagrant ssh -c 'sh -x /vagrant/${WORKSPACE}/ci-automation/tests.sh'"],
             )
           }
         }
@@ -72,11 +81,7 @@ createDslContainers podName: dslPodName,
     }
 
     stage('Clean') {
-      String objectTypes="ImageStream,Build,BuildConfig,Pod"
-      openshiftDeleteResourceByLabels(
-          types: objectTypes,
-          keys: "app",
-          values: "ember-csi")
+      clean()
     }
   }
 }
