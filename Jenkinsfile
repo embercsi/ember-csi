@@ -1,15 +1,15 @@
-dslPodName = "contraDsl-${UUID.randomUUID()}"
+uuid = UUID.randomUUID()
+dslPodName = "contraDsl-${uuid}"
 dockerRepoURL = '172.30.254.79:5000'
 openshiftNamespace = 'ember-csi'
 openshiftServiceAccount = 'jenkins'
 ansibleExecutorTag = 'v1.1.2'
+envPodName = "ember-csi-${uuid}"
 
 def clean() {
-    String objectTypes="Pod"
-    openshiftDeleteResourceByLabels(
-        types: objectTypes,
-        keys: "app",
-        values: "ember-csi")
+  openshift.withCluster(){
+    openshift.delete("pod","$envPodName")
+  }
 }
 
 createDslContainers podName: dslPodName,
@@ -21,7 +21,6 @@ createDslContainers podName: dslPodName,
   node(dslPodName){
 
     stage("pre-flight"){
-      clean()
       deleteDir()
       checkout scm
     }
@@ -32,9 +31,9 @@ createDslContainers podName: dslPodName,
     }
 
     stage("Deploy Infra"){
-      openshiftCreateResource(
-          yaml: readFile("ci-automation/config/ember-csi-pod.yaml"),
-      )
+      openshift.withCluster() {
+        openshift.create(openshift.process(readFile('ci-automation/config/ember-csi-template.yaml'),"-p","PODNAME=$envPodName"))
+      }
     }
 
     stage("Execute Tests"){
@@ -46,10 +45,7 @@ createDslContainers podName: dslPodName,
       }
 
       openshift.withCluster() {
-        def podSelector = openshift.selector(
-          'pod',
-          [app: 'ember-csi']
-        )
+        def podSelector = openshift.selector('pod',envPodName)
         if (podSelector.count() > 0) {
           podSelector.untilEach {
             echo "pod: ${it.name()} ${it.object().status}"
@@ -62,15 +58,15 @@ createDslContainers podName: dslPodName,
             def podName = it.object().metadata.name
             println("Working in pod: $podName")
             openshiftExec(
-             pod: podName,
-             command: 'bash',
-             arguments: ["-c", "mkdir -p /etc/systemd/system/vagrant-vm.service.d/workDir/workspace"],
+              pod: podName,
+              command: 'bash',
+              arguments: ["-c", "mkdir -p /etc/systemd/system/vagrant-vm.service.d/workDir/workspace"],
             )
-            def response = openshift.rsync("${WORKSPACE}","$podName:/etc/systemd/system/vagrant-vm.service.d/workDir/workspace")
+            openshift.rsync("${WORKSPACE}","$podName:/etc/systemd/system/vagrant-vm.service.d/workDir/workspace")
             openshiftExec(
-             pod: podName,
-             command: 'bash',
-             arguments: ["-c", "cd /etc/systemd/system/vagrant-vm.service.d/ && vagrant rsync && vagrant ssh -c 'sh -x /vagrant/${WORKSPACE}/ci-automation/tests.sh'"],
+              pod: podName,
+              command: 'bash',
+              arguments: ["-c", "cd /etc/systemd/system/vagrant-vm.service.d/ && vagrant rsync && vagrant ssh -c 'sh -x /vagrant/${WORKSPACE}/ci-automation/tests.sh'"],
             )
           }
         }
