@@ -3,8 +3,6 @@ items:
   - apiVersion: "v1"
     kind: "Pod"
     metadata:
-      annotations:
-        alpha.image.policy.openshift.io/resolve-names: '*'
       generateName: ember-csi-1-
       labels:
         app: ember-csi
@@ -12,7 +10,7 @@ items:
     spec:
       containers:
         - name: ember-csi
-          image: ember-csi:latest
+          image: quay.io/pod_utils/systemd-libvirt-centos-vm:1.0
           securityContext:
             privileged: true
           readinessProbe:
