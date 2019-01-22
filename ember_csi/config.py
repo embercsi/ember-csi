@@ -24,6 +24,7 @@ import socket
 
 from oslo_context import context as context_utils
 from oslo_log import log as logging
+import six
 
 from ember_csi import constants
 from ember_csi import defaults
@@ -122,7 +123,24 @@ def validate():
     # Store version in x.y.z formatted string
     CSI_SPEC = spec_version
 
+    _set_defaults_ember_cfg()
     _set_topology_config()
+
+
+def _set_defaults_ember_cfg():
+    # First set defaults for missing keys
+    for key, value in defaults.EMBER_CFG.items():
+        EMBER_CONFIG.setdefault(key, value)
+
+    # Now convert $state_path
+    state_path = EMBER_CONFIG['state_path']
+    for key, value in EMBER_CONFIG.items():
+        if isinstance(value, six.string_types) and '$state_path' in value:
+            EMBER_CONFIG[key] = value.replace('$state_path', state_path)
+
+            EMBER_CONFIG[key] = value.replace('$state_path', state_path)
+    defaults.VOL_BINDS_DIR = defaults.VOL_BINDS_DIR.replace('$state_path',
+                                                            state_path)
 
 
 def _set_logging_config():

@@ -19,8 +19,8 @@ MODE = 'all'
 PERSISTENCE_CFG = {'storage': 'crd', 'namespace': 'default'}
 ROOT_HELPER = 'sudo'
 STATE_PATH = '/var/lib/ember-csi'
-VOL_BINDS_DIR = STATE_PATH + '/vols'
-LOCKS_DIR = STATE_PATH + '/locks'
+VOL_BINDS_DIR = '$state_path/vols'
+LOCKS_DIR = '$state_path/locks'
 REQUEST_MULTIPATH = False
 EMBER_CFG = {'project_id': NAME, 'user_id': NAME, 'plugin_name': NAME,
              'root_helper': ROOT_HELPER,
