@@ -63,11 +63,12 @@ createDslContainers podName: dslPodName,
               arguments: ["-c", "mkdir -p /etc/systemd/system/vagrant-vm.service.d/workDir/workspace"],
             )
             openshift.rsync("${WORKSPACE}","$podName:/etc/systemd/system/vagrant-vm.service.d/workDir/workspace")
-            openshiftExec(
+            def response = openshiftExec(
               pod: podName,
               command: 'bash',
               arguments: ["-c", "cd /etc/systemd/system/vagrant-vm.service.d/ && vagrant rsync && vagrant ssh -c 'sh -x /vagrant/${WORKSPACE}/ci-automation/tests.sh'"],
             )
+            echo $response
           }
         }
         else {
