@@ -4,7 +4,7 @@ openshiftNamespace = 'ember-csi'
 openshiftServiceAccount = 'jenkins'
 ansibleExecutorTag = 'v1.1.2'
 
-def clean() {
+def cleanup() {
     String objectTypes="Pod"
     openshiftDeleteResourceByLabels(
         types: objectTypes,
@@ -21,7 +21,6 @@ createDslContainers podName: dslPodName,
   node(dslPodName){
 
     stage("pre-flight"){
-      clean()
       deleteDir()
       checkout scm
     }
@@ -32,56 +31,66 @@ createDslContainers podName: dslPodName,
     }
 
     stage("Deploy Infra"){
-      openshiftCreateResource(
-          yaml: readFile("ci-automation/config/ember-csi-pod.yaml"),
-      )
+      try {
+        openshiftCreateResource(
+            yaml: readFile("ci-automation/config/ember-csi-pod.yaml"),
+        )
+      } catch (Exception e){
+        currentBuild.result = 'FAILURE'
+        cleanup()
+        throw e
+      }
     }
 
     stage("Execute Tests"){
-
       try {
-        executeTests verbose: true, vars: [ workspace: "${WORKSPACE}" ]
-      } finally {
-        junit 'junit.xml'
-      }
+        try {
+          executeTests verbose: true, vars: [ workspace: "${WORKSPACE}" ]
+        } finally {
+          junit 'junit.xml'
+        }
 
-      openshift.withCluster() {
-        def podSelector = openshift.selector(
-          'pod',
-          [app: 'ember-csi']
-        )
-        if (podSelector.count() > 0) {
-          podSelector.untilEach {
-            echo "pod: ${it.name()} ${it.object().status}"
-            it.object().status.containerStatuses.every {
-              pod -> pod.ready
+        openshift.withCluster() {
+          def podSelector = openshift.selector(
+            'pod',
+            [app: 'ember-csi']
+          )
+          if (podSelector.count() > 0) {
+            podSelector.untilEach {
+              echo "pod: ${it.name()} ${it.object().status}"
+              it.object().status.containerStatuses.every {
+                pod -> pod.ready
+              }
+            }
+
+            podSelector.withEach {
+              def podName = it.object().metadata.name
+              println("Working in pod: $podName")
+              openshiftExec(
+               pod: podName,
+               command: 'bash',
+               arguments: ["-c", "mkdir -p /etc/systemd/system/vagrant-vm.service.d/workDir/workspace"],
+              )
+              def response = openshift.rsync("${WORKSPACE}","$podName:/etc/systemd/system/vagrant-vm.service.d/workDir/workspace")
+              openshiftExec(
+               pod: podName,
+               command: 'bash',
+               arguments: ["-c", "cd /etc/systemd/system/vagrant-vm.service.d/ && vagrant rsync && vagrant ssh -c 'sh -x /vagrant/${WORKSPACE}/ci-automation/tests.sh'"],
+              )
             }
           }
-
-          podSelector.withEach {
-            def podName = it.object().metadata.name
-            println("Working in pod: $podName")
-            openshiftExec(
-             pod: podName,
-             command: 'bash',
-             arguments: ["-c", "mkdir -p /etc/systemd/system/vagrant-vm.service.d/workDir/workspace"],
-            )
-            def response = openshift.rsync("${WORKSPACE}","$podName:/etc/systemd/system/vagrant-vm.service.d/workDir/workspace")
-            openshiftExec(
-             pod: podName,
-             command: 'bash',
-             arguments: ["-c", "cd /etc/systemd/system/vagrant-vm.service.d/ && vagrant rsync && vagrant ssh -c 'sh -x /vagrant/${WORKSPACE}/ci-automation/tests.sh'"],
-            )
+          else {
+            sh 'echo no more than 0'
           }
         }
-        else {
-          sh 'echo no more than 0'
-        }
+      } catch (Exception e) {
+        currentBuild.result = 'FAILURE'
+        cleanup()
+        throw e
       }
     }
-
-    stage('Clean') {
-      clean()
+    stage('env-cleanup') {
+      cleanup()
     }
   }
 }
