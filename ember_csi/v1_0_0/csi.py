@@ -58,7 +58,7 @@ class Controller(base.TopologyBase, base.SnapshotBase, base.ControllerBase):
         super(Controller, self)._validate_requirements(request, context)
         self._validate_accessibility(request, context)
 
-    def _create_from_vol(self, vol_id, vol_size, name, context):
+    def _create_from_vol(self, vol_id, vol_size, name, context, **params):
         src_vol = self._get_vol(volume_id=vol_id)
 
         if not src_vol:
@@ -70,22 +70,23 @@ class Controller(base.TopologyBase, base.SnapshotBase, base.ControllerBase):
         if src_vol.volume_size > vol_size:
             context.abort(grpc.StatusCode.OUT_OF_RANGE,
                           'Volume %s is bigger than requested volume' % vol_id)
-        vol = src_vol.clone(name=name, size=vol_size)
+        vol = src_vol.clone(name=name, size=vol_size, **params)
         return vol
 
-    def _create_volume(self, name, vol_size, request, context):
+    def _create_volume(self, name, vol_size, request, context, **params):
         if not request.HasField('volume_content_source'):
             return super(Controller, self)._create_volume(name, vol_size,
-                                                          request, context)
+                                                          request, context,
+                                                          **params)
         # Check size
         source = request.volume_content_source
         if source.HasField('snapshot'):
             vol = self._create_from_snap(source.snapshot.snapshot_id, vol_size,
-                                         request.name, context)
+                                         request.name, context, **params)
 
         else:
             vol = self._create_from_vol(source.volume.volume_id, vol_size,
-                                        request.name, context)
+                                        request.name, context, **params)
         return vol
 
     def _convert_volume_type(self, vol):
