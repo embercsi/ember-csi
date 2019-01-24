@@ -12,13 +12,13 @@ with open('HISTORY.md') as history_file:
 requirements = [
     # Once we release cinderlib with cinder we must pin this one
     'cinder',
-    'grpcio>=1.12.0',
+    'grpcio==1.12.0',
     # GRPCIO v1.12.0 has broken dependencies, so we include them here
     'protobuf>=3.5.0.post1',
     # For the CRD persistent metadata plugin
-    'kubernetes>=7.0.0',
+    'kubernetes==7.0.0',
     # Needed because some Kubernetes dependencies use version in format of 4.*
-    'setuptools>=40.0.0',
+    'setuptools==40.0.0',
 ]
 
 dependency_links = [
