@@ -22,6 +22,7 @@ import os
 import re
 import socket
 
+import cinderlib
 from oslo_context import context as context_utils
 from oslo_log import log as logging
 import six
@@ -124,7 +125,42 @@ def validate():
     CSI_SPEC = spec_version
 
     _set_defaults_ember_cfg()
+    _map_backend_config()
     _set_topology_config()
+
+
+def _get_drivers_map():
+    def get_key(driver_name):
+        key = driver_name.lower()
+        if key.endswith('driver'):
+            key = key[:-6]
+        return key
+
+    try:
+        drivers = cinderlib.list_supported_drivers()
+    except Exception:
+        LOG.warning('System driver mappings not loaded')
+        return {}
+
+    mapping = {get_key(k): v['class_fqn'] for k, v in drivers.items()}
+    return mapping
+
+
+def _map_backend_config():
+    """Transform key and values to make config easier for users."""
+    if not BACKEND_CONFIG:
+        return
+
+    # Have simpler names for some configuration options
+    for key, replacement in constants.BACKEND_KEY_MAPPINGS:
+        if key in BACKEND_CONFIG:
+            BACKEND_CONFIG.setdefault(replacement, BACKEND_CONFIG.pop(key))
+
+    # Have simpler name drivers
+    mapping = _get_drivers_map()
+    replacement = mapping.get(BACKEND_CONFIG.get('volume_driver').lower())
+    if replacement:
+        BACKEND_CONFIG['volume_driver'] = replacement
 
 
 def _set_defaults_ember_cfg():

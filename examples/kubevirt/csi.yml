@@ -68,7 +68,7 @@ spec:
     - name: X_CSI_PERSISTENCE_CONFIG
       value: '{"storage":"crd"}'
     - name: X_CSI_BACKEND_CONFIG
-      value: '{"volume_backend_name":"xtremio","volume_driver":"cinder.volume.drivers.dell_emc.xtremio.XtremIOISCSIDriver","san_ip":"192.168.1.2","xtremio_cluster_name":"cluster-name","san_login":"user","san_password":"toomanysecrets"}'
+      value: '{"name":"xtremio","driver":"XtremIOISCSI","san_ip":"192.168.1.2","xtremio_cluster_name":"cluster-name","san_login":"user","san_password":"toomanysecrets"}'
     image: embercsi/ember-csi:master
     imagePullPolicy: Always
     securityContext:
