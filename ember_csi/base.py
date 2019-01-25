@@ -196,6 +196,8 @@ class IdentityBase(object):
         backend_name = self.backend.id if self.backend else None
         res = self.persistence.get_volumes(
             volume_id=volume_id, backend_name=backend_name, **filters)
+        # Ignore soft-deleted volumes
+        res = [vol for vol in res if vol.status != 'deleted']
         if (not always_list and
                 res and len(res) == 1 and (volume_id or filters)):
             return res[0]
@@ -388,12 +390,19 @@ class ControllerBase(IdentityBase):
 
         if vol.status != 'deleted':
             LOG.debug('Deleting volume %s' % request.volume_id)
-            try:
-                vol.delete()
-            except Exception as exc:
-                # TODO(geguileo): Find out what is the right status code for
-                #                 this error
-                context.abort(grpc.StatusCode.UNKNOWN, 'Error: %s' % exc)
+            if vol.snapshots:
+                LOG.debug('Volume has snapshots, soft-deleting')
+                # Just set the status and not the deleted field so DB
+                # persistemce will still return them
+                vol.status = 'deleted'
+                vol.save()
+            else:
+                try:
+                    vol.delete()
+                except Exception as exc:
+                    # TODO(geguileo): Find out what is the right status code
+                    #                 for this error
+                    context.abort(grpc.StatusCode.UNKNOWN, 'Error: %s' % exc)
 
         return self.DELETE_RESP
 
@@ -926,6 +935,10 @@ class SnapshotBase(object):
         snap = self._get_snap(request.snapshot_id)
         if snap:
             snap.delete()
+            if snap.volume.status == 'deleted' and not snap.volume.snapshots:
+                LOG.debug('Last snapshot deleted, deleting soft-deleted '
+                          'volume %s' % snap.volume.id)
+                snap.volume.delete()
         return self.DELETE_SNAP_RESP
 
     @common.debuggable
