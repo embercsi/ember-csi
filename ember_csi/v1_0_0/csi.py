@@ -161,7 +161,6 @@ class Controller(base.TopologyBase, base.SnapshotBase, base.ControllerBase):
         creation_time.FromDatetime(created_at)
 
         snapshot = types.Snapshot(
-            size_bytes=int(snap.volume_size * constants.GB),
             snapshot_id=snap.id,
             source_volume_id=snap.volume_id,
             creation_time=creation_time,

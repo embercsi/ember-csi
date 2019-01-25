@@ -125,7 +125,6 @@ class Controller(base.TopologyBase, base.SnapshotBase, base.ControllerBase):
     def _convert_snapshot_type(self, snap):
         created_at = int(common.date_to_nano(snap.created_at))
         snapshot = types.Snapshot(
-            size_bytes=int(snap.volume_size * constants.GB),
             id=snap.id,
             source_volume_id=snap.volume_id,
             created_at=created_at,
