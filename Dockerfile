@@ -10,6 +10,7 @@ ENV PYTHONUNBUFFERED=true
 # We need to upgrade pyasn1 because the package for RDO is not new enough for
 # pyasn1_modules, which is used by some of the Google's libraries
 RUN yum -y install xfsprogs e2fsprogs btrfs-progs nmap-ncat python2-future && \
+    yum -y install python-rbd ceph-common rbd-nbd git && \
     pip install --no-cache-dir --upgrade 'pyasn1<0.5.0,>=0.4.1' future && \
     yum clean all && \
     rm -rf /var/cache/yum
