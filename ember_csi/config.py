@@ -16,6 +16,7 @@
 from __future__ import absolute_import
 import collections
 from distutils import version
+import errno
 import glob
 import json
 import os
@@ -127,6 +128,7 @@ def validate():
     _set_defaults_ember_cfg()
     _map_backend_config()
     _set_topology_config()
+    _create_default_dirs_files()
 
 
 def _get_drivers_map():
@@ -173,10 +175,30 @@ def _set_defaults_ember_cfg():
     for key, value in EMBER_CONFIG.items():
         if isinstance(value, six.string_types) and '$state_path' in value:
             EMBER_CONFIG[key] = value.replace('$state_path', state_path)
-
-            EMBER_CONFIG[key] = value.replace('$state_path', state_path)
     defaults.VOL_BINDS_DIR = defaults.VOL_BINDS_DIR.replace('$state_path',
                                                             state_path)
+
+
+def _create_default_dirs_files():
+    def create_dir(name):
+        try:
+            os.makedirs(name)
+        except OSError as e:
+            if e.errno != errno.EEXIST:
+                raise
+
+    def create_file(name):
+        with open(name, 'a'):
+            pass
+
+    create_dir(EMBER_CONFIG['state_path'])
+    create_dir(defaults.VOL_BINDS_DIR)
+    create_dir(EMBER_CONFIG['file_locks_path'])
+
+    default_hosts = os.path.join(EMBER_CONFIG['state_path'],
+                                 'ssh_known_hosts')
+    hosts_file = EMBER_CONFIG.get('ssh_hosts_key_file', default_hosts)
+    create_file(hosts_file)
 
 
 def _set_logging_config():
