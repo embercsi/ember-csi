@@ -44,3 +44,8 @@ ERROR_TOPOLOGY_LIST = 10
 ERROR_PLUGIN_NAME = 11
 ERROR_JSON = 12
 ERROR_DEBUG_MODE = 13
+
+
+BACKEND_KEY_MAPPINGS = (('driver', 'volume_driver'),
+                        ('multipath', 'use_multipath_for_image_xfer'),
+                        ('name', 'volume_backend_name'))

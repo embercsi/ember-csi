@@ -1,2 +1,2 @@
 X_CSI_PERSISTENCE_CONFIG={"storage":"db","connection":"sqlite:////var/lib/cinder/db.sqlite"}
-X_CSI_BACKEND_CONFIG={"volume_backend_name":"rbd","volume_driver":"cinder.volume.drivers.rbd.RBDDriver","rbd_user":"cinder","rbd_pool":"volumes","rbd_ceph_conf":"/etc/ceph/ceph.conf","rbd_keyring_conf":"/etc/ceph/ceph.client.cinder.keyring"}
+X_CSI_BACKEND_CONFIG={"name":"rbd","driver":"RBD","rbd_user":"cinder","rbd_pool":"volumes","rbd_ceph_conf":"/etc/ceph/ceph.conf","rbd_keyring_conf":"/etc/ceph/ceph.client.cinder.keyring"}
