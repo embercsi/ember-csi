@@ -10,7 +10,7 @@ ENV PYTHONUNBUFFERED=true
 
 RUN yum -y install targetcli iscsi-initiator-utils device-mapper-multipath epel-release lvm2 which && \
     yum -y install python2-pip python-devel gcc && \
-    yum -y install python-rbd ceph-common git && \
+    yum -y install python-rbd ceph-common rbd-nbd git && \
     # Need new setuptools version or we'll get "SyntaxError: '<' operator not allowed in environment markers" when installing Cinder
     pip install 'setuptools>=38.6.0' future && \
     yum -y install xfsprogs e2fsprogs btrfs-progs nmap-ncat && \
@@ -18,7 +18,7 @@ RUN yum -y install targetcli iscsi-initiator-utils device-mapper-multipath epel-
     # Shallow clone
     git clone --depth=1 'https://github.com/openstack/cinder.git' && \
     # Apply cinderlib patch
-    cd cinder && git fetch https://git.openstack.org/openstack/cinder refs/changes/69/620669/10 && git checkout FETCH_HEAD && cd .. && \
+    cd cinder && git fetch https://git.openstack.org/openstack/cinder refs/changes/69/620669/14 && git checkout FETCH_HEAD && cd .. && \
     pip install --no-cache-dir cinder/ && \
     mkdir -p /var/lib/ember-csi/{vols,locks} && \
     touch /var/lib/ember-csi/ssh_known_hosts && \
