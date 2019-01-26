@@ -239,6 +239,10 @@ class ControllerBase(IdentityBase):
         self.CTRL_CAPABILITIES_RESP = self.TYPES.CtrlCapabilityResp(
             capabilities=capab)
 
+        if len(self.backend.pool_names) > 1:
+            LOG.info('Available pools: %s' %
+                     ', '.join(self.backend.pool_names))
+
     def _get_size(self, what, request, default):
         vol_size = getattr(request.capacity_range, what + '_bytes', None)
         if vol_size:
