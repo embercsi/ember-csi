@@ -1,12 +1,18 @@
-kind: List
-items:
+apiVersion: v1
+kind: Template
+metadata:
+  name: ember-csi
+parameters:
+  - name:         PODNAME
+    Display Name: pod name
+    Description:  TEST environment pod name
+    Required:     true
+    Value:        "ember-csi"
+objects:
   - apiVersion: "v1"
     kind: "Pod"
     metadata:
-      generateName: ember-csi-1-
-      labels:
-        app: ember-csi
-        env: test
+      name: ${PODNAME}
     spec:
       containers:
         - name: ember-csi
