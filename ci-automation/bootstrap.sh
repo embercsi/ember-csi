@@ -13,3 +13,4 @@ pip install --upgrade setuptools
 pip install --upgrade -r $home/requirements.txt
 pip install -r $home/requirements_dev.txt
 pip install -e $home/..
+
