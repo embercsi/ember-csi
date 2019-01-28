@@ -1,0 +1,42 @@
+- name: Create LVM backing file
+  command: truncate -s 10G /root/ember-volumes
+  args:
+      creates: ember-volumes
+
+- shell: "losetup -l | awk '/ember-volumes/ {print $1}'"
+  changed_when: false
+  register: existing_loop_device
+
+- name: Create loopback device
+  command: "losetup --show -f /root/ember-volumes"
+  register: new_loop_device
+  when: existing_loop_device.stdout == ''
+ # Workaround because Ansible destroys registers when skipped
+- set_fact: loop_device="{{ new_loop_device.stdout if new_loop_device.changed else existing_loop_device.stdout }}"
+
+- name: "Create PV"
+  shell: "pvcreate {{loop_device}} && touch /root/lvm.pvcreate"
+  args:
+      creates: /root/lvm.pvcreate
+
+- name: "Create VG"
+  shell: "vgcreate ember-volumes {{loop_device}} && touch /root/lvm.vgcreate"
+  args:
+      creates: /root/lvm.vgcreate
+
+- command: "vgscan --cache"
+  changed_when: false
+
+# Workaround for lvcreate hanging inside contatiner
+# https://serverfault.com/questions/802766/calling-lvcreate-from-inside-the-container-hangs
+- lineinfile:
+    path: /etc/lvm/lvm.conf
+    state: present
+    regexp: "^\tudev_sync = 1"
+    line: "\tudev_sync = 0"
+
+- lineinfile:
+    path: /etc/lvm/lvm.conf
+    state: present
+    regexp: "^\tudev_rules = 1"
+    line: "\tudev_rules = 0"

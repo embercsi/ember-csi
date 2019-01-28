@@ -1,0 +1,71 @@
+# We need to retry this command, as the API may still be restarting
+- name: Allow Node role to create attachments
+  shell: "kubectl get -o yaml clusterroles/system:node | perl -0pe 's/volumeattachments\n  verbs:\n/volumeattachments\n  verbs:\n  - create\n  - list\n  - update\n  - watch\n  - patch\n  - delete\n/' | kubectl replace -f -"
+  # register: res
+  # until: res | success
+  # retries: 5
+  # delay: 10
+
+- name: Bind master to Node role
+  shell: 'kubectl patch clusterrolebindings/system:node -p ''{"subjects": [{"kind": "User", "name": "system:node:master", "namespace": "kube-system"}]}'''
+
+- name: Bind nodes to Node role
+  shell: "kubectl get -o yaml clusterrolebindings/system:node | perl -0pe 's/subjects:\n/subjects:\n- kind: User\n{{'  '}}name: system:node:{{ item }}\n{{'  '}}namespace: kube-system\n/' | tee -a bind_node.txt | kubectl replace -f -"
+  with_items: "{{ groups['nodes'] }}"
+
+- name: Remove API NodeRestriction
+  lineinfile:
+    path: /etc/kubernetes/manifests/kube-apiserver.yaml
+    regexp: '- --enable-admission-plugins=NodeRestriction'
+    state: absent
+
+# We would normally pass the features-gates to kubeadm init, but it complains
+# about not knowing the features
+# Once we suport CSDriver extra info we should add ,CSIDriverRegistry=true to
+# the feature-gates
+- name: Remove API Node authorization and set required features
+  command: sed -i 's/    - --authorization-mode=Node,RBAC/    - --authorization-mode=RBAC\n    - --feature-gates=CSIBlockVolume=true,VolumeSnapshotDataSource=true,CSINodeInfo=true/' /etc/kubernetes/manifests/kube-apiserver.yaml
+
+- name: Restart API containers
+  shell: docker restart $(docker ps --filter "name=apiserver_kube" --format "{{'{{'}}.ID{{'}}'}}") || true
+
+- name: Restart Scheduler and Manager containers
+  shell: docker restart $(docker ps --filter "name=scheduler_kube|manager_kube" --format "{{'{{'}}.ID{{'}}'}}") || true
+
+- name: Copy YML files
+  copy:
+    src: kubeyml
+    dest: /home/vagrant
+    owner: vagrant
+    group: vagrant
+
+- wait_for: timeout=20
+  delegate_to: localhost
+# We don't support kubernetes CSDriver additional info, so we don't need the CRD yet
+# - name: Create CRD for the CSIDriverRegistry feature
+#   command: kubectl create -f https://raw.githubusercontent.com/kubernetes/csi-api/release-1.13/pkg/crd/manifests/csidriver.yaml --validate=false
+- name: Create CRD for the CSINodeInfo feature
+  command: kubectl create -f https://raw.githubusercontent.com/kubernetes/csi-api/release-1.13/pkg/crd/manifests/csinodeinfo.yaml --validate=false
+
+- wait_for: timeout=180
+  delegate_to: localhost
+#- pause: minutes=3
+- name: Set CSI controller
+  command: kubectl create -f /home/vagrant/kubeyml/controller.yml
+
+- wait_for: timeout=180
+  delegate_to: localhost
+#- pause: minutes=3
+
+- name: Start CSI nodes
+  command: kubectl create -f /home/vagrant/kubeyml/node.yml
+
+- name: Create Storage Class
+  command: kubectl create -f /home/vagrant/kubeyml/storage-class.yml
+
+# We need to wait for VolumeSnapshotClass to exist
+- wait_for: timeout=180
+  delegate_to: localhost
+#- pause: minutes=3
+- name: Create Snapshot Storage Class
+  command: kubectl create -f /home/vagrant/kubeyml/snapshot-class.yml
