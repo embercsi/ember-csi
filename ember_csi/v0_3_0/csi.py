@@ -52,14 +52,15 @@ class Controller(base.TopologyBase, base.SnapshotBase, base.ControllerBase):
         super(Controller, self)._validate_requirements(request, context)
         self._validate_accessibility(request, context)
 
-    def _create_volume(self, name, vol_size, request, context):
+    def _create_volume(self, name, vol_size, request, context, **params):
         if not request.HasField('volume_content_source'):
             return super(Controller, self)._create_volume(name, vol_size,
-                                                          request, context)
+                                                          request, context,
+                                                          **params)
         # Check size
         source = request.volume_content_source
         vol = self._create_from_snap(source.snapshot.snapshot_id, vol_size,
-                                     request.name, context)
+                                     request.name, context, **params)
         return vol
 
     def _convert_volume_type(self, vol):
@@ -124,7 +125,6 @@ class Controller(base.TopologyBase, base.SnapshotBase, base.ControllerBase):
     def _convert_snapshot_type(self, snap):
         created_at = int(common.date_to_nano(snap.created_at))
         snapshot = types.Snapshot(
-            size_bytes=int(snap.volume_size * constants.GB),
             id=snap.id,
             source_volume_id=snap.volume_id,
             created_at=created_at,

@@ -16,14 +16,17 @@
 from __future__ import absolute_import
 import collections
 from distutils import version
+import errno
 import glob
 import json
 import os
 import re
 import socket
 
+import cinderlib
 from oslo_context import context as context_utils
 from oslo_log import log as logging
+import six
 
 from ember_csi import constants
 from ember_csi import defaults
@@ -122,7 +125,80 @@ def validate():
     # Store version in x.y.z formatted string
     CSI_SPEC = spec_version
 
+    _set_defaults_ember_cfg()
+    _map_backend_config()
     _set_topology_config()
+    _create_default_dirs_files()
+
+
+def _get_drivers_map():
+    def get_key(driver_name):
+        key = driver_name.lower()
+        if key.endswith('driver'):
+            key = key[:-6]
+        return key
+
+    try:
+        drivers = cinderlib.list_supported_drivers()
+    except Exception:
+        LOG.warning('System driver mappings not loaded')
+        return {}
+
+    mapping = {get_key(k): v['class_fqn'] for k, v in drivers.items()}
+    return mapping
+
+
+def _map_backend_config():
+    """Transform key and values to make config easier for users."""
+    if not BACKEND_CONFIG:
+        return
+
+    # Have simpler names for some configuration options
+    for key, replacement in constants.BACKEND_KEY_MAPPINGS:
+        if key in BACKEND_CONFIG:
+            BACKEND_CONFIG.setdefault(replacement, BACKEND_CONFIG.pop(key))
+
+    # Have simpler name drivers
+    mapping = _get_drivers_map()
+    replacement = mapping.get(BACKEND_CONFIG.get('volume_driver').lower())
+    if replacement:
+        BACKEND_CONFIG['volume_driver'] = replacement
+
+
+def _set_defaults_ember_cfg():
+    # First set defaults for missing keys
+    for key, value in defaults.EMBER_CFG.items():
+        EMBER_CONFIG.setdefault(key, value)
+
+    # Now convert $state_path
+    state_path = EMBER_CONFIG['state_path']
+    for key, value in EMBER_CONFIG.items():
+        if isinstance(value, six.string_types) and '$state_path' in value:
+            EMBER_CONFIG[key] = value.replace('$state_path', state_path)
+    defaults.VOL_BINDS_DIR = defaults.VOL_BINDS_DIR.replace('$state_path',
+                                                            state_path)
+
+
+def _create_default_dirs_files():
+    def create_dir(name):
+        try:
+            os.makedirs(name)
+        except OSError as e:
+            if e.errno != errno.EEXIST:
+                raise
+
+    def create_file(name):
+        with open(name, 'a'):
+            pass
+
+    create_dir(EMBER_CONFIG['state_path'])
+    create_dir(defaults.VOL_BINDS_DIR)
+    create_dir(EMBER_CONFIG['file_locks_path'])
+
+    default_hosts = os.path.join(EMBER_CONFIG['state_path'],
+                                 'ssh_known_hosts')
+    hosts_file = EMBER_CONFIG.get('ssh_hosts_key_file', default_hosts)
+    create_file(hosts_file)
 
 
 def _set_logging_config():

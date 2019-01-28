@@ -61,9 +61,10 @@ test-all: ## run tests on every Python version with tox
 	tox
 
 centos-bm-lvm:
+	mkdir -p /tmp/{locks,vols} && \
 	X_CSI_PERSISTENCE_CONFIG='{"storage":"memory"}' \
 	X_CSI_BACKEND_CONFIG='{"target_protocol":"iscsi","iscsi_ip_address":"127.0.0.1","volume_backend_name":"lvm","volume_driver":"cinder.volume.drivers.lvm.LVMVolumeDriver","volume_group":"ember-volumes","target_helper":"lioadm"}' \
-	X_CSI_EMBER_CONFIG='{"project_id":"io.ember-csi","user_id":"io.ember-csi","root_helper":"sudo","disable_logs":false,"debug":true,"request_multipath":false,"file_locks_path":"/tmp"}' \
+	X_CSI_EMBER_CONFIG='{"project_id":"io.ember-csi","user_id":"io.ember-csi","root_helper":"sudo","disable_logs":false,"debug":true,"request_multipath":false,"state_path":"/tmp"}' \
 	travis-scripts/run-bm-sanity.sh
 
 centos-lvm:

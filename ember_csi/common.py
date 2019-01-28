@@ -90,12 +90,30 @@ def logrpc(f):
     def tab(what):
         return '\t' + '\n\t'.join(filter(None, str(what).split('\n')))
 
+    def _get_idempotent_id(request):
+        for param in ('name', 'id', 'volume_id', 'snapshot_id'):
+            try:
+                return ' ' + getattr(request, param)
+            except AttributeError:
+                pass
+        return ''
+
+    def _get_response_id(response):
+        id_str = ' (id =%s)'
+
+        for resource in ('volume', 'snapshot'):
+            try:
+                return id_str % _get_idempotent_id(getattr(response, resource))
+            except AttributeError:
+                pass
+        return ''
+
     @functools.wraps(f)
     def dolog(self, request, context):
         context_utils.get_current().request_id = 'req-%s' % id(request)
 
         start = datetime.utcnow()
-        LOG.info('=> GRPC %s' % f.__name__)
+        LOG.info('=> GRPC %s%s' % (f.__name__, _get_idempotent_id(request)))
         if request.ListFields():
             msg = ' params:\n%s' % tab(request)
         else:
@@ -119,8 +137,9 @@ def logrpc(f):
             raise
         end = datetime.utcnow()
 
-        LOG.info('<= GRPC %s served in %.0fs' % (
-            f.__name__, (end - start).total_seconds()))
+        LOG.info('<= GRPC %s%s served in %.0fs' % (
+            f.__name__, _get_response_id(result),
+            (end - start).total_seconds()))
         str_result = tab(result) if str(result) else 'nothing'
         LOG.debug('Returns:\n%s' % tab(str_result))
         return result

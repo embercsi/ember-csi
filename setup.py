@@ -58,7 +58,10 @@ setuptools.setup(
     test_suite='tests',
     tests_require=test_requirements,
     entry_points={
-        'console_scripts': ['ember-csi=ember_csi.ember_csi:main'],
+        'console_scripts': [
+            'ember-csi=ember_csi.ember_csi:main',
+            'ember-list-drivers=ember_csi.generate_drivers_map:main',
+        ],
         'cinderlib.persistence.storage': [
             'crd = ember_csi.cl_crd:CRDPersistence',
         ],

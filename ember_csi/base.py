@@ -196,6 +196,8 @@ class IdentityBase(object):
         backend_name = self.backend.id if self.backend else None
         res = self.persistence.get_volumes(
             volume_id=volume_id, backend_name=backend_name, **filters)
+        # Ignore soft-deleted volumes
+        res = [vol for vol in res if vol.status != 'deleted']
         if (not always_list and
                 res and len(res) == 1 and (volume_id or filters)):
             return res[0]
@@ -219,6 +221,8 @@ class IdentityBase(object):
 
 
 class ControllerBase(IdentityBase):
+    FORBIDDEN_VOL_PARAMS = ('id', 'name', 'size', 'volume_size')
+
     def __init__(self, server, persistence_config, backend_config,
                  ember_config=None, **kwargs):
         cinderlib.setup(persistence_config=persistence_config,
@@ -234,6 +238,10 @@ class ControllerBase(IdentityBase):
                  for rpc in self.CTRL_CAPABILITIES]
         self.CTRL_CAPABILITIES_RESP = self.TYPES.CtrlCapabilityResp(
             capabilities=capab)
+
+        if len(self.backend.pool_names) > 1:
+            LOG.info('Available pools: %s' %
+                     ', '.join(self.backend.pool_names))
 
     def _get_size(self, what, request, default):
         vol_size = getattr(request.capacity_range, what + '_bytes', None)
@@ -297,8 +305,8 @@ class ControllerBase(IdentityBase):
     def _validate_requirements(self, request, context):
         self._validate_capabilities(request.volume_capabilities, context)
 
-    def _create_volume(self, name, vol_size, request, context):
-        vol = self.backend.create_volume(size=vol_size, name=name)
+    def _create_volume(self, name, vol_size, request, context, **params):
+        vol = self.backend.create_volume(size=vol_size, name=name, **params)
         return vol
 
     @common.debuggable
@@ -309,8 +317,6 @@ class ControllerBase(IdentityBase):
         vol_size, min_size, max_size = self._calculate_size(request, context)
         self._validate_requirements(request, context)
 
-        # TODO(geguileo): Use request.parameters for vol type extra specs and
-        #                 return volume_attributes to reflect parameters used.
         # NOTE(geguileo): Any reason to support controller_create_secrets?
 
         # See if the volume is already in the persistence storage
@@ -333,13 +339,36 @@ class ControllerBase(IdentityBase):
         else:
             # Create volume
             LOG.debug('Creating volume %s' % request.name)
-            vol = self._create_volume(request.name, vol_size, request, context)
+            # Extract parameters
+            params = self._convert_volume_params(request, context)
+            vol = self._create_volume(request.name, vol_size, request, context,
+                                      **params)
 
         if vol.status != 'available':
             context.abort(grpc.StatusCode.ABORTED,
                           'Operation pending for volume (%s)' % vol.status)
 
         return self._convert_volume_type(vol)
+
+    def _convert_volume_params(self, request, context):
+        params = {'qos_specs': {}, 'extra_specs': {}}
+        bad_keys = []
+
+        for k, v in request.parameters.items():
+            if k in self.FORBIDDEN_VOL_PARAMS:
+                bad_keys.append(k)
+            elif k.startswith('qos_'):
+                params['qos_specs'][k[4:]] = v
+            elif k.startswith('xtra_'):
+                params['extra_specs'][k[5:]] = v
+            else:
+                params[k] = v
+
+        if bad_keys:
+            LOG.warning('Ignoring forbidden parameters: %s',
+                        ', '.join(bad_keys))
+
+        return params
 
     @common.debuggable
     @common.logrpc
@@ -365,12 +394,19 @@ class ControllerBase(IdentityBase):
 
         if vol.status != 'deleted':
             LOG.debug('Deleting volume %s' % request.volume_id)
-            try:
-                vol.delete()
-            except Exception as exc:
-                # TODO(geguileo): Find out what is the right status code for
-                #                 this error
-                context.abort(grpc.StatusCode.UNKNOWN, 'Error: %s' % exc)
+            if vol.snapshots:
+                LOG.debug('Volume has snapshots, soft-deleting')
+                # Just set the status and not the deleted field so DB
+                # persistemce will still return them
+                vol.status = 'deleted'
+                vol.save()
+            else:
+                try:
+                    vol.delete()
+                except Exception as exc:
+                    # TODO(geguileo): Find out what is the right status code
+                    #                 for this error
+                    context.abort(grpc.StatusCode.UNKNOWN, 'Error: %s' % exc)
 
         return self.DELETE_RESP
 
@@ -850,7 +886,7 @@ class SnapshotBase(object):
             return res[0]
         return res
 
-    def _create_from_snap(self, snap_id, vol_size, name, context):
+    def _create_from_snap(self, snap_id, vol_size, name, context, **params):
         src_snap = self._get_snap(snap_id)
         if not src_snap:
             context.abort(grpc.StatusCode.NOT_FOUND,
@@ -862,7 +898,7 @@ class SnapshotBase(object):
             context.abort(grpc.StatusCode.OUT_OF_RANGE,
                           'Snapshot %s is bigger than requested volume' %
                           snap_id)
-        vol = src_snap.create_volume(name=name)
+        vol = src_snap.create_volume(name=name, **params)
         return vol
 
     # Inheriting classes must implement
@@ -903,6 +939,10 @@ class SnapshotBase(object):
         snap = self._get_snap(request.snapshot_id)
         if snap:
             snap.delete()
+            if snap.volume.status == 'deleted' and not snap.volume.snapshots:
+                LOG.debug('Last snapshot deleted, deleting soft-deleted '
+                          'volume %s' % snap.volume.id)
+                snap.volume.delete()
         return self.DELETE_SNAP_RESP
 
     @common.debuggable
