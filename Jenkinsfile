@@ -6,8 +6,8 @@ openshiftServiceAccount = 'jenkins'
 ansibleExecutorTag = 'v1.1.2'
 envPodName = "ember-csi-${uuid}"
 
-def clean() {
-  openshift.withCluster(){
+def cleanup() {
+  openshift.withCluster() {
     openshift.delete("pod","$envPodName")
   }
 }
@@ -39,14 +39,15 @@ createDslContainers podName: dslPodName,
     stage("Execute Tests"){
 
       try {
-        executeTests verbose: true, vars: [ workspace: "${WORKSPACE}" ]
-      } finally {
-        junit 'junit.xml'
-      }
 
-      openshift.withCluster() {
-        def podSelector = openshift.selector('pod',envPodName)
-        if (podSelector.count() > 0) {
+        try {
+            executeTests verbose: true, vars: [ workspace: "${WORKSPACE}" ]
+        } finally {
+            junit 'junit.xml'
+        }
+
+        openshift.withCluster() {
+          def podSelector = openshift.selector('pod',envPodName)
           podSelector.untilEach {
             echo "pod: ${it.name()} ${it.object().status}"
             it.object().status.containerStatuses.every {
@@ -70,14 +71,15 @@ createDslContainers podName: dslPodName,
             )
           }
         }
-        else {
-          sh 'echo no more than 0'
-        }
+      } catch (Exception e) {
+        currentBuild.result = 'FAILURE'
+        cleanup()
+        throw e
       }
     }
-
-    stage('Clean') {
-      clean()
+    
+    stage('env-cleanup') {
+      cleanup()
     }
   }
 }
