@@ -99,11 +99,11 @@ class Controller(base.TopologyBase, base.SnapshotBase, base.ControllerBase):
         # if not request.HasField('volume_content_source'):
         #    parameters['content_source'] = request.content_source
         if vol.source_volid:
-            parameters['volume_content_source'] = types.VolumeContentSource(
+            parameters['content_source'] = types.VolumeContentSource(
                 volume=types.VolumeSource(volume_id=vol.source_vol_id))
 
         elif vol.snapshot_id:
-            parameters['volume_content_source'] = types.VolumeContentSource(
+            parameters['content_source'] = types.VolumeContentSource(
                 snapshot=types.SnapshotSource(snapshot_id=vol.snapshot_id))
 
         # accessible_topology should only be returned if we reported
