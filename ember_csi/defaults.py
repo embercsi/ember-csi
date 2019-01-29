@@ -23,11 +23,12 @@ VOL_BINDS_DIR = '$state_path/vols'
 LOCKS_DIR = '$state_path/locks'
 REQUEST_MULTIPATH = False
 WORKERS = 30
+ENABLE_PROBE = False
 EMBER_CFG = {'project_id': NAME, 'user_id': NAME, 'plugin_name': NAME,
              'root_helper': ROOT_HELPER,
              'request_multipath': REQUEST_MULTIPATH,
              'file_locks_path': LOCKS_DIR, 'state_path': STATE_PATH,
-             'enable_probe': False, 'grpc_workers': WORKERS}
+             'enable_probe': ENABLE_PROBE, 'grpc_workers': WORKERS}
 
 LOG_LEVELS = ('amqp=WARN,amqplib=WARN,boto=WARN,qpid=WARN,sqlalchemy=WARN,'
               'suds=WARN,oslo.messaging=WARN,oslo_messaging=WARN,iso8601=WARN,'
