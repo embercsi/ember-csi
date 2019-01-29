@@ -68,10 +68,8 @@ PERSISTENCE_CONFIG = (_load_json_config('X_CSI_PERSISTENCE_CONFIG') or
                       defaults.PERSISTENCE_CFG)
 EMBER_CONFIG = _load_json_config('X_CSI_EMBER_CONFIG',
                                  defaults.EMBER_CFG)
-REQUEST_MULTIPATH = EMBER_CONFIG.pop('request_multipath',
-                                     defaults.REQUEST_MULTIPATH)
-WORKERS = EMBER_CONFIG.pop('grpc_workers', defaults.WORKERS)
-PLUGIN_NAME = EMBER_CONFIG.pop('plugin_name', None) or defaults.NAME
+# REQUEST_MULTIPATH, WORKERS, PLUGIN_NAME, ENABLE_PROBE are set from
+# EMBER_CONFIG on _set_defaults_ember_cfg
 BACKEND_CONFIG = _load_json_config('X_CSI_BACKEND_CONFIG')
 NODE_ID = os.environ.get('X_CSI_NODE_ID') or socket.getfqdn()
 DEFAULT_MOUNT_FS = os.environ.get('X_CSI_DEFAULT_MOUNT_FS', defaults.MOUNT_FS)
@@ -166,6 +164,11 @@ def _map_backend_config():
 
 
 def _set_defaults_ember_cfg():
+    global REQUEST_MULTIPATH
+    global WORKERS
+    global PLUGIN_NAME
+    global ENABLE_PROBE
+
     # First set defaults for missing keys
     for key, value in defaults.EMBER_CFG.items():
         EMBER_CONFIG.setdefault(key, value)
@@ -177,6 +180,12 @@ def _set_defaults_ember_cfg():
             EMBER_CONFIG[key] = value.replace('$state_path', state_path)
     defaults.VOL_BINDS_DIR = defaults.VOL_BINDS_DIR.replace('$state_path',
                                                             state_path)
+
+    # Now set global variables
+    REQUEST_MULTIPATH = EMBER_CONFIG.pop('request_multipath')
+    WORKERS = EMBER_CONFIG.pop('grpc_workers')
+    PLUGIN_NAME = EMBER_CONFIG.pop('plugin_name')
+    ENABLE_PROBE = EMBER_CONFIG.pop('enable_probe')
 
 
 def _create_default_dirs_files():
