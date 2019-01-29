@@ -58,17 +58,23 @@ createDslContainers podName: dslPodName,
           podSelector.withEach {
             def podName = it.object().metadata.name
             println("Working in pod: $podName")
-            openshiftExec(
+            def response = openshiftExec(
               pod: podName,
               command: 'bash',
               arguments: ["-c", "mkdir -p /etc/systemd/system/vagrant-vm.service.d/workDir/workspace"],
             )
+            if (response.getError() != null && response.getError() != "") {
+              throw new Exception("error")
+            }
             openshift.rsync("${WORKSPACE}","$podName:/etc/systemd/system/vagrant-vm.service.d/workDir/workspace")
-            openshiftExec(
+            response = openshiftExec(
               pod: podName,
               command: 'bash',
               arguments: ["-c", "cd /etc/systemd/system/vagrant-vm.service.d/ && vagrant rsync && vagrant ssh -c 'sh -x /vagrant/${WORKSPACE}/ci-automation/tests.sh'"],
             )
+            if (response.getError() != null && response.getError() != "") {
+              throw new Exception("error")
+            }
           }
         }
       } catch (Exception e) {
@@ -77,7 +83,7 @@ createDslContainers podName: dslPodName,
         throw e
       }
     }
-    
+
     stage('env-cleanup') {
       cleanup()
     }
