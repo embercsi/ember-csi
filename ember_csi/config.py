@@ -68,8 +68,13 @@ PERSISTENCE_CONFIG = (_load_json_config('X_CSI_PERSISTENCE_CONFIG') or
                       defaults.PERSISTENCE_CFG)
 EMBER_CONFIG = _load_json_config('X_CSI_EMBER_CONFIG',
                                  defaults.EMBER_CFG)
-# REQUEST_MULTIPATH, WORKERS, PLUGIN_NAME, ENABLE_PROBE are set from
+# REQUEST_MULTIPATH, WORKERS, PLUGIN_NAME, and ENABLE_PROBE are set from
 # EMBER_CONFIG on _set_defaults_ember_cfg
+REQUEST_MULTIPATH = defaults.REQUEST_MULTIPATH
+WORKERS = defaults.WORKERS
+PLUGIN_NAME = defaults.NAME
+ENABLE_PROBE = defaults.ENABLE_PROBE
+
 BACKEND_CONFIG = _load_json_config('X_CSI_BACKEND_CONFIG')
 NODE_ID = os.environ.get('X_CSI_NODE_ID') or socket.getfqdn()
 DEFAULT_MOUNT_FS = os.environ.get('X_CSI_DEFAULT_MOUNT_FS', defaults.MOUNT_FS)
@@ -84,6 +89,8 @@ def validate():
     global WORKERS
 
     _set_logging_config()
+    _set_defaults_ember_cfg()
+
     if MODE not in ('controller', 'node', 'all'):
         LOG.error('Invalid mode value (%s)' % MODE)
         exit(constants.ERROR_MODE)
@@ -123,7 +130,6 @@ def validate():
     # Store version in x.y.z formatted string
     CSI_SPEC = spec_version
 
-    _set_defaults_ember_cfg()
     _map_backend_config()
     _set_topology_config()
     _create_default_dirs_files()
