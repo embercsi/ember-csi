@@ -162,7 +162,7 @@ class IdentityBase(object):
     def Probe(self, request, context):
         # Proving may take a couple of seconds, and attacher sidecar prior to
         # v0.4 will fail due to small timeout.
-        if self.csi_version < '1.0.0':
+        if not config.ENABLE_PROBE:
             return self.PROBE_RESP
 
         try:
