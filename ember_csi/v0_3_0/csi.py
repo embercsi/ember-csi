@@ -81,8 +81,7 @@ class Controller(base.TopologyBase, base.SnapshotBase, base.ControllerBase):
         if self.TOPOLOGIES:
             parameters['accessible_topology'] = self.TOPOLOGIES
 
-        volume = types.Volume(**parameters)
-        return types.CreateResp(volume=volume)
+        return types.Volume(**parameters)
 
     # DeleteVolume implemented on base Controller class
 

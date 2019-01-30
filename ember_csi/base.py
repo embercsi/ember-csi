@@ -143,7 +143,7 @@ class IdentityBase(object):
 
     def _validate_name(self, name):
         if name and re.match(r'^[A-Za-z]{2,6}(\.[A-Za-z0-9-]{1,63})+$', name):
-                return name
+            return name
 
         return defaults.NAME
 
@@ -348,7 +348,8 @@ class ControllerBase(IdentityBase):
             context.abort(grpc.StatusCode.ABORTED,
                           'Operation pending for volume (%s)' % vol.status)
 
-        return self._convert_volume_type(vol)
+        volume = self._convert_volume_type(vol)
+        return self.TYPES.CreateResp(volume=volume)
 
     def _convert_volume_params(self, request, context):
         params = {'qos_specs': {}, 'extra_specs': {}}
@@ -486,7 +487,8 @@ class ControllerBase(IdentityBase):
         selected, token = self._paginate(request, context, vols)
 
         # TODO(geguileo): Once we support volume types set attributes
-        entries = [self._convert_volume_type(vol) for vol in selected]
+        entries = [self.TYPES.Entry(volume=self._convert_volume_type(vol))
+                   for vol in selected]
         fields = {'entries': entries}
         if token:
             fields['next_token'] = token
