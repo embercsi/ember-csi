@@ -38,10 +38,9 @@ class Controller(base.ControllerBase):
     # Requires _convert_volume_type method.
     def _convert_volume_type(self, vol):
         specs = vol.volume_type.extra_specs if vol.volume_type_id else None
-        volume = types.Volume(capacity_bytes=int(vol.size * constants.GB),
-                              id=vol.id,
-                              attributes=specs)
-        return types.CreateResp(volume=volume)
+        return types.Volume(capacity_bytes=int(vol.size * constants.GB),
+                            id=vol.id,
+                            attributes=specs)
 
     # DeleteVolume implemented on base Controller class
 
