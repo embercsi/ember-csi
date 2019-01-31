@@ -1,13 +1,3 @@
-
-ADD
-
- kubectl get csinodeinfo.csi.storage.k8s.io  --> Works
-
-
-Fails:
-kubectl get csidrivers.csi.storage.k8s.io
-
-
 # Kubernetes setup
 
 This demo deploys a Kubernetes single CentOS 7 master cluster, as the infra node, with 2 additional nodes, as workload nodes, using [kubeadm](http://kubernetes.io/docs/admin/kubeadm/) and Ember-CSI as the storage provider running v1.0 of the CSI spec with an LVM loopback device as the backend.
