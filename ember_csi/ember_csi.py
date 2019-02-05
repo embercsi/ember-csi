@@ -18,7 +18,6 @@
 from __future__ import absolute_import
 from concurrent import futures
 import importlib
-import tarfile
 import time
 
 import grpc
@@ -37,7 +36,6 @@ LOG = logging.getLogger(__name__)
 def main():
     CONF.validate()
     server_class = _get_csi_server_class(class_name=CONF.MODE.title())
-    copy_system_files()
 
     server = grpc.server(
         futures.ThreadPoolExecutor(max_workers=CONF.WORKERS))
@@ -89,28 +87,6 @@ def _get_csi_server_class(class_name):
     module = importlib.import_module(module_name)
     server_class = getattr(module, class_name)
     return server_class
-
-
-def copy_system_files():
-    # Minimal check of the archive for files/dirs only and not devices, etc
-    def check_files(members):
-        for tarinfo in members:
-            if tarinfo.isdev():
-                LOG.debug("Skipping %s" % tarinfo.name)
-            else:
-                LOG.info("Extracting %s\n" % tarinfo.name)
-                yield tarinfo
-
-    archive = CONF.SYSTEM_FILES
-    if archive:
-        try:
-            with tarfile.open(archive, 'r') as t:
-                t.extractall('/', members=check_files(t))
-        except Exception as exc:
-            LOG.error('Error expanding file %s %s' % (archive, exc))
-            exit(constants.ERROR_TAR)
-    else:
-        LOG.debug('X_CSI_SYSTEM_FILES not specified.\n')
 
 
 if __name__ == '__main__':

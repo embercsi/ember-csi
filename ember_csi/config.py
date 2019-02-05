@@ -22,6 +22,7 @@ import json
 import os
 import re
 import socket
+import tarfile
 
 import cinderlib
 from oslo_context import context as context_utils
@@ -180,6 +181,7 @@ class Config(object):
         self._map_backend_config(self.BACKEND_CONFIG)
         self._set_topology_config()
         self._create_default_dirs_files()
+        self._untar_file(self.SYSTEM_FILES)
 
     @staticmethod
     def _get_drivers_map():
@@ -291,6 +293,27 @@ class Config(object):
             elif not self.NODE_TOPOLOGY:
                 LOG.warn('Setting node topology to first controller topology')
                 self.NODE_TOPOLOGY = self.TOPOLOGIES[0]
+
+    @staticmethod
+    def _untar_file(archive):
+        # Minimal check of the archive for files/dirs only and not devices, etc
+        def check_files(members):
+            for tarinfo in members:
+                if tarinfo.isdev():
+                    LOG.debug("Skipping %s" % tarinfo.name)
+                else:
+                    LOG.info("Extracting %s\n" % tarinfo.name)
+                    yield tarinfo
+
+        if archive:
+            try:
+                with tarfile.open(archive, 'r') as t:
+                    t.extractall('/', members=check_files(t))
+            except Exception as exc:
+                LOG.error('Error expanding file %s %s' % (archive, exc))
+                exit(constants.ERROR_TAR)
+        else:
+            LOG.debug('X_CSI_SYSTEM_FILES not specified.\n')
 
 
 CONF = Config()
