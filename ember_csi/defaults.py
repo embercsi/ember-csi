@@ -30,6 +30,9 @@ EMBER_CFG = {'project_id': NAME, 'user_id': NAME, 'plugin_name': NAME,
              'file_locks_path': LOCKS_DIR, 'state_path': STATE_PATH,
              'enable_probe': ENABLE_PROBE, 'grpc_workers': WORKERS}
 
+LOGGING_FORMAT = ('%(asctime)s %(levelname)s %(name)s [%(request_id)s] '
+                  '%(message)s')
+
 LOG_LEVELS = ('amqp=WARN,amqplib=WARN,boto=WARN,qpid=WARN,sqlalchemy=WARN,'
               'suds=WARN,oslo.messaging=WARN,oslo_messaging=WARN,iso8601=WARN,'
               'requests.packages.urllib3.connectionpool=WARN,'

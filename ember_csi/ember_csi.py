@@ -18,7 +18,6 @@
 from __future__ import absolute_import
 from concurrent import futures
 import importlib
-import tarfile
 import time
 
 import grpc
@@ -30,31 +29,31 @@ from ember_csi import constants
 from ember_csi import workarounds
 
 
+CONF = config.CONF
 LOG = logging.getLogger(__name__)
 
 
 def main():
-    config.validate()
-    server_class = _get_csi_server_class(class_name=config.MODE.title())
-    copy_system_files()
+    CONF.validate()
+    server_class = _get_csi_server_class(class_name=CONF.MODE.title())
 
     server = grpc.server(
-        futures.ThreadPoolExecutor(max_workers=config.WORKERS))
+        futures.ThreadPoolExecutor(max_workers=CONF.WORKERS))
     workarounds.grpc_eventlet(server)
     csi_plugin = server_class(server=server,
-                              persistence_config=config.PERSISTENCE_CONFIG,
-                              backend_config=config.BACKEND_CONFIG,
-                              ember_config=config.EMBER_CONFIG,
-                              storage_nw_ip=config.STORAGE_NW_IP,
-                              node_id=config.NODE_ID)
+                              persistence_config=CONF.PERSISTENCE_CONFIG,
+                              backend_config=CONF.BACKEND_CONFIG,
+                              ember_config=CONF.EMBER_CONFIG,
+                              storage_nw_ip=CONF.STORAGE_NW_IP,
+                              node_id=CONF.NODE_ID)
 
     LOG.info('Ember CSI v%s with %d workers (cinder: v%s, CSI spec: v%s)' %
-             (constants.VENDOR_VERSION, config.WORKERS,
-              constants.CINDER_VERSION, config.CSI_SPEC))
+             (constants.VENDOR_VERSION, CONF.WORKERS,
+              constants.CINDER_VERSION, CONF.CSI_SPEC))
 
     LOG.info('Persistence module: %s' % type(csi_plugin.persistence).__name__)
-    msg = 'Running as %s' % config.MODE
-    if config.MODE != 'node':
+    msg = 'Running as %s' % CONF.MODE
+    if CONF.MODE != 'node':
         driver_name = type(csi_plugin.backend.driver).__name__
         msg += ' with backend %s v%s' % (driver_name,
                                          csi_plugin.backend.get_version())
@@ -67,14 +66,14 @@ def main():
         debug_msg = 'DISABLED'
     LOG.info('Debugging feature is %s.' % debug_msg)
     LOG.info('Supported filesystems: %s' % (
-        ', '.join(config.SUPPORTED_FS_TYPES)))
+        ', '.join(CONF.SUPPORTED_FS_TYPES)))
 
-    if not server.add_insecure_port(config.ENDPOINT):
-        LOG.error('ERROR: Could not bind to %s' % config.ENDPOINT)
+    if not server.add_insecure_port(CONF.ENDPOINT):
+        LOG.error('ERROR: Could not bind to %s' % CONF.ENDPOINT)
         exit(constants.ERROR_BIND_PORT)
 
     server.start()
-    LOG.info('Now serving on %s...' % config.ENDPOINT)
+    LOG.info('Now serving on %s...' % CONF.ENDPOINT)
 
     try:
         while True:
@@ -84,32 +83,10 @@ def main():
 
 
 def _get_csi_server_class(class_name):
-    module_name = 'ember_csi.v%s.csi' % config.CSI_SPEC.replace('.', '_')
+    module_name = 'ember_csi.v%s.csi' % CONF.CSI_SPEC.replace('.', '_')
     module = importlib.import_module(module_name)
     server_class = getattr(module, class_name)
     return server_class
-
-
-def copy_system_files():
-    # Minimal check of the archive for files/dirs only and not devices, etc
-    def check_files(members):
-        for tarinfo in members:
-            if tarinfo.isdev():
-                LOG.debug("Skipping %s" % tarinfo.name)
-            else:
-                LOG.info("Extracting %s\n" % tarinfo.name)
-                yield tarinfo
-
-    archive = config.SYSTEM_FILES
-    if archive:
-        try:
-            with tarfile.open(archive, 'r') as t:
-                t.extractall('/', members=check_files(t))
-        except Exception as exc:
-            LOG.error('Error expanding file %s %s' % (archive, exc))
-            exit(constants.ERROR_TAR)
-    else:
-        LOG.debug('X_CSI_SYSTEM_FILES not specified.\n')
 
 
 if __name__ == '__main__':

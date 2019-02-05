@@ -29,6 +29,9 @@ from ember_csi.v1_0_0 import csi_pb2_grpc as csi
 from ember_csi.v1_0_0 import csi_types as types
 
 
+CONF = config.CONF
+
+
 class Controller(base.TopologyBase, base.SnapshotBase, base.ControllerBase):
     CSI = csi
     TYPES = types
@@ -178,11 +181,11 @@ class Node(base.NodeBase):
                  node_id=None, storage_nw_ip=None, **kwargs):
         # TODO(geguileo): Report max_volumes_per_node based on driver
         topo_capab = self.TYPES.ServiceType.VOLUME_ACCESSIBILITY_CONSTRAINTS
-        if config.NODE_TOPOLOGY:
+        if CONF.NODE_TOPOLOGY:
             if topo_capab not in self.PLUGIN_CAPABILITIES:
                 self.PLUGIN_CAPABILITIES.append(topo_capab)
             self.NODE_TOPOLOGY = self.TYPES.Topology(
-                segments=config.NODE_TOPOLOGY)
+                segments=CONF.NODE_TOPOLOGY)
         super(Node, self).__init__(server, persistence_config, ember_config,
                                    node_id, storage_nw_ip, **kwargs)
         params = dict(node_id=node_id)

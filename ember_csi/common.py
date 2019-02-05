@@ -33,6 +33,7 @@ from ember_csi import config
 from ember_csi import constants
 
 
+CONF = config.CONF
 LOG = logging.getLogger(__name__)
 
 
@@ -54,7 +55,7 @@ class Worker(object):
             my_thread = threading.current_thread().ident
             current = (my_method, my_thread)
 
-            if config.ABORT_DUPLICATES:
+            if CONF.ABORT_DUPLICATES:
                 lock = noop_cm()
             else:
                 lock = cls.locks.get(my_method)
@@ -166,15 +167,15 @@ def setup_debug():
         DEBUG_ON = not DEBUG_ON
         LOG.info('Debugging is %s\n' % ('ON' if DEBUG_ON else 'OFF'))
 
-    if config.DEBUG_MODE not in ('', 'PDB', 'RPDB'):
+    if CONF.DEBUG_MODE not in ('', 'PDB', 'RPDB'):
         LOG.error('Invalid X_CSI_DEBUG_MODE %s (valid values are PDB and '
-                  'RPDB)' % config.DEBUG_MODE)
+                  'RPDB)' % CONF.DEBUG_MODE)
         exit(constants.ERROR_DEBUG_MODE)
 
-    if not config.DEBUG_MODE:
+    if not CONF.DEBUG_MODE:
         return None, no_debug
 
-    if config.DEBUG_MODE == 'PDB':
+    if CONF.DEBUG_MODE == 'PDB':
         import pdb as debug_library
     else:
         from ember_csi import rpdb as debug_library
@@ -238,7 +239,7 @@ class NodeInfo(object):
     def set(cls, node_id, storage_nw_ip):
         # For now just set multipathing and not enforcing it
         connector_dict = brick_connector.get_connector_properties(
-            'sudo', storage_nw_ip, config.REQUEST_MULTIPATH, False)
+            'sudo', storage_nw_ip, CONF.REQUEST_MULTIPATH, False)
         value = json.dumps(connector_dict, separators=(',', ':'))
         kv = cinderlib.KeyValue(node_id, value)
         cinderlib.Backend.persistence.set_key_value(kv)
