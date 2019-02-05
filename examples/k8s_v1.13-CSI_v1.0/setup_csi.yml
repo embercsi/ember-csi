@@ -21,10 +21,14 @@
 
 # We would normally pass the features-gates to kubeadm init, but it complains
 # about not knowing the features
-# Once we suport CSDriver extra info we should add ,CSIDriverRegistry=true to
-# the feature-gates
 - name: Remove API Node authorization and set required features
-  command: sed -i 's/    - --authorization-mode=Node,RBAC/    - --authorization-mode=RBAC\n    - --feature-gates=CSIBlockVolume=true,VolumeSnapshotDataSource=true,CSINodeInfo=true/' /etc/kubernetes/manifests/kube-apiserver.yaml
+  command: sed -i 's/    - --authorization-mode=Node,RBAC/    - --authorization-mode=RBAC\n    - --feature-gates=BlockVolume=true,CSIBlockVolume=true,VolumeSnapshotDataSource=true,CSINodeInfo=true,CSIDriverRegistry=true,VolumeScheduling=true/' /etc/kubernetes/manifests/kube-apiserver.yaml
+
+- name: Add features to scheduler
+  command: sed -i 's/    - kube-scheduler/    - kube-scheduler\n    - --feature-gates=BlockVolume=true,CSIBlockVolume=true,VolumeSnapshotDataSource=true,CSINodeInfo=true,CSIDriverRegistry=true,VolumeScheduling=true/' /etc/kubernetes/manifests/kube-scheduler.yaml
+
+- name: Add features to manager
+  command: sed -i 's/    - kube-controller-manager/    - kube-controller-manager\n    - --feature-gates=BlockVolume=true,CSIBlockVolume=true,VolumeSnapshotDataSource=true,CSINodeInfo=true,CSIDriverRegistry=true,VolumeScheduling=true/' /etc/kubernetes/manifests/kube-controller-manager.yaml
 
 - name: Restart API containers
   shell: docker restart $(docker ps --filter "name=apiserver_kube" --format "{{'{{'}}.ID{{'}}'}}") || true
@@ -41,31 +45,50 @@
 
 - wait_for: timeout=20
   delegate_to: localhost
-# We don't support kubernetes CSDriver additional info, so we don't need the CRD yet
-# - name: Create CRD for the CSIDriverRegistry feature
-#   command: kubectl create -f https://raw.githubusercontent.com/kubernetes/csi-api/release-1.13/pkg/crd/manifests/csidriver.yaml --validate=false
+
+# We don't support kubernetes CSDriver additional info, so we don't pass pod-info-mount-version to the cluster-driver-registrar
+# https://github.com/kubernetes/kubernetes/blob/8f1082c6aff6df3cb5e103474d9d846b6f8ebf90/pkg/volume/csi/csi_mounter.go#L256
+- name: Create CRD for the CSIDriverRegistry feature
+  command: kubectl create -f https://raw.githubusercontent.com/kubernetes/csi-api/release-1.13/pkg/crd/manifests/csidriver.yaml --validate=false
 - name: Create CRD for the CSINodeInfo feature
   command: kubectl create -f https://raw.githubusercontent.com/kubernetes/csi-api/release-1.13/pkg/crd/manifests/csinodeinfo.yaml --validate=false
 
-- wait_for: timeout=180
+- wait_for: timeout=90
   delegate_to: localhost
-#- pause: minutes=3
-- name: Set CSI controller
-  command: kubectl create -f /home/vagrant/kubeyml/controller.yml
 
-- wait_for: timeout=180
+- name: Set CSI LVM controller
+  command: kubectl create -f /home/vagrant/kubeyml/lvm/01-controller.yml
+
+- wait_for: timeout=90
   delegate_to: localhost
-#- pause: minutes=3
 
-- name: Start CSI nodes
-  command: kubectl create -f /home/vagrant/kubeyml/node.yml
+- name: Start CSI LVM nodes
+  command: kubectl create -f /home/vagrant/kubeyml/lvm/02-node.yml
 
-- name: Create Storage Class
-  command: kubectl create -f /home/vagrant/kubeyml/storage-class.yml
+- name: Create LVM Storage Class
+  command: kubectl create -f /home/vagrant/kubeyml/lvm/03-storage-class.yml
 
 # We need to wait for VolumeSnapshotClass to exist
 - wait_for: timeout=180
   delegate_to: localhost
-#- pause: minutes=3
-- name: Create Snapshot Storage Class
-  command: kubectl create -f /home/vagrant/kubeyml/snapshot-class.yml
+
+- name: Create LVM Snapshot Storage Class
+  command: kubectl create -f /home/vagrant/kubeyml/lvm/04-snapshot-class.yml
+
+- name: Set CSI Ceph controller
+  command: kubectl create -f /home/vagrant/kubeyml/rbd/01-controller.yml
+
+- name: Start CSI Ceph nodes
+  command: kubectl create -f /home/vagrant/kubeyml/rbd/02-node.yml
+
+- name: Create Ceph Storage Class
+  command: kubectl create -f /home/vagrant/kubeyml/rbd/03-storage-class.yml
+
+- name: Create Ceph Snapshot Storage Class
+  command: kubectl create -f /home/vagrant/kubeyml/rbd/04-snapshot-class.yml
+
+- wait_for: timeout=30
+  delegate_to: localhost
+
+- name: Change Ceph default features
+  command: kubectl exec csi-rbd-0 -c csi-driver -- /bin/bash -c 'echo -e "\nrbd default features = 3" >> /etc/ceph/ceph.conf'
