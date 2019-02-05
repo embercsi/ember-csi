@@ -103,7 +103,7 @@ class Config(object):
         self.CSI_SPEC = self._env_string('X_CSI_SPEC_VERSION',
                                          defaults.SPEC_VERSION)
         self.ABORT_DUPLICATES = self._env_bool('X_CSI_ABORT_DUPLICATES')
-        self.DEBUG_MODE = self._env_string('X_CSI_DEBUG_MODE')
+        self.DEBUG_MODE = self._env_string('X_CSI_DEBUG_MODE').upper()
         self.SYSTEM_FILES = self._env_string('X_CSI_SYSTEM_FILES')
 
         # CSI_ENDPOINT accepts multiple formats 0.0.0.0:5000, unix:foo.sock
