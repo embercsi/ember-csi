@@ -33,6 +33,7 @@ from ember_csi import constants
 from ember_csi import defaults
 
 
+CONF = config.CONF
 LOG = logging.getLogger(__name__)
 
 
@@ -77,7 +78,7 @@ class IdentityBase(object):
         if self.manifest is not None:
             return
 
-        self.csi_version = version.StrictVersion(config.CSI_SPEC)
+        self.csi_version = version.StrictVersion(CONF.CSI_SPEC)
         self.PLUGIN_CAPABILITIES.append(
             self.TYPES.ServiceType.CONTROLLER_SERVICE)
         caps = [self.TYPES.Capability(service=self.TYPES.Service(type=t))
@@ -101,7 +102,7 @@ class IdentityBase(object):
             manifest['cinder-driver-supported'] = str(self.backend.supported)
 
         self.INFO = self.TYPES.InfoResp(
-            name=config.PLUGIN_NAME,
+            name=CONF.PLUGIN_NAME,
             vendor_version=constants.VENDOR_VERSION,
             manifest=manifest)
         # NOTE(geguileo): For now let's only support single reader/writer modes
@@ -112,7 +113,7 @@ class IdentityBase(object):
         self.CSI.add_IdentityServicer_to_server(self, server)
         self.manifest = manifest
         self.PROBE_KV = cinderlib.objects.KeyValue('%s-%s-%s' % (
-            config.PLUGIN_NAME, config.MODE, 'probe'), '0')
+            CONF.PLUGIN_NAME, CONF.MODE, 'probe'), '0')
 
     def _unsupported_mode(self, capability):
         return capability.access_mode.mode not in self.SUPPORTED_ACCESS
@@ -121,7 +122,7 @@ class IdentityBase(object):
         # TODO: validate mount_flags
         return (capability.HasField('mount') and
                 capability.mount.fs_type and
-                capability.mount.fs_type not in config.SUPPORTED_FS_TYPES)
+                capability.mount.fs_type not in CONF.SUPPORTED_FS_TYPES)
 
     def _validate_capabilities(self, capabilities, context=None):
         msg = ''
@@ -162,7 +163,7 @@ class IdentityBase(object):
     def Probe(self, request, context):
         # Proving may take a couple of seconds, and attacher sidecar prior to
         # v0.4 will fail due to small timeout.
-        if not config.ENABLE_PROBE:
+        if not CONF.ENABLE_PROBE:
             return self.PROBE_RESP
 
         try:
@@ -669,7 +670,7 @@ class NodeBase(IdentityBase):
             if not self._check_mount_exists(request.volume_capability,
                                             private_bind, target, context):
                 fs_type = (request.volume_capability.mount.fs_type or
-                           config.DEFAULT_MOUNT_FS)
+                           CONF.DEFAULT_MOUNT_FS)
                 self._format_device(fs_type, private_bind, context)
                 self._mount(fs_type,
                             request.volume_capability.mount.mount_flags,
@@ -777,14 +778,14 @@ class TopologyBase(object):
     # TOPOLOGY_LEVELS_SET = None
 
     def _init_topology(self, constraint_type):
-        if config.TOPOLOGIES:
+        if CONF.TOPOLOGIES:
             self.TOPOLOGY_HIERA = []
             self.TOPOLOGIES = []
             self.TOPOLOGY_LEVELS = []
             if constraint_type not in self.PLUGIN_CAPABILITIES:
                 self.PLUGIN_CAPABILITIES.append(constraint_type)
 
-            for topology in config.TOPOLOGIES:
+            for topology in CONF.TOPOLOGIES:
 
                 topo = tuple((k.lower(), v) for k, v in topology.items())
                 topology = self.TYPES.Topology(segments=topology)
