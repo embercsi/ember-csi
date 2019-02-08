@@ -111,8 +111,8 @@ class Controller(base.TopologyBase, base.SnapshotBase, base.ControllerBase):
 
         # accessible_topology should only be returned if we reported
         # VOLUME_ACCESSIBILITY_CONSTRAINTS capability.
-        if self.TOPOLOGIES:
-            parameters['accessible_topology'] = self.TOPOLOGIES
+        if self.GRPC_TOPOLOGIES:
+            parameters['accessible_topology'] = self.GRPC_TOPOLOGIES
 
         return types.Volume(**parameters)
 
