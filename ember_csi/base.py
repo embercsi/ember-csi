@@ -164,7 +164,7 @@ class IdentityBase(object):
         # Proving may take a couple of seconds, and attacher sidecar prior to
         # v0.4 will fail due to small timeout.
         if not CONF.ENABLE_PROBE:
-            return self.PROBE_RESP
+            return self.TYPES.ProbeRespOK
 
         try:
             self.PROBE_KV.value = str((int(self.PROBE_KV.value) + 1) % 1000)
@@ -191,7 +191,7 @@ class IdentityBase(object):
                 context.abort(grpc.StatusCode.FAILED_PRECONDITION,
                               'Driver failed to return the stats')
 
-        return self.PROBE_RESP
+        return self.TYPES.ProbeRespOK
 
     def _get_vol(self, volume_id=None, always_list=False, **filters):
         backend_name = self.backend.id if self.backend else None

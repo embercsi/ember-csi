@@ -21,6 +21,8 @@ from ember_csi import common
 from ember_csi.v1_0_0 import csi_pb2
 
 
+Bool = wrappers.BoolValue
+
 InfoResp = csi_pb2.GetPluginInfoResponse
 NodeInfoResp = csi_pb2.NodeGetInfoResponse
 
@@ -51,7 +53,7 @@ StageResp = csi_pb2.NodeStageVolumeResponse
 UnstageResp = csi_pb2.NodeUnstageVolumeResponse
 NodePublishResp = csi_pb2.NodePublishVolumeResponse
 NodeUnpublishResp = csi_pb2.NodeUnpublishVolumeResponse
-ProbeResp = csi_pb2.ProbeResponse
+ProbeRespOK = csi_pb2.ProbeResponse(ready=Bool(value=True))
 CapacityResp = csi_pb2.GetCapacityResponse
 CreateResp = csi_pb2.CreateVolumeResponse
 DeleteResp = csi_pb2.DeleteVolumeResponse
@@ -67,7 +69,6 @@ DeleteSnapResp = csi_pb2.DeleteSnapshotResponse
 ListSnapResp = csi_pb2.ListSnapshotsResponse
 SnapEntry = ListSnapResp.Entry
 
-Bool = wrappers.BoolValue
 VolumeStatsResp = csi_pb2.NodeGetVolumeStatsResponse
 VolumeUsage = csi_pb2.VolumeUsage
 UsageUnit = common.EnumWrapper(VolumeUsage.Unit)

@@ -32,7 +32,6 @@ CONF = config.CONF
 class Controller(base.TopologyBase, base.SnapshotBase, base.ControllerBase):
     CSI = csi
     TYPES = types
-    PROBE_RESP = types.ProbeResp(ready=types.Bool(value=True))
     DELETE_SNAP_RESP = types.DeleteSnapResp()
     CTRL_CAPABILITIES = (types.CtrlCapabilityType.CREATE_DELETE_VOLUME,
                          types.CtrlCapabilityType.PUBLISH_UNPUBLISH_VOLUME,
