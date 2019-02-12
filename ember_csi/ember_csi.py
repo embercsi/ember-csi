@@ -40,12 +40,13 @@ def main():
     server = grpc.server(
         futures.ThreadPoolExecutor(max_workers=CONF.WORKERS))
     workarounds.grpc_eventlet(server)
+    node_id = CONF.PLUGIN_NAME + '.' + CONF.NODE_ID
     csi_plugin = server_class(server=server,
                               persistence_config=CONF.PERSISTENCE_CONFIG,
                               backend_config=CONF.BACKEND_CONFIG,
                               ember_config=CONF.EMBER_CONFIG,
                               storage_nw_ip=CONF.STORAGE_NW_IP,
-                              node_id=CONF.NODE_ID)
+                              node_id=node_id)
 
     _log_used_parameters(csi_plugin)
 
