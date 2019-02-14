@@ -77,8 +77,7 @@ spec:
             - name: registration-dir
               mountPath: /registration
         - name: csi-driver
-          # image: embercsi/ember-csi:master
-          image: 192.168.1.11:5000/ember-csi:master
+          image: embercsi/ember-csi:master
           securityContext:
             privileged: true
             allowPrivilegeEscalation: true
