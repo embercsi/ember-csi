@@ -43,7 +43,7 @@ class Controller(base.TopologyBase, base.SnapshotBase, base.ControllerBase):
                          types.CtrlCapabilityType.CREATE_DELETE_SNAPSHOT,
                          types.CtrlCapabilityType.LIST_SNAPSHOTS,
                          types.CtrlCapabilityType.CLONE_VOLUME,
-                         # types.CtrlCapabilityType.PUBLISH_READONLY,
+                         types.CtrlCapabilityType.PUBLISH_READONLY,
                          )
 
     def __init__(self, server, persistence_config, backend_config,

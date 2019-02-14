@@ -426,16 +426,6 @@ class ControllerBase(IdentityBase):
                 if conn.attached_host != request.node_id:
                     context.abort(grpc.StatusCode.FAILED_PRECONDITION,
                                   'Volume published to another node')
-
-            mode = request.volume_capability.access_mode.mode
-            if ((not request.readonly and
-                 mode == self.TYPES.AccessModeType.SINGLE_NODE_READER_ONLY) or
-                    (request.readonly and
-                     mode == self.TYPES.AccessModeType.SINGLE_NODE_WRITER)):  # noqa
-
-                context.abort(grpc.StatusCode.ALREADY_EXISTS,
-                              'Readonly incompatible with volume capability')
-
         else:
             vol.connect(node.connector_dict, attached_host=node.id)
         return self.TYPES.CtrlPublishResp()
@@ -751,7 +741,8 @@ class NodeBase(IdentityBase):
         # TODO(geguileo): Check how many are mounted and fail if > 0
 
         # If not published bind it
-        self.sudo('mount', '--bind', staging_target, target)
+        mount_options = 'bind,ro' if request.readonly else 'bind'
+        self.sudo('mount', '-o', mount_options, staging_target, target)
         return self.NODE_PUBLISH_RESP
 
     @common.debuggable
