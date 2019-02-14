@@ -28,7 +28,6 @@ from ember_csi.v0_2_0 import csi_types as types
 class Controller(base.ControllerBase):
     CSI = csi
     TYPES = types
-    PROBE_RESP = types.ProbeResp()
     CTRL_CAPABILITIES = (types.CtrlCapabilityType.CREATE_DELETE_VOLUME,
                          types.CtrlCapabilityType.PUBLISH_UNPUBLISH_VOLUME,
                          types.CtrlCapabilityType.LIST_VOLUMES,

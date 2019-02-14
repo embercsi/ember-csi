@@ -164,7 +164,7 @@ class IdentityBase(object):
         # Proving may take a couple of seconds, and attacher sidecar prior to
         # v0.4 will fail due to small timeout.
         if not CONF.ENABLE_PROBE:
-            return self.PROBE_RESP
+            return self.TYPES.ProbeRespOK
 
         try:
             self.PROBE_KV.value = str((int(self.PROBE_KV.value) + 1) % 1000)
@@ -191,7 +191,7 @@ class IdentityBase(object):
                 context.abort(grpc.StatusCode.FAILED_PRECONDITION,
                               'Driver failed to return the stats')
 
-        return self.PROBE_RESP
+        return self.TYPES.ProbeRespOK
 
     def _get_vol(self, volume_id=None, always_list=False, **filters):
         backend_name = self.backend.id if self.backend else None
@@ -426,16 +426,6 @@ class ControllerBase(IdentityBase):
                 if conn.attached_host != request.node_id:
                     context.abort(grpc.StatusCode.FAILED_PRECONDITION,
                                   'Volume published to another node')
-
-            mode = request.volume_capability.access_mode.mode
-            if ((not request.readonly and
-                 mode == self.TYPES.AccessModeType.SINGLE_NODE_READER_ONLY) or
-                    (request.readonly and
-                     mode == self.TYPES.AccessModeType.SINGLE_NODE_WRITER)):  # noqa
-
-                context.abort(grpc.StatusCode.ALREADY_EXISTS,
-                              'Readonly incompatible with volume capability')
-
         else:
             vol.connect(node.connector_dict, attached_host=node.id)
         return self.TYPES.CtrlPublishResp()
@@ -751,7 +741,8 @@ class NodeBase(IdentityBase):
         # TODO(geguileo): Check how many are mounted and fail if > 0
 
         # If not published bind it
-        self.sudo('mount', '--bind', staging_target, target)
+        mount_options = 'bind,ro' if request.readonly else 'bind'
+        self.sudo('mount', '-o', mount_options, staging_target, target)
         return self.NODE_PUBLISH_RESP
 
     @common.debuggable
@@ -771,72 +762,42 @@ class NodeBase(IdentityBase):
 
 
 class TopologyBase(object):
-    TOPOLOGIES = None
-    # These 3 attributes are defined in __init__ if we have topologies
-    # TOPOLOGY_HIERA = None
-    # TOPOLOGY_LEVELS = None
-    # TOPOLOGY_LEVELS_SET = None
+    GRPC_TOPOLOGIES = None
+    TOPOLOGY_HIERA = None
 
     def _init_topology(self, constraint_type):
         if CONF.TOPOLOGIES:
-            self.TOPOLOGY_HIERA = []
-            self.TOPOLOGIES = []
-            self.TOPOLOGY_LEVELS = []
             if constraint_type not in self.PLUGIN_CAPABILITIES:
                 self.PLUGIN_CAPABILITIES.append(constraint_type)
 
+            hiera = {}
+            grpc_topos = []
+
             for topology in CONF.TOPOLOGIES:
+                level = hiera
+                for segment_name, segment_value in topology.items():
+                    value = level.setdefault(segment_name, {})
+                    level = value.setdefault(segment_value, {})
+                grpc_topos.append(self.TYPES.Topology(segments=topology))
 
-                topo = tuple((k.lower(), v) for k, v in topology.items())
-                topology = self.TYPES.Topology(segments=topology)
-
-                if len(topo) >= len(self.TOPOLOGY_LEVELS):
-                    for k, v in topo[len(self.TOPOLOGY_LEVELS):]:
-                        self.TOPOLOGY_LEVELS.append(k)
-
-                replace = None
-                for i, t in enumerate(self.TOPOLOGY_HIERA):
-                    if t[:len(topo)] == topo:
-                        LOG.warn('Ignoring topology %s. Is included in %s' % (
-                            t, topo))
-                        replace = i
-                        break
-                    elif topo[:len(t)] == t:
-                        LOG.warn('Ignoring topology %s. Is included in %s' % (
-                            topo, t))
-                        break
-                else:
-                    self.TOPOLOGY_HIERA.append(topo)
-                    self.TOPOLOGIES.append(topology)
-
-                if replace is not None:
-                    self.TOPOLOGY_HIERA[i] = topo
-                    self.TOPOLOGIES[i] = topology
-
-            LOG.debug("topology: %s" % self.TOPOLOGY_HIERA)
-            self.TOPOLOGY_LEVELS_SET = set(self.TOPOLOGY_LEVELS)
+            self.TOPOLOGY_HIERA = hiera
+            self.GRPC_TOPOLOGIES = grpc_topos
 
     def _topology_is_accessible(self, topology, context):
-        topo = []
-        unused_domains = set(topology.keys())
+        unchecked = list(topology.segments.keys())
+        level = self.TOPOLOGY_HIERA
+        while level and unchecked:
+            for segment_name in level:
+                if segment_name in unchecked:
+                    value = topology.segments[segment_name]
+                    level = level[segment_name].get(value)
+                    unchecked.remove(segment_name)
+                    break
 
-        for domain in self.TOPOLOGY_LEVELS:
-            if domain not in topology:
-                break
-            topo.append((domain, topology[domain]))
-            unused_domains.remove(domain)
-
-        # We used the domains in hierarchical order, if there is any known
-        # domain in the request we haven't used, then there was one level that
-        # was missing.
-        if unused_domains.intersection(self.TOPOLOGY_LEVELS_SET):
-            context.abort(grpc.StatusCode.INVALID_ARGUMENT,
-                          'Missing domain topology in request.')
-
-        for t in self.TOPOLOGY_HIERA:
-            if topo == t[:len(topo)]:
-                return True
-        return False
+        # Accessible if value of a segment name didn't fail, and if one of the
+        # topologies is a subset of the other one.
+        return level is not None and not (unchecked and level)
+        # return not (levels is None or (unchecked_segments and level))
 
     def _validate_accessible_requirements(self, topology_req, context):
         requisite = getattr(topology_req, 'requisite', None)
@@ -853,15 +814,20 @@ class TopologyBase(object):
                                   'All preferred topologies must be in '
                                   'requisite topologies')
 
-        to_check = requisite or preferred
-        for topology in to_check:
+        # If we only have preferred, we can ignore it, after all we don't have
+        # different topologies to choose from.
+        if not requisite:
+            return
+
+        for topology in requisite:
             if self._topology_is_accessible(topology, context):
                 return
+
         context.abort(grpc.StatusCode.INVALID_ARGUMENT,
                       'None of the requested topologies are accessible.')
 
     def _validate_accessibility(self, request, context):
-        if not self.TOPOLOGIES:
+        if not self.GRPC_TOPOLOGIES:
             return
 
         # Used by CreateVolume

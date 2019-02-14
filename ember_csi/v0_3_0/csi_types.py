@@ -20,6 +20,8 @@ from google.protobuf import wrappers_pb2 as wrappers
 from ember_csi import common
 from ember_csi.v0_3_0 import csi_pb2
 
+Bool = wrappers.BoolValue
+
 InfoResp = csi_pb2.GetPluginInfoResponse
 NodeInfoResp = csi_pb2.NodeGetInfoResponse
 
@@ -51,7 +53,7 @@ UnstageResp = csi_pb2.NodeUnstageVolumeResponse
 NodePublishResp = csi_pb2.NodePublishVolumeResponse
 NodeUnpublishResp = csi_pb2.NodeUnpublishVolumeResponse
 IdResp = csi_pb2.NodeGetIdResponse
-ProbeResp = csi_pb2.ProbeResponse
+ProbeRespOK = csi_pb2.ProbeResponse(ready=Bool(value=True))
 CapacityResp = csi_pb2.GetCapacityResponse
 CreateResp = csi_pb2.CreateVolumeResponse
 DeleteResp = csi_pb2.DeleteVolumeResponse
@@ -65,5 +67,4 @@ DeleteSnapResp = csi_pb2.DeleteSnapshotResponse
 ListSnapResp = csi_pb2.ListSnapshotsResponse
 SnapEntry = ListSnapResp.Entry
 
-Bool = wrappers.BoolValue
 Topology = csi_pb2.Topology

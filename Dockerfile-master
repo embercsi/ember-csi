@@ -18,7 +18,7 @@ RUN yum -y install targetcli iscsi-initiator-utils device-mapper-multipath epel-
     # Shallow clone
     git clone --depth=1 'https://github.com/openstack/cinder.git' && \
     # Apply cinderlib patch
-    cd cinder && git fetch https://git.openstack.org/openstack/cinder refs/changes/69/620669/14 && git checkout FETCH_HEAD && cd .. && \
+    cd cinder && git fetch https://git.openstack.org/openstack/cinder refs/changes/69/620669/19 && git checkout FETCH_HEAD && cd .. && \
     pip install --no-cache-dir cinder/ && \
     rm -rf cinder && \
     yum -y remove git python-devel gcc openssl-devel && \

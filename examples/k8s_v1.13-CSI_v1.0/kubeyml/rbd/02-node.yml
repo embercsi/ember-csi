@@ -1,12 +1,12 @@
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: csi-node-sa
+  name: csi-node-rbd
 ---
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: csi-node-cr
+  name: csi-node-rbd
 rules:
   # Allow managing ember resources
   - apiGroups: ['ember-csi.io']
@@ -29,42 +29,42 @@ rules:
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: csi-node-rb
+  name: csi-node-rbd
 roleRef:
   kind: ClusterRole
   apiGroup: rbac.authorization.k8s.io
-  name: csi-node-cr
+  name: csi-node-rbd
 subjects:
 - kind: ServiceAccount
-  name: csi-node-sa
+  name: csi-node-rbd
   namespace: default
 ---
+# Node 0 will only be able to access RBD
+# Nodes 1 onward will be able to access everything
 kind: DaemonSet
 apiVersion: apps/v1beta2
 metadata:
-  name: csi-node
+  name: csi-node-rbd
   namespace: default
 spec:
   selector:
     matchLabels:
-      app: csi-node
+      app: csi-node-rbd
   template:
     metadata:
       labels:
-        app: csi-node
+        app: csi-node-rbd
     spec:
-      serviceAccount: csi-node-sa
+      serviceAccount: csi-node-rbd
       # Required by iSCSI
       hostNetwork: true
-      # Required by multipath detach
-      hostIPC: true
       containers:
         - name: driver-registrar
           image: quay.io/k8scsi/csi-node-driver-registrar:v1.0.2
           args:
           - --v=5
           - --csi-address=/csi-data/csi.sock
-          - --kubelet-registration-path=/var/lib/kubelet/plugins/io.ember-csi/csi.sock
+          - --kubelet-registration-path=/var/lib/kubelet/plugins/io.ember-csi.rbd/csi.sock
           env:
             - name: KUBE_NODE_NAME
               valueFrom:
@@ -77,7 +77,8 @@ spec:
             - name: registration-dir
               mountPath: /registration
         - name: csi-driver
-          image: embercsi/ember-csi:master
+          # image: embercsi/ember-csi:master
+          image: 192.168.1.11:5000/ember-csi:master
           securityContext:
             privileged: true
             allowPrivilegeEscalation: true
@@ -93,34 +94,32 @@ spec:
               value: node
             - name: X_CSI_PERSISTENCE_CONFIG
               value: '{"storage":"crd"}'
+            - name: X_CSI_NODE_TOPOLOGY
+              value: '{"rbd":"true"}'
+            - name: X_CSI_EMBER_CONFIG
+              # Comment next line and uncomment the one after it for debug logs
+              value: '{"plugin_name":"io.ember-csi.rbd"}'
+              # value: '{"debug": true,"plugin_name":"io.ember-csi.rbd"}'
             - name: X_CSI_NODE_ID
               valueFrom:
                 fieldRef:
                   fieldPath: spec.nodeName
+          livenessProbe:
+            exec:
+              command:
+              - ember-liveness
+            initialDelaySeconds: 120
+            periodSeconds: 90
+            timeoutSeconds: 60
           volumeMounts:
             - name: socket-dir
               mountPath: /csi-data
             - name: mountpoint-dir
               mountPath: /var/lib/kubelet
               mountPropagation: Bidirectional
-            - name: iscsi-dir
-              mountPath: /etc/iscsi
-              mountPropagation: Bidirectional
             - name: dev-dir
               mountPath: /dev
               mountPropagation: Bidirectional
-            - name: lvm-conf
-              mountPath: /etc/lvm/lvm.conf
-              mountPropagation: HostToContainer
-            - name: lvm-lock
-              mountPath: /var/lock/lvm
-              mountPropagation: Bidirectional
-            - name: multipath-dir
-              mountPath: /etc/multipath
-              mountPropagation: Bidirectional
-            - name: multipath-conf
-              mountPath: /etc/multipath.conf
-              mountPropagation: HostToContainer
             - name: modules-dir
               mountPath: /lib/modules
               mountPropagation: HostToContainer
@@ -131,9 +130,6 @@ spec:
               mountPath: /run/udev
               mountPropagation: HostToContainer
             # Required to preserve the node targets between restarts
-            - name: iscsi-info
-              mountPath: /var/lib/iscsi
-              mountPropagation: Bidirectional
             # In a real deployment we should be mounting container's
             # /var/lib-ember-csi on the host
         - name: csc
@@ -149,7 +145,7 @@ spec:
       volumes:
         - name: socket-dir
           hostPath:
-            path: /var/lib/kubelet/plugins/io.ember-csi
+            path: /var/lib/kubelet/plugins/io.ember-csi.rbd
             type: DirectoryOrCreate
         - name: registration-dir
           hostPath:
@@ -159,25 +155,9 @@ spec:
           hostPath:
             path: /var/lib/kubelet
             type: Directory
-        - name: iscsi-dir
-          hostPath:
-            path: /etc/iscsi
-            type: Directory
         - name: dev-dir
           hostPath:
             path: /dev
-        - name: lvm-conf
-          hostPath:
-            path: /etc/lvm/lvm.conf
-        - name: lvm-lock
-          hostPath:
-            path: /var/lock/lvm
-        - name: multipath-dir
-          hostPath:
-            path: /etc/multipath
-        - name: multipath-conf
-          hostPath:
-            path: /etc/multipath.conf
         - name: modules-dir
           hostPath:
             path: /lib/modules
@@ -187,6 +167,3 @@ spec:
         - name: udev-data
           hostPath:
             path: /run/udev
-        - name: iscsi-info
-          hostPath:
-            path: /var/lib/iscsi

@@ -35,7 +35,6 @@ CONF = config.CONF
 class Controller(base.TopologyBase, base.SnapshotBase, base.ControllerBase):
     CSI = csi
     TYPES = types
-    PROBE_RESP = types.ProbeResp(ready=types.Bool(value=True))
     DELETE_SNAP_RESP = types.DeleteSnapResp()
     CTRL_CAPABILITIES = (types.CtrlCapabilityType.CREATE_DELETE_VOLUME,
                          types.CtrlCapabilityType.PUBLISH_UNPUBLISH_VOLUME,
@@ -44,7 +43,7 @@ class Controller(base.TopologyBase, base.SnapshotBase, base.ControllerBase):
                          types.CtrlCapabilityType.CREATE_DELETE_SNAPSHOT,
                          types.CtrlCapabilityType.LIST_SNAPSHOTS,
                          types.CtrlCapabilityType.CLONE_VOLUME,
-                         # types.CtrlCapabilityType.PUBLISH_READONLY,
+                         types.CtrlCapabilityType.PUBLISH_READONLY,
                          )
 
     def __init__(self, server, persistence_config, backend_config,
@@ -111,8 +110,8 @@ class Controller(base.TopologyBase, base.SnapshotBase, base.ControllerBase):
 
         # accessible_topology should only be returned if we reported
         # VOLUME_ACCESSIBILITY_CONSTRAINTS capability.
-        if self.TOPOLOGIES:
-            parameters['accessible_topology'] = self.TOPOLOGIES
+        if self.GRPC_TOPOLOGIES:
+            parameters['accessible_topology'] = self.GRPC_TOPOLOGIES
 
         return types.Volume(**parameters)
 

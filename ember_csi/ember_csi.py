@@ -40,33 +40,15 @@ def main():
     server = grpc.server(
         futures.ThreadPoolExecutor(max_workers=CONF.WORKERS))
     workarounds.grpc_eventlet(server)
+    node_id = CONF.PLUGIN_NAME + '.' + CONF.NODE_ID
     csi_plugin = server_class(server=server,
                               persistence_config=CONF.PERSISTENCE_CONFIG,
                               backend_config=CONF.BACKEND_CONFIG,
                               ember_config=CONF.EMBER_CONFIG,
                               storage_nw_ip=CONF.STORAGE_NW_IP,
-                              node_id=CONF.NODE_ID)
+                              node_id=node_id)
 
-    LOG.info('Ember CSI v%s with %d workers (cinder: v%s, CSI spec: v%s)' %
-             (constants.VENDOR_VERSION, CONF.WORKERS,
-              constants.CINDER_VERSION, CONF.CSI_SPEC))
-
-    LOG.info('Persistence module: %s' % type(csi_plugin.persistence).__name__)
-    msg = 'Running as %s' % CONF.MODE
-    if CONF.MODE != 'node':
-        driver_name = type(csi_plugin.backend.driver).__name__
-        msg += ' with backend %s v%s' % (driver_name,
-                                         csi_plugin.backend.get_version())
-    LOG.info(msg)
-
-    if common.DEBUG_LIBRARY:
-        debug_msg = ('ENABLED with %s and OFF. Toggle it with SIGUSR1' %
-                     common.DEBUG_LIBRARY.__name__)
-    else:
-        debug_msg = 'DISABLED'
-    LOG.info('Debugging feature is %s.' % debug_msg)
-    LOG.info('Supported filesystems: %s' % (
-        ', '.join(CONF.SUPPORTED_FS_TYPES)))
+    _log_used_parameters(csi_plugin)
 
     if not server.add_insecure_port(CONF.ENDPOINT):
         LOG.error('ERROR: Could not bind to %s' % CONF.ENDPOINT)
@@ -87,6 +69,31 @@ def _get_csi_server_class(class_name):
     module = importlib.import_module(module_name)
     server_class = getattr(module, class_name)
     return server_class
+
+
+def _log_used_parameters(csi_plugin):
+    LOG.info('Ember CSI v%s with %d workers (cinder: v%s, CSI spec: v%s)' %
+             (constants.VENDOR_VERSION, CONF.WORKERS,
+              constants.CINDER_VERSION, CONF.CSI_SPEC))
+
+    LOG.info('Persistence module: %s' % type(csi_plugin.persistence).__name__)
+    msg = 'Running as %s' % CONF.MODE
+    if CONF.MODE != 'node':
+        driver_name = type(csi_plugin.backend.driver).__name__
+        msg += ' with backend %s v%s' % (driver_name,
+                                         csi_plugin.backend.get_version())
+    LOG.info(msg)
+
+    if common.DEBUG_LIBRARY:
+        debug_msg = ('ENABLED with %s and OFF. Toggle it with SIGUSR1' %
+                     common.DEBUG_LIBRARY.__name__)
+    else:
+        debug_msg = 'DISABLED'
+    LOG.info('Debugging feature is %s.' % debug_msg)
+    LOG.info('Supported filesystems: %s' % (
+        ', '.join(CONF.SUPPORTED_FS_TYPES)))
+    if getattr(csi_plugin, 'TOPOLOGY_HIERA', None):
+        LOG.debug('Topologies: %s.' % csi_plugin.TOPOLOGY_HIERA)
 
 
 if __name__ == '__main__':

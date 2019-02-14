@@ -1,12 +1,12 @@
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: csi-controller-sa
+  name: csi-rbd
 ---
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: csi-controller-cr
+  name: csi-rbd
 rules:
   # Allow managing ember resources
   - apiGroups: ['ember-csi.io']
@@ -34,6 +34,9 @@ rules:
   - apiGroups: ['storage.k8s.io']
     resources: ['storageclasses']
     verbs: ['get', 'list', 'watch']
+  - apiGroups: ['csi.storage.k8s.io']
+    resources: ['csidrivers']
+    verbs: ['get', 'list', 'watch', 'update', 'create']
   - apiGroups: ['']
     resources: ['events']
     verbs: ['list', 'watch', 'create', 'update', 'patch']
@@ -46,37 +49,38 @@ rules:
   - apiGroups: ["snapshot.storage.k8s.io"]
     resources: ["volumesnapshots"]
     verbs: ["get", "list", "watch", "update"]
+  - apiGroups: ["csi.storage.k8s.io"]
+    resources: ["csinodeinfos"]
+    verbs: ["get", "list", "watch"]
 ---
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: csi-controller-rb
+  name: csi-rbd
 roleRef:
   kind: ClusterRole
   apiGroup: rbac.authorization.k8s.io
-  name: csi-controller-cr
+  name: csi-rbd
 subjects:
 - kind: ServiceAccount
-  name: csi-controller-sa
+  name: csi-rbd
   namespace: default
 ---
 kind: StatefulSet
 apiVersion: apps/v1beta1
 metadata:
-  name: csi-controller
+  name: csi-rbd
 spec:
-  serviceName: csi-controller
+  serviceName: csi-rbd
   replicas: 1
   template:
     metadata:
       labels:
-        app: csi-controller
+        app: csi-rbd
     spec:
-      serviceAccount: csi-controller-sa
+      serviceAccount: csi-rbd
       # iSCSI only the very latest Open-iSCSI supports namespaces
       hostNetwork: true
-      # Required by multipath detach (some drivers clone volumes dd-ing)
-      hostIPC: true
       # Allow running it in master even if it's tainted for NoSchedule
       tolerations:
       - operator: "Exists"
@@ -90,17 +94,26 @@ spec:
         image: quay.io/k8scsi/csi-provisioner:v1.0.1
         args:
         - --v=5
-        - --provisioner=io.ember-csi
+        - --provisioner=io.ember-csi.rbd
         - --csi-address=/csi-data/csi.sock
+        - --feature-gates=Topology=true
         volumeMounts:
         - mountPath: /csi-data
           name: socket-dir
+      - name: cluster-driver-registrar
+        image: quay.io/k8scsi/csi-cluster-driver-registrar:v1.0.1
+        args:
+         - "--csi-address=/csi-data/csi.sock"
+         # - "--pod-info-mount-version=v1"
+        volumeMounts:
+         - name: socket-dir
+           mountPath: /csi-data
       - name: external-attacher
         image: quay.io/k8scsi/csi-attacher:v1.0.1
         args:
         - --v=5
         - --csi-address=/csi-data/csi.sock
-        - --timeout=120s
+        - --timeout=60s
         volumeMounts:
         - mountPath: /csi-data
           name: socket-dir
@@ -113,7 +126,8 @@ spec:
         - mountPath: /csi-data
           name: socket-dir
       - name: csi-driver
-        image: embercsi/ember-csi:master
+        # image: embercsi/ember-csi:master
+        image: 192.168.1.11:5000/ember-csi:master
         imagePullPolicy: Always
         securityContext:
           privileged: true
@@ -134,29 +148,27 @@ spec:
           value: controller
         - name: X_CSI_PERSISTENCE_CONFIG
           value: '{"storage":"crd"}'
+        - name: X_CSI_EMBER_CONFIG
+          # Comment next line and uncomment the one after it for debug logs
+          value: '{"plugin_name":"io.ember-csi.rbd"}'
+          # value: '{"debug": true,"plugin_name":"io.ember-csi.rbd"}'
+        - name: X_CSI_TOPOLOGIES
+          value: '[{"rbd":"true"}]'
         - name: X_CSI_BACKEND_CONFIG
-          value: '{"target_protocol":"iscsi","iscsi_ip_address":"192.168.10.100","name":"lvm","driver":"LVMVolume","volume_group":"ember-volumes","target_helper":"lioadm","multipath":false}'
+          value: '{"name":"ceph","driver":"RBD","rbd_user":"admin","rbd_pool":"rbd","rbd_ceph_conf":"/etc/ceph/ceph.conf","rbd_keyring_conf":"/etc/ceph/ceph.client.admin.keyring"}'
+        livenessProbe:
+          exec:
+            command:
+            - ember-liveness
+          initialDelaySeconds: 120
+          periodSeconds: 90
+          timeoutSeconds: 60
         volumeMounts:
         - name: socket-dir
           mountPath: /csi-data
-        - name: iscsi-dir
-          mountPath: /etc/iscsi
-          mountPropagation: Bidirectional
         - name: dev-dir
           mountPath: /dev
           mountPropagation: Bidirectional
-        - name: lvm-dir
-          mountPath: /etc/lvm
-          mountPropagation: Bidirectional
-        - name: lvm-lock
-          mountPath: /var/lock/lvm
-          mountPropagation: Bidirectional
-        - name: multipath-dir
-          mountPath: /etc/multipath
-          mountPropagation: Bidirectional
-        - name: multipath-conf
-          mountPath: /etc/multipath.conf
-          mountPropagation: HostToContainer
         - name: modules-dir
           mountPath: /lib/modules
           mountPropagation: HostToContainer
@@ -166,12 +178,32 @@ spec:
         - name: udev-data
           mountPath: /run/udev
           mountPropagation: HostToContainer
-        # Required to preserve the node targets between restarts
-        - name: iscsi-info
-          mountPath: /var/lib/iscsi
-          mountPropagation: Bidirectional
+        - name: ceph-config
+          mountPath: /etc/ceph
+          mountPropagation: HostToContainer
         # In a real deployment we should be mounting container's
         # /var/lib-ember-csi on the host
+      - name: ceph-cluster
+        image: ceph/daemon:latest-luminous
+        args: ["demo"]
+        env:
+          - name: MON_IP
+            value: 192.168.10.90
+          - name: CEPH_PUBLIC_NETWORK
+            value: 192.168.10.90/0
+          - name: DEMO_DAEMONS
+            value: osd mds
+        volumeMounts:
+        - mountPath: /dev
+          name: dev-dir
+        - mountPath: /lib/modules
+          name: modules-dir
+        - mountPath: /etc/localtime
+          name: localtime
+        - mountPath: /run/udev
+          name: udev-data
+        - mountPath: /etc/ceph
+          name: ceph-config
       - name: csc
         image: embercsi/csc:v1.0.0
         command: ["tail"]
@@ -185,27 +217,9 @@ spec:
       volumes:
       - name: socket-dir
         emptyDir:
-      # Some backends do create volume from snapshot by attaching and dd-ing
-      - name: iscsi-dir
-        hostPath:
-          path: /etc/iscsi
-          type: Directory
       - name: dev-dir
         hostPath:
           path: /dev
-      - name: lvm-dir
-        hostPath:
-          path: /etc/lvm
-          type: Directory
-      - name: lvm-lock
-        hostPath:
-          path: /var/lock/lvm
-      - name: multipath-dir
-        hostPath:
-          path: /etc/multipath
-      - name: multipath-conf
-        hostPath:
-          path: /etc/multipath.conf
       - name: modules-dir
         hostPath:
           path: /lib/modules
@@ -215,6 +229,5 @@ spec:
       - name: udev-data
         hostPath:
           path: /run/udev
-      - name: iscsi-info
-        hostPath:
-          path: /var/lib/iscsi
+      - name: ceph-config
+        emptyDir: {}

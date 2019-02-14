@@ -30,31 +30,22 @@
 
 # Pin kubernetes related packages to ensure we don't break every other day
 - name: install utility programs
-  yum: name={{ item }} state=present disable_gpg_check=yes
-  with_items:
-    - wget
-    - ntp
-    - screen
-    - epel-release
-    - vim
-    - iptables
-    - iptables-utils
-    - iptables-services
-    - ncurses-term
-    - docker
-    - kubelet-1.13.2
-    - kubeadm-1.13.2
-    - kubectl-1.13.2
+  yum:
+    name: ['wget', 'ntp', 'screen', 'epel-release', 'vim', 'iptables', 'iptables-utils', 'iptables-services', 'ncurses-term', 'docker', 'kubelet-1.13.2', 'kubeadm-1.13.2', 'kubectl-1.13.2']
+    state: present
+    disable_gpg_check: yes
 
 # Workaround for bugs:
 #  - https://github.com/kubernetes/kubernetes/issues/56850
 #  - https://github.com/kubernetes/kubernetes/issues/63804
 # Once we suport CSDriver extra info we should add ,CSIDriverRegistry=true to
 # the feature-gates
+# KubeletPluginsWatcher, VolumeScheduling, and BlockVolume are enabled by
+# default on K8s 1.13
 - lineinfile:
     path: /etc/sysconfig/kubelet
     regexp: '^KUBELET_EXTRA_ARGS='
-    line: 'KUBELET_EXTRA_ARGS=--runtime-cgroups=/systemd/system.slice --kubelet-cgroups=/systemd/system.slice --feature-gates=CSIBlockVolume=true,VolumeSnapshotDataSource=true,CSINodeInfo=true'
+    line: 'KUBELET_EXTRA_ARGS=--runtime-cgroups=/systemd/system.slice --kubelet-cgroups=/systemd/system.slice --feature-gates=CSIBlockVolume=true,VolumeSnapshotDataSource=true,CSINodeInfo=true,KubeletPluginsWatcher=true,VolumeScheduling=true,BlockVolume=true'
 
 # Note(geguileo): If we want to use our own registry for developtment we just
 # need to edit the roles/common/files/daemon.json with the IP of our registry.
@@ -94,10 +85,9 @@
     line: "\tfilter = [ \"a|loop|\", \"r|.*\\/|\" ]\n\tglobal_filter = [ \"a|loop|\", \"r|.*\\/|\" ]"
 
 - name: Install iSCSI
-  yum: name={{ item }} state=present
-  with_items:
-    - iscsi-initiator-utils
-    - device-mapper-multipath
+  yum:
+    name: ['iscsi-initiator-utils', 'device-mapper-multipath']
+    state: present
 
 - name: Configure multipath
   command: mpathconf --enable --with_multipathd y --user_friendly_names n --find_multipaths y

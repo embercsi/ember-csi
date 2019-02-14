@@ -61,6 +61,7 @@ setuptools.setup(
         'console_scripts': [
             'ember-csi=ember_csi.ember_csi:main',
             'ember-list-drivers=ember_csi.generate_drivers_map:main',
+            'ember-liveness=ember_csi.liveness:main',
         ],
         'cinderlib.persistence.storage': [
             'crd = ember_csi.cl_crd:CRDPersistence',
