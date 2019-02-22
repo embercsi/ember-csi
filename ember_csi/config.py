@@ -128,12 +128,41 @@ class Config(object):
         self.REQUEST_MULTIPATH = EMBER_CONFIG.pop('request_multipath',
                                                   defaults.REQUEST_MULTIPATH)
         self.WORKERS = EMBER_CONFIG.pop('grpc_workers', defaults.WORKERS)
-        self.PLUGIN_NAME = EMBER_CONFIG.pop('plugin_name', defaults.NAME)
+
+        self.PLUGIN_NAME = EMBER_CONFIG['plugin_name']
         self.ENABLE_PROBE = EMBER_CONFIG.pop('enable_probe',
                                              defaults.ENABLE_PROBE)
         self.EMBER_CONFIG = EMBER_CONFIG
 
         self._set_logging(self.EMBER_CONFIG)
+
+    @staticmethod
+    def _get_name(csi_version, plugin_name):
+        # In spec < 1.0 name must follow reverse domain name notation
+        if version.StrictVersion(csi_version) < '1.0':
+            data = [defaults.REVERSE_NAME, plugin_name]
+            regex = r'^[A-Za-z]{2,6}(\.[A-Za-z0-9-]{1,63})+$'
+        # In spec 1.0 the name must be domain name notation
+        else:
+            data = [plugin_name, defaults.NAME]
+            regex = r'^([A-Za-z0-9-]{1,63}\.)+?[A-Za-z]{2,6}$'
+
+        # For backward compatibility, accept full name
+        if 'ember-csi' in plugin_name:
+            name = plugin_name
+        else:
+            name = '.'.join(filter(None, data))
+
+        if len(name) > 63:
+            LOG.error('Plugin name %s too long (max %s)' %
+                      (plugin_name, 63 - len(defaults.NAME)))
+            exit(constants.ERROR_PLUGIN_NAME)
+
+        if not re.match(regex, name):
+            LOG.error('Invalid plugin name %s' % plugin_name)
+            exit(constants.ERROR_PLUGIN_NAME)
+
+        return name
 
     def validate(self):
         if self.MODE not in ('controller', 'node', 'all'):
@@ -143,11 +172,6 @@ class Config(object):
         if self.MODE != 'node' and not self.BACKEND_CONFIG:
             LOG.error('Missing required backend configuration')
             exit(constants.ERROR_MISSING_BACKEND)
-
-        if not re.match(r'^[A-Za-z]{2,6}(\.[A-Za-z0-9-]{1,63})+$',
-                        self.PLUGIN_NAME):
-            LOG.error('Invalid plugin name %s' % self.PLUGIN_NAME)
-            exit(constants.ERROR_PLUGIN_NAME)
 
         if self.DEFAULT_MOUNT_FS not in self.SUPPORTED_FS_TYPES:
             LOG.error('Invalid default mount filesystem %s' %
@@ -177,6 +201,7 @@ class Config(object):
 
         # Store version in x.y.z formatted string
         self.CSI_SPEC = spec_version
+        self.NAME = self._get_name(spec_version, self.PLUGIN_NAME)
 
         self._map_backend_config(self.BACKEND_CONFIG)
         self._set_topology_config()

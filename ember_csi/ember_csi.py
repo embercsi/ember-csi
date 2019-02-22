@@ -40,7 +40,7 @@ def main():
     server = grpc.server(
         futures.ThreadPoolExecutor(max_workers=CONF.WORKERS))
     workarounds.grpc_eventlet(server)
-    node_id = CONF.PLUGIN_NAME + '.' + CONF.NODE_ID
+    node_id = CONF.NAME + '.' + CONF.NODE_ID
     csi_plugin = server_class(server=server,
                               persistence_config=CONF.PERSISTENCE_CONFIG,
                               backend_config=CONF.BACKEND_CONFIG,
@@ -83,6 +83,7 @@ def _log_used_parameters(csi_plugin):
         msg += ' with backend %s v%s' % (driver_name,
                                          csi_plugin.backend.get_version())
     LOG.info(msg)
+    LOG.info('Plugin name: %s' % CONF.NAME)
 
     if common.DEBUG_LIBRARY:
         debug_msg = ('ENABLED with %s and OFF. Toggle it with SIGUSR1' %

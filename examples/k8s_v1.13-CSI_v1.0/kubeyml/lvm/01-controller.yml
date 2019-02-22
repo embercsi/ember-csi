@@ -96,7 +96,7 @@ spec:
         image: quay.io/k8scsi/csi-provisioner:v1.0.1
         args:
         - --v=5
-        - --provisioner=io.ember-csi
+        - --provisioner=ember-csi.io
         - --csi-address=/csi-data/csi.sock
         - --feature-gates=Topology=true
         volumeMounts:

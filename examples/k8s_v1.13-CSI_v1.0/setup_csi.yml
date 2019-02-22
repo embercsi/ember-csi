@@ -87,7 +87,7 @@
 - name: Create Ceph Snapshot Storage Class
   command: kubectl create -f /home/vagrant/kubeyml/rbd/04-snapshot-class.yml
 
-- wait_for: timeout=30
+- wait_for: timeout=60
   delegate_to: localhost
 
 - name: Change Ceph default features

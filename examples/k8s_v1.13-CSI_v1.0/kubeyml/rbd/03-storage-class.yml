@@ -5,7 +5,7 @@ metadata:
   namespace: default
   annotations:
     storageclass.kubernetes.io/is-default-class: "true"
-provisioner: io.ember-csi.rbd
+provisioner: rbd.ember-csi.io
 reclaimPolicy: Delete
 volumeBindingMode: Immediate
 # Don't use WaitForFirstConsumer because k8s topology doesn't work as it should

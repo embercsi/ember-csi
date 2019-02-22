@@ -160,8 +160,8 @@ Node:               master/192.168.10.90
 
 [vagrant@master ~]$ kubectl get csidrivers
 NAME               AGE
-io.ember-csi       8m
-io.ember-csi.rbd   4m
+ember-csi.io       8m
+rbd.ember-csi.io   4m
 ```
 
 Check the logs of the CSI *controller* to see that its running as expected:
@@ -272,21 +272,21 @@ Metadata:
   UID:               717b2f2e-3063-11e9-aed5-5254002dbb88
 Spec:
   Drivers:
-    Name:     io.ember-csi
-    Node ID:  io.ember-csi.node0
+    Name:     ember-csi.io
+    Node ID:  ember-csi.io.node0
     Topology Keys:
       iscsi
-    Name:     io.ember-csi.rbd
-    Node ID:  io.ember-csi.rbd.node0
+    Name:     rbd.ember-csi.io
+    Node ID:  rbd.ember-csi.node0
     Topology Keys:
       rbd
 Status:
   Drivers:
     Available:                true
-    Name:                     io.ember-csi
+    Name:                     ember-csi.io
     Volume Plugin Mechanism:  in-tree
     Available:                true
-    Name:                     io.ember-csi.rbd
+    Name:                     rbd.ember-csi.io
     Volume Plugin Mechanism:  in-tree
 Events:                       <none>
 
@@ -310,21 +310,21 @@ Metadata:
   UID:               71c5bc98-3063-11e9-aed5-5254002dbb88
 Spec:
   Drivers:
-    Name:     io.ember-csi
-    Node ID:  io.ember-csi.node1
+    Name:     ember-csi.io
+    Node ID:  node1.ember-csi.io
     Topology Keys:
       iscsi
-    Name:     io.ember-csi.rbd
-    Node ID:  io.ember-csi.rbd.node1
+    Name:     rbd.ember-csi.io
+    Node ID:  rbd.ember-csi.io.node1
     Topology Keys:
       rbd
 Status:
   Drivers:
     Available:                true
-    Name:                     io.ember-csi
+    Name:                     ember-csi.io
     Volume Plugin Mechanism:  in-tree
     Available:                true
-    Name:                     io.ember-csi.rbd
+    Name:                     rbd.ember-csi.io
     Volume Plugin Mechanism:  in-tree
 Events:                       <none>
 ```
@@ -418,14 +418,14 @@ Check the connection information that the Ember-CSI *node* services are storing 
 ```
 [vagrant@master ~]$ kubectl get keyvalue
 NAME                     AGE
-io.ember-csi.node0       20m
-io.ember-csi.node1       20m
-io.ember-csi.rbd.node0   18m
-io.ember-csi.rbd.node1   18m
+ember-csi.io.node0       20m
+ember-csi.io.node1       20m
+rbd.ember-csi.io.node0   18m
+rbd.ember-csi.io.node1   18m
 
 
 [vagrant@master ~]$ kubectl describe keyvalue
-Name:         io.ember-csi.node0
+Name:         ember-csi.io.node0
 Namespace:    default
 Labels:       <none>
 Annotations:  value:
@@ -436,12 +436,12 @@ Metadata:
   Creation Timestamp:  2019-02-14T14:18:45Z
   Generation:          1
   Resource Version:    1064
-  Self Link:           /apis/ember-csi.io/v1/namespaces/default/keyvalues/io.ember-csi.node0
+  Self Link:           /apis/ember-csi.io/v1/namespaces/default/keyvalues/ember-csi.io.node0
   UID:                 70332e8d-3063-11e9-aed5-5254002dbb88
 Events:                <none>
 
 
-Name:         io.ember-csi.node1
+Name:         ember-csi.io.node1
 Namespace:    default
 Labels:       <none>
 Annotations:  value:
@@ -452,12 +452,12 @@ Metadata:
   Creation Timestamp:  2019-02-14T14:18:45Z
   Generation:          1
   Resource Version:    1065
-  Self Link:           /apis/ember-csi.io/v1/namespaces/default/keyvalues/io.ember-csi.node1
+  Self Link:           /apis/ember-csi.io/v1/namespaces/default/keyvalues/ember-csi.io.node1
   UID:                 7033259c-3063-11e9-aed5-5254002dbb88
 Events:                <none>
 
 
-Name:         io.ember-csi.rbd.node0
+Name:         ember-csi.io.rbd.node0
 Namespace:    default
 Labels:       <none>
 Annotations:  value:
@@ -468,12 +468,12 @@ Metadata:
   Creation Timestamp:  2019-02-14T14:20:45Z
   Generation:          1
   Resource Version:    1330
-  Self Link:           /apis/ember-csi.io/v1/namespaces/default/keyvalues/io.ember-csi.rbd.node0
+  Self Link:           /apis/ember-csi.io/v1/namespaces/default/keyvalues/rbd.ember-csi.io.node0
   UID:                 b7ef3ad5-3063-11e9-aed5-5254002dbb88
 Events:                <none>
 
 
-Name:         io.ember-csi.rbd.node1
+Name:         rbd.ember-csi.io.node1
 Namespace:    default
 Labels:       <none>
 Annotations:  value:
@@ -484,7 +484,7 @@ Metadata:
   Creation Timestamp:  2019-02-14T14:20:46Z
   Generation:          1
   Resource Version:    1334
-  Self Link:           /apis/ember-csi.io/v1/namespaces/default/keyvalues/io.ember-csi.rbd.node1
+  Self Link:           /apis/ember-csi.io/v1/namespaces/default/keyvalues/rbd.ember-csi.io.node1
   UID:                 b8517e9f-3063-11e9-aed5-5254002dbb88
 Events:                <none>
 ```
@@ -512,7 +512,7 @@ pvc-7db8685b-3066-11e9-aed5-5254002dbb88   1Gi        RWO            Delete     
 [vagrant@master ~]$ kubectl describe pv
 Name:              pvc-7db8685b-3066-11e9-aed5-5254002dbb88
 Labels:            <none>
-Annotations:       pv.kubernetes.io/provisioned-by: io.ember-csi
+Annotations:       pv.kubernetes.io/provisioned-by: ember-csi.io
 Finalizers:        [kubernetes.io/pv-protection]
 StorageClass:      csi-sc
 Status:            Bound
@@ -527,10 +527,10 @@ Node Affinity:
 Message:
 Source:
     Type:              CSI (a Container Storage Interface (CSI) volume source)
-    Driver:            io.ember-csi
+    Driver:            ember-csi.io
     VolumeHandle:      540c5a37-ce98-4b47-83f7-10c54a4777b9
     ReadOnly:          false
-    VolumeAttributes:      storage.kubernetes.io/csiProvisionerIdentity=1550153767135-8081-io.ember-csi
+    VolumeAttributes:      storage.kubernetes.io/csiProvisionerIdentity=1550153767135-8081-ember-csi.io
 Events:                <none>
 ```
 
@@ -838,10 +838,10 @@ volume.ember-csi.io/f91e729e-e9d1-4a28-89f8-293423047eea   5m
 volume.ember-csi.io/faa72ced-43ef-45ac-9bfe-5781e15f75da   8m
 
 NAME                                           AGE
-keyvalue.ember-csi.io/io.ember-csi.node0       51m
-keyvalue.ember-csi.io/io.ember-csi.node1       51m
-keyvalue.ember-csi.io/io.ember-csi.rbd.node0   49m
-keyvalue.ember-csi.io/io.ember-csi.rbd.node1   49m
+keyvalue.ember-csi.io/ember-csi.io.node0       51m
+keyvalue.ember-csi.io/ember-csi.io.node1       51m
+keyvalue.ember-csi.io/rbd.ember-csi.io.node0   49m
+keyvalue.ember-csi.io/rbd.ember-csi.io.node1   49m
 ```
 
 
