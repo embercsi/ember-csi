@@ -64,7 +64,7 @@ spec:
           args:
           - --v=5
           - --csi-address=/csi-data/csi.sock
-          - --kubelet-registration-path=/var/lib/kubelet/plugins/io.ember-csi.rbd/csi.sock
+          - --kubelet-registration-path=/var/lib/kubelet/plugins/rbd.ember-csi.io/csi.sock
           env:
             - name: KUBE_NODE_NAME
               valueFrom:
@@ -97,8 +97,8 @@ spec:
               value: '{"rbd":"true"}'
             - name: X_CSI_EMBER_CONFIG
               # Comment next line and uncomment the one after it for debug logs
-              value: '{"plugin_name":"io.ember-csi.rbd"}'
-              # value: '{"debug": true,"plugin_name":"io.ember-csi.rbd"}'
+              value: '{"plugin_name":"rbd"}'
+              # value: '{"debug": true,"plugin_name":"rbd"}'
             - name: X_CSI_NODE_ID
               valueFrom:
                 fieldRef:
@@ -144,7 +144,7 @@ spec:
       volumes:
         - name: socket-dir
           hostPath:
-            path: /var/lib/kubelet/plugins/io.ember-csi.rbd
+            path: /var/lib/kubelet/plugins/rbd.ember-csi.io
             type: DirectoryOrCreate
         - name: registration-dir
           hostPath:

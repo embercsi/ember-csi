@@ -74,7 +74,7 @@ spec:
           args:
           - --v=5
           - --csi-address=/csi-data/csi.sock
-          - --kubelet-registration-path=/var/lib/kubelet/plugins/io.ember-csi/csi.sock
+          - --kubelet-registration-path=/var/lib/kubelet/plugins/ember-csi.io/csi.sock
           env:
             - name: KUBE_NODE_NAME
               valueFrom:
@@ -171,7 +171,7 @@ spec:
       volumes:
         - name: socket-dir
           hostPath:
-            path: /var/lib/kubelet/plugins/io.ember-csi
+            path: /var/lib/kubelet/plugins/ember-csi.io
             type: DirectoryOrCreate
         - name: registration-dir
           hostPath:
@@ -242,7 +242,7 @@ spec:
           args:
           - --v=5
           - --csi-address=/csi-data/csi.sock
-          - --kubelet-registration-path=/var/lib/kubelet/plugins/io.ember-csi/csi.sock
+          - --kubelet-registration-path=/var/lib/kubelet/plugins/ember-csi.io/csi.sock
           env:
             - name: KUBE_NODE_NAME
               valueFrom:
@@ -339,7 +339,7 @@ spec:
       volumes:
         - name: socket-dir
           hostPath:
-            path: /var/lib/kubelet/plugins/io.ember-csi
+            path: /var/lib/kubelet/plugins/ember-csi.io
             type: DirectoryOrCreate
         - name: registration-dir
           hostPath:

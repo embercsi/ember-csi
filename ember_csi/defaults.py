@@ -13,7 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-NAME = 'io.ember-csi'
+NAME = 'ember-csi.io'
+REVERSE_NAME = 'io.ember-csi'
 ENDPOINT = '[::]:50051'
 MODE = 'all'
 PERSISTENCE_CFG = {'storage': 'crd', 'namespace': 'default'}
@@ -24,7 +25,7 @@ LOCKS_DIR = '$state_path/locks'
 REQUEST_MULTIPATH = False
 WORKERS = 30
 ENABLE_PROBE = False
-EMBER_CFG = {'project_id': NAME, 'user_id': NAME, 'plugin_name': NAME,
+EMBER_CFG = {'project_id': NAME, 'user_id': NAME, 'plugin_name': '',
              'root_helper': ROOT_HELPER,
              'request_multipath': REQUEST_MULTIPATH,
              'file_locks_path': LOCKS_DIR, 'state_path': STATE_PATH,

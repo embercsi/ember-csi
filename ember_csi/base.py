@@ -102,7 +102,7 @@ class IdentityBase(object):
             manifest['cinder-driver-supported'] = str(self.backend.supported)
 
         self.INFO = self.TYPES.InfoResp(
-            name=CONF.PLUGIN_NAME,
+            name=CONF.NAME,
             vendor_version=constants.VENDOR_VERSION,
             manifest=manifest)
         # NOTE(geguileo): For now let's only support single reader/writer modes
@@ -113,7 +113,7 @@ class IdentityBase(object):
         self.CSI.add_IdentityServicer_to_server(self, server)
         self.manifest = manifest
         self.PROBE_KV = cinderlib.objects.KeyValue('%s-%s-%s' % (
-            CONF.PLUGIN_NAME, CONF.MODE, 'probe'), '0')
+            CONF.NAME, CONF.MODE, 'probe'), '0')
 
     def _unsupported_mode(self, capability):
         return capability.access_mode.mode not in self.SUPPORTED_ACCESS

@@ -94,7 +94,7 @@ spec:
         image: quay.io/k8scsi/csi-provisioner:v1.0.1
         args:
         - --v=5
-        - --provisioner=io.ember-csi.rbd
+        - --provisioner=rbd.ember-csi.io
         - --csi-address=/csi-data/csi.sock
         - --feature-gates=Topology=true
         volumeMounts:
@@ -149,8 +149,8 @@ spec:
           value: '{"storage":"crd"}'
         - name: X_CSI_EMBER_CONFIG
           # Comment next line and uncomment the one after it for debug logs
-          value: '{"plugin_name":"io.ember-csi.rbd"}'
-          # value: '{"debug": true,"plugin_name":"io.ember-csi.rbd"}'
+          value: '{"plugin_name":"rbd"}'
+          # value: '{"debug": true,"plugin_name":"rbd"}'
         - name: X_CSI_TOPOLOGIES
           value: '[{"rbd":"true"}]'
         - name: X_CSI_BACKEND_CONFIG

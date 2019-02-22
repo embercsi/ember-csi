@@ -84,7 +84,7 @@ class CRD(object):
     The CRDs are added to the "all" and "ember" categories.
     """
     CRD_VERSION = 'v1'
-    DOMAIN = 'ember-csi.io'
+    DOMAIN = defaults.NAME
     NAMESPACE = defaults.CRD_NAMESPACE
     RESOURCE_VERSION_ATTR = '__resource_version'
 
