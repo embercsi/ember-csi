@@ -505,6 +505,8 @@ class ControllerBase(IdentityBase):
 
 
 class NodeBase(IdentityBase):
+    STAGED_NAME = 'stage'
+
     def __init__(self, server, persistence_config=None, ember_config=None,
                  node_id=None, storage_nw_ip=None, **kwargs):
         # When running as Node only we have to initialize cinderlib telling it
@@ -603,22 +605,48 @@ class NodeBase(IdentityBase):
         command.append(target)
         self.sudo(*command)
 
-    def _check_path(self, request, context, is_staging):
-        is_block = request.volume_capability.HasField('block')
-        attr_name = 'staging_target_path' if is_staging else 'target_path'
-        path = getattr(request, attr_name)
+    def _check_path(self, request, context, path, attr='staging'):
         try:
-            st_mode = os.stat(path).st_mode
+            st_mode = os.stat(os.path.dirname(path)).st_mode
         except OSError as exc:
             context.abort(grpc.StatusCode.INVALID_ARGUMENT,
-                          'Invalid %s path: %s' % (attr_name, exc))
+                          "Parent %s directory for %s doesn't exist: %s" %
+                          (attr, path, exc))
 
-        if ((is_block and stat.S_ISBLK(st_mode) or stat.S_ISREG(st_mode)) or
-                (not is_block and stat.S_ISDIR(st_mode))):
-            return path, is_block
+        # Parent must always be a directory
+        if not stat.S_ISDIR(st_mode):
+            context.abort(grpc.StatusCode.INVALID_ARGUMENT,
+                          'Parent %s path %s is not a directory' %
+                          (attr, path))
 
-        context.abort(grpc.StatusCode.INVALID_ARGUMENT,
-                      'Invalid existing %s' % attr_name)
+        is_block = request.volume_capability.HasField('block')
+
+        try:
+            st_mode = os.stat(path).st_mode
+            if ((is_block and
+                 not (stat.S_ISBLK(st_mode) or stat.S_ISREG(st_mode))) or
+                    (not is_block and not stat.S_ISDIR(st_mode))):
+
+                context.abort(grpc.StatusCode.INVALID_ARGUMENT,
+                              'Invalid existing %s path %s' % (attr, path))
+        except OSError as exc:
+            if is_block:
+                # Create the bind file
+                open(path, 'a').close()
+            else:
+                # Create the directory for bind mounting
+                os.mkdir(path)
+        return is_block
+
+    def _check_staging_path(self, request, context):
+        path = os.path.join(request.staging_target_path, self.STAGED_NAME)
+        is_block = self._check_path(request, context, path)
+        return path, is_block
+
+    def _check_target_path(self, request, context):
+        path = request.target_path
+        self._check_path(request, context, path, 'publish')
+        return path
 
     @common.debuggable
     @common.logrpc
@@ -631,7 +659,7 @@ class NodeBase(IdentityBase):
                           'Volume %s does not exist' % request.volume_id)
 
         self._validate_capabilities([request.volume_capability], context)
-        target, is_block = self._check_path(request, context, is_staging=True)
+        target, is_block = self._check_staging_path(request, context)
 
         device, private_bind = self._get_vol_device(vol.id)
         if not device:
@@ -655,6 +683,8 @@ class NodeBase(IdentityBase):
             device = self._get_device(target)
             if not device:
                 # TODO(geguileo): Add support for NFS/QCOW2
+                # Create the staging file for bind mounting
+                open(target, 'a').close()
                 self.sudo('mount', '--bind', private_bind, target)
         else:
             if not self._check_mount_exists(request.volume_capability,
@@ -696,8 +726,10 @@ class NodeBase(IdentityBase):
                               'Operation pending for volume')
 
             if count == 2:
-                self.sudo('umount', request.staging_target_path,
-                          retries=4)
+                path = os.path.join(request.staging_target_path,
+                                    self.STAGED_NAME)
+                self.sudo('umount', path, retries=4)
+                self._clean_file_or_dir(path)
             if count > 0:
                 self.sudo('umount', private_bind, retries=4)
             os.remove(private_bind)
@@ -707,6 +739,14 @@ class NodeBase(IdentityBase):
 
         return self.UNSTAGE_RESP
 
+    def _clean_file_or_dir(self, path):
+        # For UnStage we need to remove the file we created or kubelet will
+        # fail.  For UnPublish the spec says we need to remove it as well.
+        if os.path.isfile(path):
+            os.remove(path)
+        else:
+            os.rmdir(path)
+
     @common.debuggable
     @common.logrpc
     @common.require('volume_id', 'staging_target_path', 'target_path',
@@ -714,8 +754,7 @@ class NodeBase(IdentityBase):
     @common.Worker.unique
     def NodePublishVolume(self, request, context):
         self._validate_capabilities([request.volume_capability], context)
-        staging_target, is_block = self._check_path(request, context,
-                                                    is_staging=True)
+        staging_target, is_block = self._check_staging_path(request, context)
 
         device, private_bind = self._get_vol_device(request.volume_id)
         error = (not device or
@@ -728,7 +767,7 @@ class NodeBase(IdentityBase):
             context.abort(grpc.StatusCode.FAILED_PRECONDITION,
                           'Staging was not been successfully called')
 
-        target, is_block = self._check_path(request, context, is_staging=False)
+        target = self._check_target_path(request, context)
 
         # TODO(geguileo): Add support for modes, etc.
 
@@ -753,6 +792,7 @@ class NodeBase(IdentityBase):
         device = self._get_device(request.target_path)
         if device:
             self.sudo('umount', request.target_path, retries=4)
+            self._clean_file_or_dir(request.target_path)
         return self.NODE_UNPUBLISH_RESP
 
     @common.debuggable
