@@ -168,65 +168,65 @@ Check the logs of the CSI *controller* to see that its running as expected:
 
 ```
 [vagrant@master ~]$ kubectl logs csi-controller-0 -c csi-driver
-2019-02-14 14:17:03 INFO ember_csi.ember_csi [-] Ember CSI v0.0.2 with 30 workers (cinder: v1.0.0.dev16644, CSI spec: v1.0.0)
-2019-02-14 14:17:03 INFO ember_csi.ember_csi [-] Persistence module: CRDPersistence
-2019-02-14 14:17:03 INFO ember_csi.ember_csi [-] Running as controller with backend LVMVolumeDriver v3.0.0
-2019-02-14 14:17:03 INFO ember_csi.ember_csi [-] Debugging feature is ENABLED with ember_csi.rpdb and OFF. Toggle it with SIGUSR1.
-2019-02-14 14:17:03 INFO ember_csi.ember_csi [-] Supported filesystems: cramfs, minix, btrfs, ext2, ext3, ext4, xfs
-2019-02-14 14:17:03 INFO ember_csi.ember_csi [-] Now serving on unix:///csi-data/csi.sock...
-2019-02-14 14:17:03 INFO ember_csi.common [req-140148287040280] => GRPC GetPluginInfo
-2019-02-14 14:17:03 INFO ember_csi.common [req-140148287040280] <= GRPC GetPluginInfo served in 0s
-2019-02-14 14:17:03 INFO ember_csi.common [req-140148287039920] => GRPC Probe
-2019-02-14 14:17:03 INFO ember_csi.common [req-140148287039920] <= GRPC Probe served in 0s
-2019-02-14 14:17:03 INFO ember_csi.common [req-140148287040400] => GRPC ControllerGetCapabilities
-2019-02-14 14:17:03 INFO ember_csi.common [req-140148287040400] <= GRPC ControllerGetCapabilities served in 0s
-2019-02-14 14:17:04 INFO ember_csi.common [req-140148287040280] => GRPC GetPluginInfo
-2019-02-14 14:17:04 INFO ember_csi.common [req-140148287040280] <= GRPC GetPluginInfo served in 0s
-2019-02-14 14:17:04 INFO ember_csi.common [req-140148287039920] => GRPC Probe
-2019-02-14 14:17:04 INFO ember_csi.common [req-140148287039920] <= GRPC Probe served in 0s
-2019-02-14 14:17:04 INFO ember_csi.common [req-140148287040400] => GRPC GetPluginInfo
-2019-02-14 14:17:04 INFO ember_csi.common [req-140148287040400] <= GRPC GetPluginInfo served in 0s
-2019-02-14 14:17:04 INFO ember_csi.common [req-140148287040280] => GRPC GetPluginCapabilities
-2019-02-14 14:17:04 INFO ember_csi.common [req-140148287040280] <= GRPC GetPluginCapabilities served in 0s
-2019-02-14 14:17:04 INFO ember_csi.common [req-140148287039920] => GRPC ControllerGetCapabilities
-2019-02-14 14:17:04 INFO ember_csi.common [req-140148287039920] <= GRPC ControllerGetCapabilities served in 0s
-2019-02-14 14:19:49 INFO ember_csi.common [req-140148287040400] => GRPC Probe
-2019-02-14 14:19:49 INFO ember_csi.common [req-140148287040400] <= GRPC Probe served in 0s
-2019-02-14 14:21:19 INFO ember_csi.common [req-140148287040400] => GRPC Probe
-2019-02-14 14:21:19 INFO ember_csi.common [req-140148287040400] <= GRPC Probe served in 0s
-2019-02-14 14:22:49 INFO ember_csi.common [req-140148287033424] => GRPC Probe
-2019-02-14 14:22:49 INFO ember_csi.common [req-140148287033424] <= GRPC Probe served in 0s
-2019-02-14 14:24:19 INFO ember_csi.common [req-140148287034624] => GRPC Probe
-2019-02-14 14:24:19 INFO ember_csi.common [req-140148287034624] <= GRPC Probe served in 0s
+2019-02-14 14:17:03 default INFO ember_csi.ember_csi [-] Ember CSI v0.0.2 with 30 workers (cinder: v1.0.0.dev16644, CSI spec: v1.0.0)
+2019-02-14 14:17:03 default INFO ember_csi.ember_csi [-] Persistence module: CRDPersistence
+2019-02-14 14:17:03 default INFO ember_csi.ember_csi [-] Running as controller with backend LVMVolumeDriver v3.0.0
+2019-02-14 14:17:03 default INFO ember_csi.ember_csi [-] Debugging feature is ENABLED with ember_csi.rpdb and OFF. Toggle it with SIGUSR1.
+2019-02-14 14:17:03 default INFO ember_csi.ember_csi [-] Supported filesystems: cramfs, minix, btrfs, ext2, ext3, ext4, xfs
+2019-02-14 14:17:03 default INFO ember_csi.ember_csi [-] Now serving on unix:///csi-data/csi.sock...
+2019-02-14 14:17:03 default INFO ember_csi.common [req-140148287040280] => GRPC GetPluginInfo
+2019-02-14 14:17:03 default INFO ember_csi.common [req-140148287040280] <= GRPC GetPluginInfo served in 0s
+2019-02-14 14:17:03 default INFO ember_csi.common [req-140148287039920] => GRPC Probe
+2019-02-14 14:17:03 default INFO ember_csi.common [req-140148287039920] <= GRPC Probe served in 0s
+2019-02-14 14:17:03 default INFO ember_csi.common [req-140148287040400] => GRPC ControllerGetCapabilities
+2019-02-14 14:17:03 default INFO ember_csi.common [req-140148287040400] <= GRPC ControllerGetCapabilities served in 0s
+2019-02-14 14:17:04 default INFO ember_csi.common [req-140148287040280] => GRPC GetPluginInfo
+2019-02-14 14:17:04 default INFO ember_csi.common [req-140148287040280] <= GRPC GetPluginInfo served in 0s
+2019-02-14 14:17:04 default INFO ember_csi.common [req-140148287039920] => GRPC Probe
+2019-02-14 14:17:04 default INFO ember_csi.common [req-140148287039920] <= GRPC Probe served in 0s
+2019-02-14 14:17:04 default INFO ember_csi.common [req-140148287040400] => GRPC GetPluginInfo
+2019-02-14 14:17:04 default INFO ember_csi.common [req-140148287040400] <= GRPC GetPluginInfo served in 0s
+2019-02-14 14:17:04 default INFO ember_csi.common [req-140148287040280] => GRPC GetPluginCapabilities
+2019-02-14 14:17:04 default INFO ember_csi.common [req-140148287040280] <= GRPC GetPluginCapabilities served in 0s
+2019-02-14 14:17:04 default INFO ember_csi.common [req-140148287039920] => GRPC ControllerGetCapabilities
+2019-02-14 14:17:04 default INFO ember_csi.common [req-140148287039920] <= GRPC ControllerGetCapabilities served in 0s
+2019-02-14 14:19:49 default INFO ember_csi.common [req-140148287040400] => GRPC Probe
+2019-02-14 14:19:49 default INFO ember_csi.common [req-140148287040400] <= GRPC Probe served in 0s
+2019-02-14 14:21:19 default INFO ember_csi.common [req-140148287040400] => GRPC Probe
+2019-02-14 14:21:19 default INFO ember_csi.common [req-140148287040400] <= GRPC Probe served in 0s
+2019-02-14 14:22:49 default INFO ember_csi.common [req-140148287033424] => GRPC Probe
+2019-02-14 14:22:49 default INFO ember_csi.common [req-140148287033424] <= GRPC Probe served in 0s
+2019-02-14 14:24:19 default INFO ember_csi.common [req-140148287034624] => GRPC Probe
+2019-02-14 14:24:19 default INFO ember_csi.common [req-140148287034624] <= GRPC Probe served in 0s
 
 
 [vagrant@master ~]$ kubectl logs csi-rbd-0 -c csi-driver
-2019-02-14 14:21:15 INFO ember_csi.ember_csi [-] Ember CSI v0.0.2 with 30 workers (cinder: v1.0.0.dev16644, CSI spec: v1.0.0)
-2019-02-14 14:21:15 INFO ember_csi.ember_csi [-] Persistence module: CRDPersistence
-2019-02-14 14:21:15 INFO ember_csi.ember_csi [-] Running as controller with backend RBDDriver v1.2.0
-2019-02-14 14:21:15 INFO ember_csi.ember_csi [-] Debugging feature is ENABLED with ember_csi.rpdb and OFF. Toggle it with SIGUSR1.
-2019-02-14 14:21:15 INFO ember_csi.ember_csi [-] Supported filesystems: cramfs, minix, btrfs, ext2, ext3, ext4, xfs
-2019-02-14 14:21:15 INFO ember_csi.ember_csi [-] Now serving on unix:///csi-data/csi.sock...
-2019-02-14 14:21:16 INFO ember_csi.common [req-140121198625208] => GRPC GetPluginInfo
-2019-02-14 14:21:16 INFO ember_csi.common [req-140121198625208] <= GRPC GetPluginInfo served in 0s
-2019-02-14 14:21:16 INFO ember_csi.common [req-140121198624848] => GRPC GetPluginInfo
-2019-02-14 14:21:16 INFO ember_csi.common [req-140121198624848] <= GRPC GetPluginInfo served in 0s
-2019-02-14 14:21:16 INFO ember_csi.common [req-140121198625328] => GRPC Probe
-2019-02-14 14:21:16 INFO ember_csi.common [req-140121198625328] <= GRPC Probe served in 0s
-2019-02-14 14:21:16 INFO ember_csi.common [req-140121198625208] => GRPC ControllerGetCapabilities
-2019-02-14 14:21:16 INFO ember_csi.common [req-140121198625208] <= GRPC ControllerGetCapabilities served in 0s
-2019-02-14 14:21:16 INFO ember_csi.common [req-140121198624848] => GRPC Probe
-2019-02-14 14:21:16 INFO ember_csi.common [req-140121198624848] <= GRPC Probe served in 0s
-2019-02-14 14:21:16 INFO ember_csi.common [req-140121198625328] => GRPC GetPluginInfo
-2019-02-14 14:21:16 INFO ember_csi.common [req-140121198625328] <= GRPC GetPluginInfo served in 0s
-2019-02-14 14:21:16 INFO ember_csi.common [req-140121198625208] => GRPC GetPluginCapabilities
-2019-02-14 14:21:16 INFO ember_csi.common [req-140121198625208] <= GRPC GetPluginCapabilities served in 0s
-2019-02-14 14:21:16 INFO ember_csi.common [req-140121198624848] => GRPC ControllerGetCapabilities
-2019-02-14 14:21:16 INFO ember_csi.common [req-140121198624848] <= GRPC ControllerGetCapabilities served in 0s
-2019-02-14 14:24:11 INFO ember_csi.common [req-140121198625328] => GRPC Probe
-2019-02-14 14:24:11 INFO ember_csi.common [req-140121198625328] <= GRPC Probe served in 0s
-2019-02-14 14:25:41 INFO ember_csi.common [req-140121198625208] => GRPC Probe
-2019-02-14 14:25:41 INFO ember_csi.common [req-140121198625208] <= GRPC Probe served in 0s
+2019-02-14 14:21:15 rbd INFO ember_csi.ember_csi [-] Ember CSI v0.0.2 with 30 workers (cinder: v1.0.0.dev16644, CSI spec: v1.0.0)
+2019-02-14 14:21:15 rbd INFO ember_csi.ember_csi [-] Persistence module: CRDPersistence
+2019-02-14 14:21:15 rbd INFO ember_csi.ember_csi [-] Running as controller with backend RBDDriver v1.2.0
+2019-02-14 14:21:15 rbd INFO ember_csi.ember_csi [-] Debugging feature is ENABLED with ember_csi.rpdb and OFF. Toggle it with SIGUSR1.
+2019-02-14 14:21:15 rbd INFO ember_csi.ember_csi [-] Supported filesystems: cramfs, minix, btrfs, ext2, ext3, ext4, xfs
+2019-02-14 14:21:15 rbd INFO ember_csi.ember_csi [-] Now serving on unix:///csi-data/csi.sock...
+2019-02-14 14:21:16 rbd INFO ember_csi.common [req-140121198625208] => GRPC GetPluginInfo
+2019-02-14 14:21:16 rbd INFO ember_csi.common [req-140121198625208] <= GRPC GetPluginInfo served in 0s
+2019-02-14 14:21:16 rbd INFO ember_csi.common [req-140121198624848] => GRPC GetPluginInfo
+2019-02-14 14:21:16 rbd INFO ember_csi.common [req-140121198624848] <= GRPC GetPluginInfo served in 0s
+2019-02-14 14:21:16 rbd INFO ember_csi.common [req-140121198625328] => GRPC Probe
+2019-02-14 14:21:16 rbd INFO ember_csi.common [req-140121198625328] <= GRPC Probe served in 0s
+2019-02-14 14:21:16 rbd INFO ember_csi.common [req-140121198625208] => GRPC ControllerGetCapabilities
+2019-02-14 14:21:16 rbd INFO ember_csi.common [req-140121198625208] <= GRPC ControllerGetCapabilities served in 0s
+2019-02-14 14:21:16 rbd INFO ember_csi.common [req-140121198624848] => GRPC Probe
+2019-02-14 14:21:16 rbd INFO ember_csi.common [req-140121198624848] <= GRPC Probe served in 0s
+2019-02-14 14:21:16 rbd INFO ember_csi.common [req-140121198625328] => GRPC GetPluginInfo
+2019-02-14 14:21:16 rbd INFO ember_csi.common [req-140121198625328] <= GRPC GetPluginInfo served in 0s
+2019-02-14 14:21:16 rbd INFO ember_csi.common [req-140121198625208] => GRPC GetPluginCapabilities
+2019-02-14 14:21:16 rbd INFO ember_csi.common [req-140121198625208] <= GRPC GetPluginCapabilities served in 0s
+2019-02-14 14:21:16 rbd INFO ember_csi.common [req-140121198624848] => GRPC ControllerGetCapabilities
+2019-02-14 14:21:16 rbd INFO ember_csi.common [req-140121198624848] <= GRPC ControllerGetCapabilities served in 0s
+2019-02-14 14:24:11 rbd INFO ember_csi.common [req-140121198625328] => GRPC Probe
+2019-02-14 14:24:11 rbd INFO ember_csi.common [req-140121198625328] <= GRPC Probe served in 0s
+2019-02-14 14:25:41 rbd INFO ember_csi.common [req-140121198625208] => GRPC Probe
+2019-02-14 14:25:41 rbd INFO ember_csi.common [req-140121198625208] <= GRPC Probe served in 0s
 ```
 
 Check that the CSI *node* services are also running:
@@ -338,18 +338,18 @@ Command: dmidecode
 Exit code: -
 Stdout: None
 Stderr: None: ProcessExecutionError: [Errno 2] No such file or directory
-2019-02-14 14:18:46 INFO ember_csi.ember_csi [-] Ember CSI v0.0.2 with 30 workers (cinder: v1.0.0.dev16644, CSI spec: v1.0.0)
-2019-02-14 14:18:46 INFO ember_csi.ember_csi [-] Persistence module: CRDPersistence
-2019-02-14 14:18:46 INFO ember_csi.ember_csi [-] Running as node
-2019-02-14 14:18:46 INFO ember_csi.ember_csi [-] Debugging feature is ENABLED with ember_csi.rpdb and OFF. Toggle it with SIGUSR1.
-2019-02-14 14:18:46 INFO ember_csi.ember_csi [-] Supported filesystems: cramfs, minix, btrfs, ext2, ext3, ext4, xfs
-2019-02-14 14:18:46 INFO ember_csi.ember_csi [-] Now serving on unix:///csi-data/csi.sock...
-2019-02-14 14:18:47 INFO ember_csi.common [req-139625352109064] => GRPC GetPluginInfo
-2019-02-14 14:18:47 INFO ember_csi.common [req-139625352109064] <= GRPC GetPluginInfo served in 0s
-2019-02-14 14:18:47 INFO ember_csi.common [req-139625352108584] => GRPC NodeGetInfo
-2019-02-14 14:18:47 INFO ember_csi.common [req-139625352108584] <= GRPC NodeGetInfo served in 0s
-2019-02-14 14:21:07 INFO ember_csi.common [req-139625352107984] => GRPC Probe
-2019-02-14 14:21:07 INFO ember_csi.common [req-139625352107984] <= GRPC Probe served in 0s
+2019-02-14 14:18:46 default INFO ember_csi.ember_csi [-] Ember CSI v0.0.2 with 30 workers (cinder: v1.0.0.dev16644, CSI spec: v1.0.0)
+2019-02-14 14:18:46 default INFO ember_csi.ember_csi [-] Persistence module: CRDPersistence
+2019-02-14 14:18:46 default INFO ember_csi.ember_csi [-] Running as node
+2019-02-14 14:18:46 default INFO ember_csi.ember_csi [-] Debugging feature is ENABLED with ember_csi.rpdb and OFF. Toggle it with SIGUSR1.
+2019-02-14 14:18:46 default INFO ember_csi.ember_csi [-] Supported filesystems: cramfs, minix, btrfs, ext2, ext3, ext4, xfs
+2019-02-14 14:18:46 default INFO ember_csi.ember_csi [-] Now serving on unix:///csi-data/csi.sock...
+2019-02-14 14:18:47 default INFO ember_csi.common [req-139625352109064] => GRPC GetPluginInfo
+2019-02-14 14:18:47 default INFO ember_csi.common [req-139625352109064] <= GRPC GetPluginInfo served in 0s
+2019-02-14 14:18:47 default INFO ember_csi.common [req-139625352108584] => GRPC NodeGetInfo
+2019-02-14 14:18:47 default INFO ember_csi.common [req-139625352108584] <= GRPC NodeGetInfo served in 0s
+2019-02-14 14:21:07 default INFO ember_csi.common [req-139625352107984] => GRPC Probe
+2019-02-14 14:21:07 default INFO ember_csi.common [req-139625352107984] <= GRPC Probe served in 0s
 
 
 [vagrant@master ~]$ kubectl logs csi-node-qf4ld -c csi-driver
@@ -358,18 +358,18 @@ Command: dmidecode
 Exit code: -
 Stdout: None
 Stderr: None: ProcessExecutionError: [Errno 2] No such file or directory
-2019-02-14 14:18:46 INFO ember_csi.ember_csi [-] Ember CSI v0.0.2 with 30 workers (cinder: v1.0.0.dev16644, CSI spec: v1.0.0)
-2019-02-14 14:18:46 INFO ember_csi.ember_csi [-] Persistence module: CRDPersistence
-2019-02-14 14:18:46 INFO ember_csi.ember_csi [-] Running as node
-2019-02-14 14:18:46 INFO ember_csi.ember_csi [-] Debugging feature is ENABLED with ember_csi.rpdb and OFF. Toggle it with SIGUSR1.
-2019-02-14 14:18:46 INFO ember_csi.ember_csi [-] Supported filesystems: cramfs, minix, btrfs, ext2, ext3, ext4, xfs
-2019-02-14 14:18:46 INFO ember_csi.ember_csi [-] Now serving on unix:///csi-data/csi.sock...
-2019-02-14 14:18:48 INFO ember_csi.common [req-140458013056008] => GRPC GetPluginInfo
-2019-02-14 14:18:48 INFO ember_csi.common [req-140458013056008] <= GRPC GetPluginInfo served in 0s
-2019-02-14 14:18:48 INFO ember_csi.common [req-140458013055528] => GRPC NodeGetInfo
-2019-02-14 14:18:48 INFO ember_csi.common [req-140458013055528] <= GRPC NodeGetInfo served in 0s
-2019-02-14 14:22:05 INFO ember_csi.common [req-140458013054928] => GRPC Probe
-2019-02-14 14:22:05 INFO ember_csi.common [req-140458013054928] <= GRPC Probe served in 0s
+2019-02-14 14:18:46 default INFO ember_csi.ember_csi [-] Ember CSI v0.0.2 with 30 workers (cinder: v1.0.0.dev16644, CSI spec: v1.0.0)
+2019-02-14 14:18:46 default INFO ember_csi.ember_csi [-] Persistence module: CRDPersistence
+2019-02-14 14:18:46 default INFO ember_csi.ember_csi [-] Running as node
+2019-02-14 14:18:46 default INFO ember_csi.ember_csi [-] Debugging feature is ENABLED with ember_csi.rpdb and OFF. Toggle it with SIGUSR1.
+2019-02-14 14:18:46 default INFO ember_csi.ember_csi [-] Supported filesystems: cramfs, minix, btrfs, ext2, ext3, ext4, xfs
+2019-02-14 14:18:46 default INFO ember_csi.ember_csi [-] Now serving on unix:///csi-data/csi.sock...
+2019-02-14 14:18:48 default INFO ember_csi.common [req-140458013056008] => GRPC GetPluginInfo
+2019-02-14 14:18:48 default INFO ember_csi.common [req-140458013056008] <= GRPC GetPluginInfo served in 0s
+2019-02-14 14:18:48 default INFO ember_csi.common [req-140458013055528] => GRPC NodeGetInfo
+2019-02-14 14:18:48 default INFO ember_csi.common [req-140458013055528] <= GRPC NodeGetInfo served in 0s
+2019-02-14 14:22:05 default INFO ember_csi.common [req-140458013054928] => GRPC Probe
+2019-02-14 14:22:05 default INFO ember_csi.common [req-140458013054928] <= GRPC Probe served in 0s
 
 
 [vagrant@master ~]$ kubectl logs csi-node-rbd-k5dx5 -c csi-driver
@@ -378,18 +378,18 @@ Command: dmidecode
 Exit code: -
 Stdout: None
 Stderr: None: ProcessExecutionError: [Errno 2] No such file or directory
-2019-02-14 14:20:45 INFO ember_csi.ember_csi [-] Ember CSI v0.0.2 with 30 workers (cinder: v1.0.0.dev16644, CSI spec: v1.0.0)
-2019-02-14 14:20:45 INFO ember_csi.ember_csi [-] Persistence module: CRDPersistence
-2019-02-14 14:20:45 INFO ember_csi.ember_csi [-] Running as node
-2019-02-14 14:20:45 INFO ember_csi.ember_csi [-] Debugging feature is ENABLED with ember_csi.rpdb and OFF. Toggle it with SIGUSR1.
-2019-02-14 14:20:45 INFO ember_csi.ember_csi [-] Supported filesystems: cramfs, minix, btrfs, ext2, ext3, ext4, xfs
-2019-02-14 14:20:45 INFO ember_csi.ember_csi [-] Now serving on unix:///csi-data/csi.sock...
-2019-02-14 14:20:45 INFO ember_csi.common [req-140165654412296] => GRPC GetPluginInfo
-2019-02-14 14:20:45 INFO ember_csi.common [req-140165654412296] <= GRPC GetPluginInfo served in 0s
-2019-02-14 14:20:45 INFO ember_csi.common [req-140165654411816] => GRPC NodeGetInfo
-2019-02-14 14:20:45 INFO ember_csi.common [req-140165654411816] <= GRPC NodeGetInfo served in 0s
-2019-02-14 14:23:25 INFO ember_csi.common [req-140165654411216] => GRPC Probe
-2019-02-14 14:23:25 INFO ember_csi.common [req-140165654411216] <= GRPC Probe served in 0s
+2019-02-14 14:20:45 rbd INFO ember_csi.ember_csi [-] Ember CSI v0.0.2 with 30 workers (cinder: v1.0.0.dev16644, CSI spec: v1.0.0)
+2019-02-14 14:20:45 rbd INFO ember_csi.ember_csi [-] Persistence module: CRDPersistence
+2019-02-14 14:20:45 rbd INFO ember_csi.ember_csi [-] Running as node
+2019-02-14 14:20:45 rbd INFO ember_csi.ember_csi [-] Debugging feature is ENABLED with ember_csi.rpdb and OFF. Toggle it with SIGUSR1.
+2019-02-14 14:20:45 rbd INFO ember_csi.ember_csi [-] Supported filesystems: cramfs, minix, btrfs, ext2, ext3, ext4, xfs
+2019-02-14 14:20:45 rbd INFO ember_csi.ember_csi [-] Now serving on unix:///csi-data/csi.sock...
+2019-02-14 14:20:45 rbd INFO ember_csi.common [req-140165654412296] => GRPC GetPluginInfo
+2019-02-14 14:20:45 rbd INFO ember_csi.common [req-140165654412296] <= GRPC GetPluginInfo served in 0s
+2019-02-14 14:20:45 rbd INFO ember_csi.common [req-140165654411816] => GRPC NodeGetInfo
+2019-02-14 14:20:45 rbd INFO ember_csi.common [req-140165654411816] <= GRPC NodeGetInfo served in 0s
+2019-02-14 14:23:25 rbd INFO ember_csi.common [req-140165654411216] => GRPC Probe
+2019-02-14 14:23:25 rbd INFO ember_csi.common [req-140165654411216] <= GRPC Probe served in 0s
 
 
 [vagrant@master ~]$ kubectl logs csi-node-rbd-mrxwc -c csi-driver
@@ -398,18 +398,18 @@ Command: dmidecode
 Exit code: -
 Stdout: None
 Stderr: None: ProcessExecutionError: [Errno 2] No such file or directory
-2019-02-14 14:20:46 INFO ember_csi.ember_csi [-] Ember CSI v0.0.2 with 30 workers (cinder: v1.0.0.dev16644, CSI spec: v1.0.0)
-2019-02-14 14:20:46 INFO ember_csi.ember_csi [-] Persistence module: CRDPersistence
-2019-02-14 14:20:46 INFO ember_csi.ember_csi [-] Running as node
-2019-02-14 14:20:46 INFO ember_csi.ember_csi [-] Debugging feature is ENABLED with ember_csi.rpdb and OFF. Toggle it with SIGUSR1.
-2019-02-14 14:20:46 INFO ember_csi.ember_csi [-] Supported filesystems: cramfs, minix, btrfs, ext2, ext3, ext4, xfs
-2019-02-14 14:20:46 INFO ember_csi.ember_csi [-] Now serving on unix:///csi-data/csi.sock...
-2019-02-14 14:20:47 INFO ember_csi.common [req-140135792684040] => GRPC GetPluginInfo
-2019-02-14 14:20:47 INFO ember_csi.common [req-140135792684040] <= GRPC GetPluginInfo served in 0s
-2019-02-14 14:20:47 INFO ember_csi.common [req-140135792683560] => GRPC NodeGetInfo
-2019-02-14 14:20:47 INFO ember_csi.common [req-140135792683560] <= GRPC NodeGetInfo served in 0s
-2019-02-14 14:22:48 INFO ember_csi.common [req-140135792682960] => GRPC Probe
-2019-02-14 14:22:48 INFO ember_csi.common [req-140135792682960] <= GRPC Probe served in 0s
+2019-02-14 14:20:46 rbd INFO ember_csi.ember_csi [-] Ember CSI v0.0.2 with 30 workers (cinder: v1.0.0.dev16644, CSI spec: v1.0.0)
+2019-02-14 14:20:46 rbd INFO ember_csi.ember_csi [-] Persistence module: CRDPersistence
+2019-02-14 14:20:46 rbd INFO ember_csi.ember_csi [-] Running as node
+2019-02-14 14:20:46 rbd INFO ember_csi.ember_csi [-] Debugging feature is ENABLED with ember_csi.rpdb and OFF. Toggle it with SIGUSR1.
+2019-02-14 14:20:46 rbd INFO ember_csi.ember_csi [-] Supported filesystems: cramfs, minix, btrfs, ext2, ext3, ext4, xfs
+2019-02-14 14:20:46 rbd INFO ember_csi.ember_csi [-] Now serving on unix:///csi-data/csi.sock...
+2019-02-14 14:20:47 rbd INFO ember_csi.common [req-140135792684040] => GRPC GetPluginInfo
+2019-02-14 14:20:47 rbd INFO ember_csi.common [req-140135792684040] <= GRPC GetPluginInfo served in 0s
+2019-02-14 14:20:47 rbd INFO ember_csi.common [req-140135792683560] => GRPC NodeGetInfo
+2019-02-14 14:20:47 rbd INFO ember_csi.common [req-140135792683560] <= GRPC NodeGetInfo served in 0s
+2019-02-14 14:22:48 rbd INFO ember_csi.common [req-140135792682960] => GRPC Probe
+2019-02-14 14:22:48 rbd INFO ember_csi.common [req-140135792682960] <= GRPC Probe served in 0s
 ```
 
 
@@ -582,15 +582,15 @@ Tail the CSI *controller* plugin logs to see that the plugin exports the volume:
 
 ```
 [vagrant@master ~]$ kubectl logs csi-controller-0 -fc csi-driver
-2019-02-14 14:17:03 INFO ember_csi.ember_csi [-] Ember CSI v0.0.2 with 30 workers (cinder: v1.0.0.dev16644, CSI spec: v1.0.0)
+2019-02-14 14:17:03 default INFO ember_csi.ember_csi [-] Ember CSI v0.0.2 with 30 workers (cinder: v1.0.0.dev16644, CSI spec: v1.0.0)
 
 
 [ . . .]
 
-2019-02-14 14:52:49 INFO ember_csi.common [req-140148287036904] => GRPC Probe
-2019-02-14 14:52:49 INFO ember_csi.common [req-140148287036904] <= GRPC Probe served in 0s
-2019-02-14 14:53:29 INFO ember_csi.common [req-140148287037024] => GRPC ControllerPublishVolume 540c5a37-ce98-4b47-83f7-10c54a4777b9
-2019-02-14 14:53:31 INFO ember_csi.common [req-140148287037024] <= GRPC ControllerPublishVolume served in 2s
+2019-02-14 14:52:49 default INFO ember_csi.common [req-140148287036904] => GRPC Probe
+2019-02-14 14:52:49 default INFO ember_csi.common [req-140148287036904] <= GRPC Probe served in 0s
+2019-02-14 14:53:29 default INFO ember_csi.common [req-140148287037024] => GRPC ControllerPublishVolume 540c5a37-ce98-4b47-83f7-10c54a4777b9
+2019-02-14 14:53:31 default INFO ember_csi.common [req-140148287037024] <= GRPC ControllerPublishVolume served in 2s
 ^C
 ```
 
@@ -602,20 +602,20 @@ Tail the CSI *node* plugin logs to see that the plugin actually attaches the vol
 
 [ . . . ]
 
-2019-02-14 14:53:44 INFO ember_csi.common [req-140458012850128] => GRPC Probe
-2019-02-14 14:53:44 INFO ember_csi.common [req-140458012850128] <= GRPC Probe served in 0s
-2019-02-14 14:53:45 INFO ember_csi.common [req-140458012850248] => GRPC NodeGetCapabilities
-2019-02-14 14:53:45 INFO ember_csi.common [req-140458012850248] <= GRPC NodeGetCapabilities served in 0s
-2019-02-14 14:53:45 INFO ember_csi.common [req-140458012850368] => GRPC NodeStageVolume 540c5a37-ce98-4b47-83f7-10c54a4777b9
-2019-02-14 14:53:47 WARNING os_brick.initiator.connectors.iscsi [req-140458012850368] iscsiadm stderr output when getting sessions: iscsiadm: No active sessions.
+2019-02-14 14:53:44 default INFO ember_csi.common [req-140458012850128] => GRPC Probe
+2019-02-14 14:53:44 default INFO ember_csi.common [req-140458012850128] <= GRPC Probe served in 0s
+2019-02-14 14:53:45 default INFO ember_csi.common [req-140458012850248] => GRPC NodeGetCapabilities
+2019-02-14 14:53:45 default INFO ember_csi.common [req-140458012850248] <= GRPC NodeGetCapabilities served in 0s
+2019-02-14 14:53:45 default INFO ember_csi.common [req-140458012850368] => GRPC NodeStageVolume 540c5a37-ce98-4b47-83f7-10c54a4777b9
+2019-02-14 14:53:47 default WARNING os_brick.initiator.connectors.iscsi [req-140458012850368] iscsiadm stderr output when getting sessions: iscsiadm: No active sessions.
 
-2019-02-14 14:53:50 INFO ember_csi.common [req-140458012850368] <= GRPC NodeStageVolume served in 5s
-2019-02-14 14:53:50 INFO ember_csi.common [req-140458012850488] => GRPC NodeGetCapabilities
-2019-02-14 14:53:50 INFO ember_csi.common [req-140458012850488] <= GRPC NodeGetCapabilities served in 0s
-2019-02-14 14:53:50 INFO ember_csi.common [req-140458012850248] => GRPC NodePublishVolume 540c5a37-ce98-4b47-83f7-10c54a4777b9
-2019-02-14 14:53:50 INFO ember_csi.common [req-140458012850248] <= GRPC NodePublishVolume served in 0s
-2019-02-14 14:55:05 INFO ember_csi.common [req-140458012850608] => GRPC Probe
-2019-02-14 14:55:05 INFO ember_csi.common [req-140458012850608] <= GRPC Probe served in 0s
+2019-02-14 14:53:50 default INFO ember_csi.common [req-140458012850368] <= GRPC NodeStageVolume served in 5s
+2019-02-14 14:53:50 default INFO ember_csi.common [req-140458012850488] => GRPC NodeGetCapabilities
+2019-02-14 14:53:50 default INFO ember_csi.common [req-140458012850488] <= GRPC NodeGetCapabilities served in 0s
+2019-02-14 14:53:50 default INFO ember_csi.common [req-140458012850248] => GRPC NodePublishVolume 540c5a37-ce98-4b47-83f7-10c54a4777b9
+2019-02-14 14:53:50 default INFO ember_csi.common [req-140458012850248] <= GRPC NodePublishVolume served in 0s
+2019-02-14 14:55:05 default INFO ember_csi.common [req-140458012850608] => GRPC Probe
+2019-02-14 14:55:05 default INFO ember_csi.common [req-140458012850608] <= GRPC Probe served in 0s
 ^C
 ```
 
