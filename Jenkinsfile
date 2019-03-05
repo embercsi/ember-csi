@@ -73,7 +73,7 @@ createDslContainers podName: dslPodName,
               arguments: ["-c", "cd /etc/systemd/system/vagrant-vm.service.d/ && vagrant rsync && vagrant ssh -c 'sh -x /vagrant/${WORKSPACE}/ci-automation/tests.sh'"],
             )
             if (response.getError() != null && response.getError() != "") {
-              throw new Exception("error")
+              throw new Exception("Error: CI Tests failed. Check above OpenShift Exec for logs")
             }
           }
         }
