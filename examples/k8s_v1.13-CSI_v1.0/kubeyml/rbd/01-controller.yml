@@ -109,7 +109,9 @@ spec:
          - name: socket-dir
            mountPath: /csi-data
       - name: external-attacher
-        image: quay.io/k8scsi/csi-attacher:v1.0.1
+        # Use canary until there's a new release of the image that includes PR
+        # https://github.com/kubernetes-csi/external-attacher/pull/129
+        image: quay.io/k8scsi/csi-attacher:canary
         args:
         - --v=5
         - --csi-address=/csi-data/csi.sock

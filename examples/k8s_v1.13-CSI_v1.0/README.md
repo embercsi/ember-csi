@@ -751,7 +751,86 @@ my-csi-app           1/1     Running   0          10m
 my-csi-app-2         1/1     Running   0          55s
 ```
 
-We can now all these same steps with the RBD backend that, according to the topology we've defined, can be accessed from all of our worker nodes:
+Since Ember-CSI also supports raw block volumes we'll create one:
+
+```
+[vagrant@master ~]$ kubectl create -f kubeyml/lvm/10-pvc-block.yml
+persistentvolumeclaim/csi-block-pvc created
+```
+
+Now we confirm that the PVC has the `VolumeMode` set to `Block`:
+
+```
+[vagrant@master ~]$ kubectl describe pvc csi-block-pvc
+Name:          csi-block-pvc
+Namespace:     default
+StorageClass:  csi-sc
+Status:        Bound
+Volume:        pvc-1bc1442e-3f44-11e9-93df-525400ba8dbe
+Labels:        <none>
+Annotations:   pv.kubernetes.io/bind-completed: yes
+               pv.kubernetes.io/bound-by-controller: yes
+               volume.beta.kubernetes.io/storage-provisioner: ember-csi.io
+Finalizers:    [kubernetes.io/pvc-protection]
+Capacity:      3Gi
+Access Modes:  RWO
+VolumeMode:    Block
+Events:
+  Type       Reason                 Age   From                                                      Message
+  ----       ------                 ----  ----                                                      -------
+  Normal     ExternalProvisioning   42s   persistentvolume-controller                               waiting for a volume to be created, either by external provisioner "ember-csi.io" or manually created by system administrator
+  Normal     Provisioning           42s   ember-csi.io_master_3905aa08-3f42-11e9-82e2-525400ba8dbe  External provisioner is provisioning volume for claim "default/csi-block-pvc"
+  Normal     ProvisioningSucceeded  41s   ember-csi.io_master_3905aa08-3f42-11e9-82e2-525400ba8dbe  Successfully provisioned volume pvc-1bc1442e-3f44-11e9-93df-525400ba8dbe
+Mounted By:  <none>
+```
+
+And with the name of the Volume we can see that the PV is also `Block`:
+
+```
+[vagrant@master ~]$ k describe pv pvc-1bc1442e-3f44-11e9-93df-525400ba8dbe
+Name:              pvc-1bc1442e-3f44-11e9-93df-525400ba8dbe
+Labels:            <none>
+Annotations:       pv.kubernetes.io/provisioned-by: ember-csi.io
+Finalizers:        [kubernetes.io/pv-protection]
+StorageClass:      csi-sc
+Status:            Bound
+Claim:             default/csi-block-pvc
+Reclaim Policy:    Delete
+Access Modes:      RWO
+VolumeMode:        Block
+Capacity:          3Gi
+Node Affinity:
+  Required Terms:
+    Term 0:        iscsi in [true]
+Message:
+Source:
+    Type:              CSI (a Container Storage Interface (CSI) volume source)
+    Driver:            ember-csi.io
+    VolumeHandle:      684a33bf-da59-4b60-b986-7203281e5a3c
+    ReadOnly:          false
+    VolumeAttributes:      storage.kubernetes.io/csiProvisionerIdentity=1551788866849-8081-ember-csi.io
+Events:                <none>
+```
+
+It's time to use this raw block volume on a container:
+
+```
+[vagrant@master ~]$ kubectl create -f kubeyml/lvm/11-app-block.yml
+pod/my-csi-block-app created
+```
+
+And now see that the raw volume is there:
+
+```
+[vagrant@master ~]$ kubectl get pod my-csi-block-app
+NAME               READY   STATUS    RESTARTS   AGE
+my-csi-block-app   1/1     Running   0          74s
+
+[vagrant@master ~]$ kubectl -it exec my-csi-block-app -- ls -la /dev/ember0
+brw-rw----    1 root     disk        8,  32 Mar  5 12:47 /dev/ember0
+```
+
+We can now repeat all these same steps with the RBD backend that, according to the topology we've defined, can be accessed from all of our worker nodes:
 
 ```
 [vagrant@master ~]$ kubectl create -f kubeyml/rbd/05-pvc.yml
@@ -760,6 +839,7 @@ persistentvolumeclaim/csi-rbd created
 
 [vagrant@master ~]$ kubectl get pv
 NAME                                       CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS   CLAIM                   STORAGECLASS   REASON   AGE
+pvc-1bc1442e-3f44-11e9-93df-525400ba8dbe   3Gi        RWO            Delete           Bound    default/csi-block-pvc   csi-sc                  1m
 pvc-7537f440-3069-11e9-aed5-5254002dbb88   1Gi        RWO            Delete           Bound    default/vol-from-snap   csi-sc                  2m59s
 pvc-7db8685b-3066-11e9-aed5-5254002dbb88   1Gi        RWO            Delete           Bound    default/csi-pvc         csi-sc                  24m
 pvc-ddf984b7-3069-11e9-aed5-5254002dbb88   2Gi        RWO            Delete           Bound    default/csi-rbd         csi-rbd                 3s
@@ -782,38 +862,48 @@ NAME                                   AGE
 [vagrant@master ~]$ kubectl create -f kubeyml/rbd/08-restore-snapshot.yml
 persistentvolumeclaim/vol-from-snap-rbd created
 
+[vagrant@master ~]$ kubectl create -f kubeyml/rbd/10-pvc-block.yml
+persistentvolumeclaim/csi-rbd-block created
 
-[vagrant@master ~]$ kugetctl get pv
--bash: kugetctl: command not found
 [vagrant@master ~]$ kubectl get pv
 NAME                                       CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS   CLAIM                       STORAGECLASS   REASON   AGE
 pvc-1117b711-306a-11e9-aed5-5254002dbb88   2Gi        RWO            Delete           Bound    default/vol-from-snap-rbd   csi-rbd                 11s
+pvc-1bc1442e-3f44-11e9-93df-525400ba8dbe   3Gi        RWO            Delete           Bound    default/csi-block-pvc       csi-sc                  2m32s
 pvc-7537f440-3069-11e9-aed5-5254002dbb88   1Gi        RWO            Delete           Bound    default/vol-from-snap       csi-sc                  4m31s
 pvc-7db8685b-3066-11e9-aed5-5254002dbb88   1Gi        RWO            Delete           Bound    default/csi-pvc             csi-sc                  25m
+pvc-ac9a3111-3f46-11e9-93df-525400ba8dbe   3Gi        RWO            Delete           Bound    default/csi-rbd-block       csi-rbd                 19s
 pvc-ddf984b7-3069-11e9-aed5-5254002dbb88   2Gi        RWO            Delete           Bound    default/csi-rbd             csi-rbd                 95s
-
 
 [vagrant@master ~]$ kubectl create -f kubeyml/rbd/09-app-from-snap-vol.yml
 pod/my-csi-app-rbd-2 created
 
+[vagrant@master ~]$ kubectl create -f kubeyml/rbd/11-app-block.yml
+pod/my-csi-block-app-rbd created
+
 [vagrant@master ~]$ kubectl get pod
-NAME                 READY   STATUS    RESTARTS   AGE
-csi-controller-0     6/6     Running   0          52m
-csi-node-0-jpdsg     3/3     Running   1          50m
-csi-node-qf4ld       3/3     Running   1          50m
-csi-node-rbd-k5dx5   3/3     Running   0          47m
-csi-node-rbd-mrxwc   3/3     Running   0          47m
-csi-rbd-0            7/7     Running   1          47m
-my-csi-app           1/1     Running   0          14m
-my-csi-app-2         1/1     Running   0          4m54s
-my-csi-app-rbd       1/1     Running   0          3m1s
-my-csi-app-rbd-2     1/1     Running   0          84s
+NAME                   READY   STATUS    RESTARTS   AGE
+csi-controller-0       6/6     Running   0          52m
+csi-node-0-jpdsg       3/3     Running   1          50m
+csi-node-qf4ld         3/3     Running   1          50m
+csi-node-rbd-k5dx5     3/3     Running   0          47m
+csi-node-rbd-mrxwc     3/3     Running   0          47m
+csi-rbd-0              7/7     Running   1          47m
+my-csi-app             1/1     Running   0          14m
+my-csi-app-2           1/1     Running   0          4m54s
+my-csi-app-rbd         1/1     Running   0          3m1s
+my-csi-app-rbd-2       1/1     Running   0          84s
+my-csi-block-app       1/1     Running   0          4m
+my-csi-block-app-rbd   1/1     Running   0          77s
 
 [vagrant@master ~]$ kubectl describe pod my-csi-app-rbd |grep Node:
 Node:               node0/192.168.10.100
 
 
 [vagrant@master ~]$ kubectl describe pod my-csi-app-rbd-2 |grep Node:
+Node:               node1/192.168.10.101
+
+
+[vagrant@master ~]$ kubectl describe pod my-csi-block-app-rbd |grep Node:
 Node:               node1/192.168.10.101
 ```
 
@@ -827,12 +917,16 @@ snapshot.ember-csi.io/79fd2dff-7ba5-4e29-b4b4-64ee94e1c36d   4m
 
 NAME                                                           AGE
 connection.ember-csi.io/35c43fc6-65db-4ce5-b328-830c86eba08a   6m
+connection.ember-csi.io/489259c2-116e-4888-b48f-cd7e1e27b2e4   8m
 connection.ember-csi.io/63394bf4-9153-4c9c-9e76-aa73d5b80b48   16m
 connection.ember-csi.io/a96e8e33-f14e-46e6-8732-67efae593539   5m
+connection.ember-csi.io/cf2800e7-018f-44d7-8880-c971a74d87ef   3m
 connection.ember-csi.io/eeb85633-a554-4b2d-aabe-a8bf5c3b7f41   3m
 
 NAME                                                       AGE
+volume.ember-csi.io/20c798a2-ba98-4479-9167-6ee253b7601e   12m
 volume.ember-csi.io/540c5a37-ce98-4b47-83f7-10c54a4777b9   29m
+volume.ember-csi.io/684a33bf-da59-4b60-b986-7203281e5a3c   4m
 volume.ember-csi.io/9e1e7f95-2007-4775-92a8-896881b22618   3m
 volume.ember-csi.io/f91e729e-e9d1-4a28-89f8-293423047eea   5m
 volume.ember-csi.io/faa72ced-43ef-45ac-9bfe-5781e15f75da   8m

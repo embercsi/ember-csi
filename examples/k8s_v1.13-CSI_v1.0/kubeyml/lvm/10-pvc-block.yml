@@ -8,5 +8,5 @@ spec:
   volumeMode: Block
   resources:
     requests:
-      storage: 2Gi
+      storage: 3Gi
   storageClassName: csi-sc
