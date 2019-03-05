@@ -19,6 +19,7 @@ import itertools
 import os
 import stat
 import re
+import socket
 import time
 
 import cinderlib
@@ -112,8 +113,8 @@ class IdentityBase(object):
 
         self.CSI.add_IdentityServicer_to_server(self, server)
         self.manifest = manifest
-        self.PROBE_KV = cinderlib.objects.KeyValue('%s-%s-%s' % (
-            CONF.NAME, CONF.MODE, 'probe'), '0')
+        self.PROBE_KV = cinderlib.objects.KeyValue('%s.%s.%s.%s' % (
+            CONF.NAME, CONF.MODE, socket.getfqdn(), 'probe'), '0')
 
     def _unsupported_mode(self, capability):
         return capability.access_mode.mode not in self.SUPPORTED_ACCESS

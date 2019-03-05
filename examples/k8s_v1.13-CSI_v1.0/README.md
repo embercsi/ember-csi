@@ -417,11 +417,17 @@ Check the connection information that the Ember-CSI *node* services are storing 
 
 ```
 [vagrant@master ~]$ kubectl get keyvalue
-NAME                     AGE
-ember-csi.io.node0       20m
-ember-csi.io.node1       20m
-rbd.ember-csi.io.node0   18m
-rbd.ember-csi.io.node1   18m
+NAME                                       AGE
+ember-csi.io.controller.master.probe       21m
+ember-csi.io.node.node0.probe              17m
+ember-csi.io.node.node1.probe              17m
+ember-csi.io.node0                         20m
+ember-csi.io.node1                         20m
+rbd.ember-csi.io.controller.master.probe   17m
+rbd.ember-csi.io.node.node0.probe          15m
+rbd.ember-csi.io.node.node1.probe          15m
+rbd.ember-csi.io.node0                     18m
+rbd.ember-csi.io.node1                     18m
 
 
 [vagrant@master ~]$ kubectl describe keyvalue
@@ -931,11 +937,17 @@ volume.ember-csi.io/9e1e7f95-2007-4775-92a8-896881b22618   3m
 volume.ember-csi.io/f91e729e-e9d1-4a28-89f8-293423047eea   5m
 volume.ember-csi.io/faa72ced-43ef-45ac-9bfe-5781e15f75da   8m
 
-NAME                                           AGE
-keyvalue.ember-csi.io/ember-csi.io.node0       51m
-keyvalue.ember-csi.io/ember-csi.io.node1       51m
-keyvalue.ember-csi.io/rbd.ember-csi.io.node0   49m
-keyvalue.ember-csi.io/rbd.ember-csi.io.node1   49m
+NAME                                                             AGE
+keyvalue.ember-csi.io/ember-csi.io.controller.master.probe       52m
+keyvalue.ember-csi.io/ember-csi.io.node.node0.probe              48m
+keyvalue.ember-csi.io/ember-csi.io.node.node1.probe              48m
+keyvalue.ember-csi.io/ember-csi.io.node0                         51m
+keyvalue.ember-csi.io/ember-csi.io.node1                         51m
+keyvalue.ember-csi.io/rbd.ember-csi.io.controller.master.probe   48m
+keyvalue.ember-csi.io/rbd.ember-csi.io.node.node0.probe          46m
+keyvalue.ember-csi.io/rbd.ember-csi.io.node.node1.probe          46m
+keyvalue.ember-csi.io/rbd.ember-csi.io.node0                     49m
+keyvalue.ember-csi.io/rbd.ember-csi.io.node1                     49m
 ```
 
 
