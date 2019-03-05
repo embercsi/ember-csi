@@ -426,8 +426,19 @@ class ControllerBase(IdentityBase):
                 if conn.attached_host != request.node_id:
                     context.abort(grpc.StatusCode.FAILED_PRECONDITION,
                                   'Volume published to another node')
+                expected_mode = 'ro' if request.readonly else 'rw'
+                if conn.attach_mode != expected_mode:
+                    context.abort(grpc.StatusCode.ALREADY_EXISTS,
+                                  'Volume published with readonly=%s. Cannot '
+                                  'publish now as readonly=%s' %
+                                  (not request.readonly, request.readonly))
         else:
-            vol.connect(node.connector_dict, attached_host=node.id)
+            c = vol.connect(node.connector_dict, attached_host=node.id)
+            # TODO(geguileo): Once cinderlib supports changing attach_mode on
+            # the connect call pass it there and remove this.
+            if request.readonly:
+                c.attach_mode = 'ro'
+                c.save()
         return self.TYPES.CtrlPublishResp()
 
     @common.debuggable
@@ -553,6 +564,14 @@ class NodeBase(IdentityBase):
         for line in self._get_mountinfo():
             if line[4] == path:
                 return line[9] if line[9].startswith('/') else line[3]
+        return None
+
+    IS_RO_REGEX = re.compile(r'(^|.+,)ro($|,.+)')
+
+    def _is_ro_mount(self, path):
+        for line in self._get_mountinfo():
+            if line[4] == path:
+                return bool(self.IS_RO_REGEX.match(line[5]))
         return None
 
     def _get_vol_device(self, volume_id):
@@ -742,10 +761,13 @@ class NodeBase(IdentityBase):
     def _clean_file_or_dir(self, path):
         # For UnStage we need to remove the file we created or kubelet will
         # fail.  For UnPublish the spec says we need to remove it as well.
-        if os.path.isfile(path):
-            os.remove(path)
-        else:
-            os.rmdir(path)
+        try:
+            if os.path.isfile(path):
+                os.remove(path)
+            else:
+                os.rmdir(path)
+        except OSError as exc:
+            LOG.warning('Could not remove %s: %s' % (path, exc))
 
     @common.debuggable
     @common.logrpc
@@ -775,6 +797,13 @@ class NodeBase(IdentityBase):
         device = self._get_device(target)
         volume_device, private_bind = self._get_vol_device(request.volume_id)
         if device in (volume_device, staging_target, private_bind):
+            ro_mode = self._is_ro_mount(target)
+            if request.readonly != ro_mode:
+                context.abort(grpc.StatusCode.ALREADY_EXISTS,
+                              'Incompatible readonly=%s mode requested, volume'
+                              'is already present as %s' %
+                              (request.readonly, ro_mode))
+
             return self.NODE_PUBLISH_RESP
 
         # TODO(geguileo): Check how many are mounted and fail if > 0
