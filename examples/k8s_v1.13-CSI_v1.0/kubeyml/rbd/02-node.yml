@@ -97,8 +97,8 @@ spec:
               value: '{"rbd":"true"}'
             - name: X_CSI_EMBER_CONFIG
               # Comment next line and uncomment the one after it for debug logs
-              value: '{"plugin_name":"rbd"}'
-              # value: '{"debug": true,"plugin_name":"rbd"}'
+              value: '{"plugin_name":"rbd","enable_probe":true}'
+              # value: '{"debug": true,"plugin_name":"rbd","enable_probe":true}'
             - name: X_CSI_NODE_ID
               valueFrom:
                 fieldRef:

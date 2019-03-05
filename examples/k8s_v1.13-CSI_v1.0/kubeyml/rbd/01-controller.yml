@@ -120,7 +120,11 @@ spec:
         - mountPath: /csi-data
           name: socket-dir
       - name: external-snapshotter
-        image: quay.io/k8scsi/csi-snapshotter:v1.0.1
+        # Until issue https://github.com/kubernetes-csi/external-snapshotter/issues/89
+        # is fixed upstream, use our own snapshotter that includes code from PR
+        # https://github.com/kubernetes-csi/external-snapshotter/pull/90
+        image: embercsi/external-snapshotter
+        # image: quay.io/k8scsi/csi-snapshotter:v1.0.1
         args:
         - --v=5
         - --csi-address=/csi-data/csi.sock
@@ -151,8 +155,8 @@ spec:
           value: '{"storage":"crd"}'
         - name: X_CSI_EMBER_CONFIG
           # Comment next line and uncomment the one after it for debug logs
-          value: '{"plugin_name":"rbd"}'
-          # value: '{"debug": true,"plugin_name":"rbd"}'
+          value: '{"plugin_name":"rbd","enable_probe":true}'
+          # value: '{"debug": true,"plugin_name":"rbd","enable_probe":true}'
         - name: X_CSI_TOPOLOGIES
           value: '[{"rbd":"true"}]'
         - name: X_CSI_BACKEND_CONFIG
