@@ -17,7 +17,7 @@ cd "$home/.."
 echo "-------------------- unit-tests --------------------"
 make unit-tests
 echo "-------------------- setup-lvm  --------------------"
-sudo travis-scripts/setup-lvm.sh
+sudo tools/setup-lvm.sh
 echo "-------------------- bm-lvm     --------------------"
 make centos-bm-lvm
 echo "-------------------- done       --------------------"
