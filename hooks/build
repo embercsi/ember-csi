@@ -2,11 +2,12 @@
 
 if [ "$SOURCE_BRANCH" == "master" ]
 then
+  docker run -d --rm --name pypiserver -p 12345:8080 embercsi/pypiserver
   for tag in master latest; do
     echo "Building ember-csi $tag with cinderlib $tag ..."
-    docker build --build-arg CINDERLIB_TAG=$tag -t $DOCKER_REPO:$tag -f Dockerfile .
+    docker build --build-arg VERSION=$tag --build-arg PIP_SERVER=ci-pypi.org --build-arg PIP_PORT=12345 -t $DOCKER_REPO:$tag -f Dockerfile .
   done
-
+  docker stop pypiserver
 else
   releases=`curl https://raw.githubusercontent.com/Akrog/cinderlib/master/rdo-releases`
   cinderlib_pinned_stable_version=`cat hooks/cinderlib-pinned-stable-version`

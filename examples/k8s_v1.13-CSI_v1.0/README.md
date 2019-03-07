@@ -333,11 +333,6 @@ Check the CSI *node* logs:
 
 ```
 [vagrant@master ~]$ kubectl logs csi-node-0-jpdsg -c csi-driver
-2019-02-14 14:18:41 WARNING os_brick.initiator.connectors.nvme [-] Unable to locate dmidecode. For Cinder RSD Backend, please make sure it is installed: [Errno 2] No such file or directory
-Command: dmidecode
-Exit code: -
-Stdout: None
-Stderr: None: ProcessExecutionError: [Errno 2] No such file or directory
 2019-02-14 14:18:46 default INFO ember_csi.ember_csi [-] Ember CSI v0.0.2 with 30 workers (cinder: v1.0.0.dev16644, CSI spec: v1.0.0)
 2019-02-14 14:18:46 default INFO ember_csi.ember_csi [-] Persistence module: CRDPersistence
 2019-02-14 14:18:46 default INFO ember_csi.ember_csi [-] Running as node
@@ -353,11 +348,6 @@ Stderr: None: ProcessExecutionError: [Errno 2] No such file or directory
 
 
 [vagrant@master ~]$ kubectl logs csi-node-qf4ld -c csi-driver
-2019-02-14 14:18:42 WARNING os_brick.initiator.connectors.nvme [-] Unable to locate dmidecode. For Cinder RSD Backend, please make sure it is installed: [Errno 2] No such file or directory
-Command: dmidecode
-Exit code: -
-Stdout: None
-Stderr: None: ProcessExecutionError: [Errno 2] No such file or directory
 2019-02-14 14:18:46 default INFO ember_csi.ember_csi [-] Ember CSI v0.0.2 with 30 workers (cinder: v1.0.0.dev16644, CSI spec: v1.0.0)
 2019-02-14 14:18:46 default INFO ember_csi.ember_csi [-] Persistence module: CRDPersistence
 2019-02-14 14:18:46 default INFO ember_csi.ember_csi [-] Running as node
@@ -373,11 +363,6 @@ Stderr: None: ProcessExecutionError: [Errno 2] No such file or directory
 
 
 [vagrant@master ~]$ kubectl logs csi-node-rbd-k5dx5 -c csi-driver
-2019-02-14 14:20:45 WARNING os_brick.initiator.connectors.nvme [-] Unable to locate dmidecode. For Cinder RSD Backend, please make sure it is installed: [Errno 2] No such file or directory
-Command: dmidecode
-Exit code: -
-Stdout: None
-Stderr: None: ProcessExecutionError: [Errno 2] No such file or directory
 2019-02-14 14:20:45 rbd INFO ember_csi.ember_csi [-] Ember CSI v0.0.2 with 30 workers (cinder: v1.0.0.dev16644, CSI spec: v1.0.0)
 2019-02-14 14:20:45 rbd INFO ember_csi.ember_csi [-] Persistence module: CRDPersistence
 2019-02-14 14:20:45 rbd INFO ember_csi.ember_csi [-] Running as node
@@ -393,11 +378,6 @@ Stderr: None: ProcessExecutionError: [Errno 2] No such file or directory
 
 
 [vagrant@master ~]$ kubectl logs csi-node-rbd-mrxwc -c csi-driver
-2019-02-14 14:20:46 WARNING os_brick.initiator.connectors.nvme [-] Unable to locate dmidecode. For Cinder RSD Backend, please make sure it is installed: [Errno 2] No such file or directory
-Command: dmidecode
-Exit code: -
-Stdout: None
-Stderr: None: ProcessExecutionError: [Errno 2] No such file or directory
 2019-02-14 14:20:46 rbd INFO ember_csi.ember_csi [-] Ember CSI v0.0.2 with 30 workers (cinder: v1.0.0.dev16644, CSI spec: v1.0.0)
 2019-02-14 14:20:46 rbd INFO ember_csi.ember_csi [-] Persistence module: CRDPersistence
 2019-02-14 14:20:46 rbd INFO ember_csi.ember_csi [-] Running as node
