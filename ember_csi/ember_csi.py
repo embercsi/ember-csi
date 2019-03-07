@@ -20,6 +20,9 @@ from concurrent import futures
 import importlib
 import time
 
+import eventlet
+eventlet.monkey_patch()  # noqa
+
 import grpc
 from oslo_log import log as logging
 

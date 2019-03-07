@@ -111,9 +111,13 @@ def logrpc(f):
 
     @functools.wraps(f)
     def dolog(self, request, context):
-        req_ctxt = context_utils.get_current()
-        req_ctxt.request_id = 'req-%s' % id(request)
-        req_ctxt.project_name = CONF.PROJECT_NAME
+        # Set this thread's context
+        context_utils.RequestContext(
+            overwrite=True,
+            user_id=CONF.EMBER_CONFIG['user_id'],
+            project_id=CONF.EMBER_CONFIG['project_id'],
+            project_name=CONF.PROJECT_NAME,
+            request_id='req-%s' % id(request))
 
         start = datetime.utcnow()
         LOG.info('=> GRPC %s%s' % (f.__name__, _get_idempotent_id(request)))
