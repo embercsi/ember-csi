@@ -92,6 +92,7 @@ class IdentityBase(object):
 
         manifest = {
             'cinder-version': constants.CINDER_VERSION,
+            'cinderlib-version': constants.CINDERLIB_VERSION,
         }
         self.persistence = cinderlib.Backend.persistence
         manifest['persistence'] = type(self.persistence).__name__

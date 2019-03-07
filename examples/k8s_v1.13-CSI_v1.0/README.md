@@ -168,7 +168,7 @@ Check the logs of the CSI *controller* to see that its running as expected:
 
 ```
 [vagrant@master ~]$ kubectl logs csi-controller-0 -c csi-driver
-2019-02-14 14:17:03 default INFO ember_csi.ember_csi [-] Ember CSI v0.0.2 with 30 workers (cinder: v1.0.0.dev16644, CSI spec: v1.0.0)
+2019-02-14 14:17:03 default INFO ember_csi.ember_csi [-] Ember CSI v0.0.2 with 30 workers (CSI spec: v1.0.0, cinderlib: v0.3.10.dev4, cinder: v13.1.0.dev902)
 2019-02-14 14:17:03 default INFO ember_csi.ember_csi [-] Persistence module: CRDPersistence
 2019-02-14 14:17:03 default INFO ember_csi.ember_csi [-] Running as controller with backend LVMVolumeDriver v3.0.0
 2019-02-14 14:17:03 default INFO ember_csi.ember_csi [-] Debugging feature is ENABLED with ember_csi.rpdb and OFF. Toggle it with SIGUSR1.
@@ -201,7 +201,7 @@ Check the logs of the CSI *controller* to see that its running as expected:
 
 
 [vagrant@master ~]$ kubectl logs csi-rbd-0 -c csi-driver
-2019-02-14 14:21:15 rbd INFO ember_csi.ember_csi [-] Ember CSI v0.0.2 with 30 workers (cinder: v1.0.0.dev16644, CSI spec: v1.0.0)
+2019-02-14 14:21:15 rbd INFO ember_csi.ember_csi [-] Ember CSI v0.0.2 with 30 workers (CSI spec: v1.0.0, cinderlib: v0.3.10.dev4, cinder: v13.1.0.dev902)
 2019-02-14 14:21:15 rbd INFO ember_csi.ember_csi [-] Persistence module: CRDPersistence
 2019-02-14 14:21:15 rbd INFO ember_csi.ember_csi [-] Running as controller with backend RBDDriver v1.2.0
 2019-02-14 14:21:15 rbd INFO ember_csi.ember_csi [-] Debugging feature is ENABLED with ember_csi.rpdb and OFF. Toggle it with SIGUSR1.
@@ -333,7 +333,7 @@ Check the CSI *node* logs:
 
 ```
 [vagrant@master ~]$ kubectl logs csi-node-0-jpdsg -c csi-driver
-2019-02-14 14:18:46 default INFO ember_csi.ember_csi [-] Ember CSI v0.0.2 with 30 workers (cinder: v1.0.0.dev16644, CSI spec: v1.0.0)
+2019-02-14 14:18:46 default INFO ember_csi.ember_csi [-] Ember CSI v0.0.2 with 30 workers (CSI spec: v1.0.0, cinderlib: v0.3.10.dev4, cinder: v13.1.0.dev902)
 2019-02-14 14:18:46 default INFO ember_csi.ember_csi [-] Persistence module: CRDPersistence
 2019-02-14 14:18:46 default INFO ember_csi.ember_csi [-] Running as node
 2019-02-14 14:18:46 default INFO ember_csi.ember_csi [-] Debugging feature is ENABLED with ember_csi.rpdb and OFF. Toggle it with SIGUSR1.
@@ -348,7 +348,7 @@ Check the CSI *node* logs:
 
 
 [vagrant@master ~]$ kubectl logs csi-node-qf4ld -c csi-driver
-2019-02-14 14:18:46 default INFO ember_csi.ember_csi [-] Ember CSI v0.0.2 with 30 workers (cinder: v1.0.0.dev16644, CSI spec: v1.0.0)
+2019-02-14 14:18:46 default INFO ember_csi.ember_csi [-] Ember CSI v0.0.2 with 30 workers (CSI spec: v1.0.0, cinderlib: v0.3.10.dev4, cinder: v13.1.0.dev902)
 2019-02-14 14:18:46 default INFO ember_csi.ember_csi [-] Persistence module: CRDPersistence
 2019-02-14 14:18:46 default INFO ember_csi.ember_csi [-] Running as node
 2019-02-14 14:18:46 default INFO ember_csi.ember_csi [-] Debugging feature is ENABLED with ember_csi.rpdb and OFF. Toggle it with SIGUSR1.
@@ -378,7 +378,7 @@ Check the CSI *node* logs:
 
 
 [vagrant@master ~]$ kubectl logs csi-node-rbd-mrxwc -c csi-driver
-2019-02-14 14:20:46 rbd INFO ember_csi.ember_csi [-] Ember CSI v0.0.2 with 30 workers (cinder: v1.0.0.dev16644, CSI spec: v1.0.0)
+2019-02-14 14:20:46 rbd INFO ember_csi.ember_csi [-] Ember CSI v0.0.2 with 30 workers (CSI spec: v1.0.0, cinderlib: v0.3.10.dev4, cinder: v13.1.0.dev902)
 2019-02-14 14:20:46 rbd INFO ember_csi.ember_csi [-] Persistence module: CRDPersistence
 2019-02-14 14:20:46 rbd INFO ember_csi.ember_csi [-] Running as node
 2019-02-14 14:20:46 rbd INFO ember_csi.ember_csi [-] Debugging feature is ENABLED with ember_csi.rpdb and OFF. Toggle it with SIGUSR1.
@@ -568,7 +568,7 @@ Tail the CSI *controller* plugin logs to see that the plugin exports the volume:
 
 ```
 [vagrant@master ~]$ kubectl logs csi-controller-0 -fc csi-driver
-2019-02-14 14:17:03 default INFO ember_csi.ember_csi [-] Ember CSI v0.0.2 with 30 workers (cinder: v1.0.0.dev16644, CSI spec: v1.0.0)
+2019-02-14 14:17:03 default INFO ember_csi.ember_csi [-] Ember CSI v0.0.2 with 30 workers (CSI spec: v1.0.0, cinderlib: v0.3.10.dev4, cinder: v13.1.0.dev902)
 
 
 [ . . .]
@@ -584,7 +584,7 @@ Tail the CSI *node* plugin logs to see that the plugin actually attaches the vol
 
 ```
 [vagrant@master ~]$ kubectl logs csi-node-qf4ld -fc csi-driver
-2019-02-14 14:18:46 INFO ember_csi.ember_csi [-] Ember CSI v0.0.2 with 30 workers (cinder: v1.0.0.dev16644, CSI spec: v1.0.0)
+2019-02-14 14:18:46 INFO ember_csi.ember_csi [-] Ember CSI v0.0.2 with 30 workers (CSI spec: v1.0.0, cinderlib: v0.3.10.dev4, cinder: v13.1.0.dev902)
 
 [ . . . ]
 

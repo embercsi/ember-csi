@@ -25,6 +25,7 @@ EPOCH = datetime.utcfromtimestamp(0).replace(tzinfo=pytz.UTC)
 GB = float(1024 ** 3)
 ONE_DAY_IN_SECONDS = 60 * 60 * 24
 CINDER_VERSION = pkg_resources.get_distribution('cinder').version
+CINDERLIB_VERSION = pkg_resources.get_distribution('cinderlib').version
 REFRESH_TIME = 1
 VENDOR_VERSION = '0.0.2'
 MULTIPATH_FIND_RETRIES = 3

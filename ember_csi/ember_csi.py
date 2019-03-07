@@ -75,9 +75,10 @@ def _get_csi_server_class(class_name):
 
 
 def _log_used_parameters(csi_plugin):
-    LOG.info('Ember CSI v%s with %d workers (cinder: v%s, CSI spec: v%s)' %
-             (constants.VENDOR_VERSION, CONF.WORKERS,
-              constants.CINDER_VERSION, CONF.CSI_SPEC))
+    LOG.info('Ember CSI v%s with %d workers (CSI spec: v%s, cinderlib: v%s, '
+             'cinder: v%s)' %
+             (constants.VENDOR_VERSION, CONF.WORKERS, CONF.CSI_SPEC,
+              constants.CINDERLIB_VERSION, constants.CINDER_VERSION))
 
     LOG.info('Persistence module: %s' % type(csi_plugin.persistence).__name__)
     msg = 'Running as %s' % CONF.MODE
