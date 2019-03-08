@@ -4,7 +4,7 @@ set -e
 cleanup()
 {
   echo "Cleaning up"
-  pkill -6 ember-csi
+  pkill -6 ember-csi || true
   echo "Done cleanup... quitting"
 }
 
