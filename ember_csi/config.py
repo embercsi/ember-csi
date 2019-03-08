@@ -84,10 +84,12 @@ class Config(object):
                                                                 state_path)
         return config
 
-    @staticmethod
-    def _set_logging(config):
-        context_utils.generate_request_id = lambda: '-'
-        context_utils.get_current().request_id = '-'
+    def _set_logging(self, config):
+        context_utils.RequestContext(
+            overwrite=True,
+            user_id=self.EMBER_CONFIG['user_id'],
+            project_id=self.EMBER_CONFIG['project_id'],
+            request_id='-')
 
         config.setdefault('logging_context_format_string',
                           defaults.LOGGING_FORMAT)

@@ -116,8 +116,7 @@ def logrpc(f):
             overwrite=True,
             user_id=CONF.EMBER_CONFIG['user_id'],
             project_id=CONF.EMBER_CONFIG['project_id'],
-            project_name=CONF.PROJECT_NAME,
-            request_id='req-%s' % id(request))
+            project_name=CONF.PROJECT_NAME)
 
         start = datetime.utcnow()
         LOG.info('=> GRPC %s%s' % (f.__name__, _get_idempotent_id(request)))
