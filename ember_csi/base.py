@@ -402,7 +402,7 @@ class ControllerBase(IdentityBase):
                 LOG.debug('Volume has snapshots, soft-deleting')
                 # Just set the status and not the deleted field so DB
                 # persistemce will still return them
-                vol.status = 'deleted'
+                vol._ovo.status = 'deleted'
                 vol.save()
             else:
                 try:
@@ -439,7 +439,7 @@ class ControllerBase(IdentityBase):
             # TODO(geguileo): Once cinderlib supports changing attach_mode on
             # the connect call pass it there and remove this.
             if request.readonly:
-                c.attach_mode = 'ro'
+                c._ovo.attach_mode = 'ro'
                 c.save()
         return self.TYPES.CtrlPublishResp()
 
