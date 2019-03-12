@@ -6,8 +6,13 @@ flake8==2.6.0
 tox==2.3.1
 coverage==4.1
 Sphinx==1.4.8
-# Deployments should use packaged Cinder, but for dev we can install from git
-git+https://github.com/openstack/cinder.git
+# Deployments should use packaged Cinder, but for dev we should install from
+# git to detect breaking changes in time.
+git+https://git.openstack.org/openstack/os-brick
+git+https://git.openstack.org/openstack/cinder
+# Use Akrog's repo until https://review.openstack.org/643013 merges upstream
+# git+https://git.openstack.org/openstack/cinderlib
+git+https://github.com/akrog/cinderlib
 grpcio-tools==1.12.0
 readme_renderer==21.0
 setuptools>=38.6.0
