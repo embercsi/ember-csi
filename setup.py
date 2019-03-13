@@ -45,7 +45,8 @@ setuptools.setup(
     dependency_links=dependency_links,
     install_requires=requirements,
     license="Apache Software License 2.0",
-    zip_safe=False,
+    data_files=[('./', ['HISTORY.md', 'README.md'])],
+    zip_safe=True,
     keywords='ember_csi',
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',

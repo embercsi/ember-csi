@@ -84,10 +84,12 @@ class Config(object):
                                                                 state_path)
         return config
 
-    @staticmethod
-    def _set_logging(config):
-        context_utils.generate_request_id = lambda: '-'
-        context_utils.get_current().request_id = '-'
+    def _set_logging(self, config):
+        context_utils.RequestContext(
+            overwrite=True,
+            user_id=self.EMBER_CONFIG['user_id'],
+            project_id=self.EMBER_CONFIG['project_id'],
+            request_id='-')
 
         config.setdefault('logging_context_format_string',
                           defaults.LOGGING_FORMAT)
@@ -137,9 +139,10 @@ class Config(object):
         self._set_logging(self.EMBER_CONFIG)
 
     @staticmethod
-    def _get_name(csi_version, plugin_name):
+    def _get_names(csi_version, plugin_name):
         # In spec < 1.0 name must follow reverse domain name notation
-        if version.StrictVersion(csi_version) < '1.0':
+        reverse = version.StrictVersion(csi_version) < '1.0'
+        if reverse:
             data = [defaults.REVERSE_NAME, plugin_name]
             regex = r'^[A-Za-z]{2,6}(\.[A-Za-z0-9-]{1,63})+$'
         # In spec 1.0 the name must be domain name notation
@@ -162,7 +165,11 @@ class Config(object):
             LOG.error('Invalid plugin name %s' % plugin_name)
             exit(constants.ERROR_PLUGIN_NAME)
 
-        return name
+        if not plugin_name:
+            project_name = 'default'
+        else:
+            project_name = name.split('.')[-1 if reverse else 0]
+        return name, project_name
 
     def validate(self):
         if self.MODE not in ('controller', 'node', 'all'):
@@ -201,7 +208,9 @@ class Config(object):
 
         # Store version in x.y.z formatted string
         self.CSI_SPEC = spec_version
-        self.NAME = self._get_name(spec_version, self.PLUGIN_NAME)
+        self.NAME, self.PROJECT_NAME = self._get_names(spec_version,
+                                                       self.PLUGIN_NAME)
+        context_utils.get_current().project_name = self.PROJECT_NAME
 
         self._map_backend_config(self.BACKEND_CONFIG)
         self._set_topology_config()

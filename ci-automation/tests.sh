@@ -4,7 +4,7 @@ set -e
 cleanup()
 {
   echo "Cleaning up"
-  pkill -6 ember-csi
+  pkill -6 ember-csi || true
   echo "Done cleanup... quitting"
 }
 
@@ -17,7 +17,7 @@ cd "$home/.."
 echo "-------------------- unit-tests --------------------"
 make unit-tests
 echo "-------------------- setup-lvm  --------------------"
-sudo travis-scripts/setup-lvm.sh
+sudo tools/setup-lvm.sh
 echo "-------------------- bm-lvm     --------------------"
 make centos-bm-lvm
 echo "-------------------- done       --------------------"

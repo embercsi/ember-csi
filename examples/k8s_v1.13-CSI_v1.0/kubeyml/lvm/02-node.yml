@@ -105,9 +105,10 @@ spec:
               value: '{"storage":"crd"}'
             - name: X_CSI_NODE_TOPOLOGY
               value: '{"iscsi":"true"}'
-            # Uncomment next 2 lines for debug logs
-            # - name: X_CSI_EMBER_CONFIG
-            #   value: '{"debug": true}'
+            - name: X_CSI_EMBER_CONFIG
+              # Comment next line and uncomment the one after it for debug logs
+              value: '{"enable_probe":true}'
+              # value: '{"debug": true,"enable_probe":true}'
             - name: X_CSI_NODE_ID
               valueFrom:
                 fieldRef:
@@ -273,9 +274,10 @@ spec:
               value: '{"storage":"crd"}'
             - name: X_CSI_NODE_TOPOLOGY
               value: '{"iscsi":"false"}'
-            # Uncomment next 2 lines for debug logs
-            # - name: X_CSI_EMBER_CONFIG
-            #   value: '{"debug": true}'
+            - name: X_CSI_EMBER_CONFIG
+              # Comment next line and uncomment the one after it for debug logs
+              value: '{"enable_probe":true}'
+              # value: '{"debug": true,"enable_probe":true}'
             - name: X_CSI_NODE_ID
               valueFrom:
                 fieldRef:

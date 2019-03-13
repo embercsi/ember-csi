@@ -13,7 +13,6 @@ tools/
 .venv/
 *.py[cod]
 .*.sw?
-Dockerfile
-Dockerfile-master
+Dockerfile*
 csi_proto/
 travis-scripts/
