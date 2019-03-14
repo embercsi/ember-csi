@@ -1,20 +1,19 @@
 #!/usr/bin/env bash
+set -e
+
+EMBER_VERSION=`git describe --tags`
 
 if [ "$SOURCE_BRANCH" == "master" ]
 then
-  docker run -d --rm --name pypiserver -p 12345:8080 embercsi/pypiserver
-  for tag in master latest; do
-    echo "Building ember-csi $tag with cinderlib $tag ..."
-    docker build --build-arg VERSION=$tag --build-arg PIP_SERVER=ci-pypi.org --build-arg PIP_PORT=12345 -t $DOCKER_REPO:$tag -f Dockerfile .
-  done
-  docker stop pypiserver
-else
-  releases=`curl https://raw.githubusercontent.com/Akrog/cinderlib/master/rdo-releases`
-  cinderlib_pinned_stable_version=`cat hooks/cinderlib-pinned-stable-version`
+  STABLE_RELEASE=`tail -1 hooks/rdo-releases`
+  docker build --build-arg VERSION=$EMBER_VERSION --build-arg RELEASE=master -t $DOCKER_REPO:master -f Dockerfile .
+  # TODO: Uncomment once we release cinderlib in Stein
+  # docker build --build-arg VERSION=$EMBER_VERSION --build-arg RELEASE=$STABLE_RELEASE -t $DOCKER_REPO:latest -f Dockerfile .
 
+else
+  RDO_RELEASES=`cat hooks/rdo-releases`
   while read -r release; do
-      cinderlib_tag="${release}-cl_${cinderlib_pinned_stable_version}"
-      echo "Building $SOURCE_BRANCH with cinderlib $cinderlib_tag ..."
-      docker build --build-arg CINDERLIB_TAG=$cinderlib_tag -t $DOCKER_REPO:$release --build-arg VERSION=$SOURCE_BRANCH -f Dockerfile-release .
-  done <<< "$releases"
+    echo "Building $SOURCE_BRANCH with cinderlib $release ..."
+    docker build --build-arg VERSION=$EMBER_VERSION --build-arg RELEASE=$release --build -t $DOCKER_REPO:$release -f Dockerfile-release .
+  done <<< "$RDO_RELEASES"
 fi

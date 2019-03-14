@@ -2,15 +2,12 @@ build/
 dist/
 docs/
 examples/
-.git/
-.github/
+.*/
 groups/
 hooks/
 tests/
 tmp/
 tools/
-.tox/
-.venv/
 *.py[cod]
 .*.sw?
 Dockerfile*
