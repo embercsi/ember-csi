@@ -75,3 +75,4 @@ examples/k8s_v1.13-CSI_v1.0/site.retry
 
 .vagrant
 *.class
+system-files.tar

@@ -14,13 +14,19 @@ This demo is based on Luis Pabon's [Kubeup repository](https://github.com/lpabon
 
 ## Requirements
 
-Install qemu-kvm, libvirt, vagrant-libvirt, and ansible.
+* Install qemu-kvm, libvirt, vagrant-libvirt and ansible.
 
-* Fedora
+    - Fedora
 
-```
-$ sudo dnf -y install qemu-kvm libvirt vagrant-libvirt ansible
-```
+    ```
+    $ sudo dnf -y install qemu-kvm libvirt vagrant-libvirt ansible
+    ```
+
+* Start libvirt service.
+    - Fedora
+    ```
+    $ sudo systemctl start libvirtd
+    ```
 
 
 ## Configuration
@@ -116,10 +122,36 @@ $ sed -i "s/embercsi\/ember-csi:master/$MY_IP:5000\/ember-csi:testing/" kubeyml/
 
 With that, we are now ready to use our own custom image when deploying Ember-CSI in this example, but since we wanted to use the 3PAR backend we have to change the configuration editing `kubeyml/controller.yml` and changing the value of the environmental vairiable `X_CSI_BACKEND_CONFIG` with our backend's configuration.
 
+### Deploy sysfiles secret (for adding backend specific file requirements)
+
+#### Create 'system-files.tar' file
+
+##### Example for Ceph backend
+
+- Prepare the following tree structure:
+    - etc/ceph/ceph.conf
+    - etc/ceph/ceph.client.admin.keyring
+
+- Create the archive:
+    ```
+    $ tar -cvf system-files.tar etc
+    ```
+
+#### Modify 'kubeyml/rbd/01-controller.yml'
+
+##### Modify values of X_CSI_BACKEND_CONFIG and X_CSI_SYSTEM_FILES
+
+######  Example for an external Ceph backend
+```
+- name: X_CSI_BACKEND_CONFIG
+  value: '{"name":"rbd","driver":"RBD","rbd_user":"admin","rbd_pool":"volumes","rbd_ceph_conf":"/etc/ceph/ceph.conf","rbd_keyring_conf":"/etc/ceph/ceph.client.admin.keyring"}'
+- name: X_CSI_SYSTEM_FILES
+  value: '/tmp/ember-csi/system-files.tar'
+```
 
 ## Usage
 
-After the setup is completed the Kubernetes configuration is copied from the master node to the host, so we can use it locally as follows:
+After the setup is completed the Kubernetes configuration is copied from the master node to the host. If we have the Kubernetes client installed (in Fedora you can install it with `sudo dnf install -y kubernetes-client`) we can use it from our own machine as follows:
 
 ```
 $ kubectl --kubeconfig=kubeconfig.conf get nodes

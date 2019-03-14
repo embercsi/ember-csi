@@ -161,6 +161,8 @@ spec:
           value: '[{"rbd":"true"}]'
         - name: X_CSI_BACKEND_CONFIG
           value: '{"name":"ceph","driver":"RBD","rbd_user":"admin","rbd_pool":"rbd","rbd_ceph_conf":"/etc/ceph/ceph.conf","rbd_keyring_conf":"/etc/ceph/ceph.client.admin.keyring"}'
+        - name: X_CSI_SYSTEM_FILES
+          value: '/tmp/ember-csi/system-files.tar'
         livenessProbe:
           exec:
             command:
@@ -169,6 +171,8 @@ spec:
           periodSeconds: 90
           timeoutSeconds: 60
         volumeMounts:
+        - name: "system-files"
+          mountPath: /tmp/ember-csi
         - name: socket-dir
           mountPath: /csi-data
         - name: dev-dir
@@ -220,6 +224,9 @@ spec:
           - name: socket-dir
             mountPath: /csi-data
       volumes:
+      - name: "system-files"
+        secret:
+          secretName: sysfiles-secret
       - name: socket-dir
         emptyDir:
       - name: dev-dir
