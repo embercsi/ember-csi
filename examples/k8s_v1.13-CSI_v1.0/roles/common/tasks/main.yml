@@ -31,7 +31,7 @@
 # Pin kubernetes related packages to ensure we don't break every other day
 - name: install utility programs
   yum:
-    name: ['wget', 'ntp', 'screen', 'epel-release', 'vim', 'iptables', 'iptables-utils', 'iptables-services', 'ncurses-term', 'docker', 'kubelet-1.13.2', 'kubeadm-1.13.2', 'kubectl-1.13.2']
+    name: ['wget', 'ntp', 'screen', 'epel-release', 'vim', 'iptables', 'iptables-utils', 'iptables-services', 'ncurses-term', 'docker', 'kubelet-1.13.5', 'kubeadm-1.13.5', 'kubectl-1.13.5']
     state: present
     disable_gpg_check: yes
 
