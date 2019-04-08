@@ -87,7 +87,7 @@ spec:
             - name: registration-dir
               mountPath: /registration
         - name: csi-driver
-          image: embercsi/ember-csi:master
+          image: "{{ ember_image }}"
           securityContext:
             privileged: true
             allowPrivilegeEscalation: true
@@ -256,7 +256,7 @@ spec:
             - name: registration-dir
               mountPath: /registration
         - name: csi-driver
-          image: embercsi/ember-csi:master
+          image: "{{ ember_image }}"
           securityContext:
             privileged: true
             allowPrivilegeEscalation: true

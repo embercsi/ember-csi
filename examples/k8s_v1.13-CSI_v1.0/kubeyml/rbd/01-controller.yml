@@ -132,7 +132,7 @@ spec:
         - mountPath: /csi-data
           name: socket-dir
       - name: csi-driver
-        image: embercsi/ember-csi:master
+        image: "{{ ember_image }}"
         imagePullPolicy: Always
         securityContext:
           privileged: true
@@ -160,7 +160,7 @@ spec:
         - name: X_CSI_TOPOLOGIES
           value: '[{"rbd":"true"}]'
         - name: X_CSI_BACKEND_CONFIG
-          value: '{"name":"ceph","driver":"RBD","rbd_user":"admin","rbd_pool":"rbd","rbd_ceph_conf":"/etc/ceph/ceph.conf","rbd_keyring_conf":"/etc/ceph/ceph.client.admin.keyring"}'
+          value: '{{ ember_rbd_config }}'
         - name: X_CSI_SYSTEM_FILES
           value: '/tmp/ember-csi/system-files.tar'
         livenessProbe:

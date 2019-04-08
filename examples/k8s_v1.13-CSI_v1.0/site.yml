@@ -26,5 +26,7 @@
 
 - hosts: master_node
   become: yes
+  vars_files:
+    - "global_vars.yml"
   tasks:
     - import_tasks: setup_csi.yml

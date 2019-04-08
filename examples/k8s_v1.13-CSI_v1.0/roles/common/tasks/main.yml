@@ -52,7 +52,11 @@
 # We can easily run a registry with:
 #     docker run -d -p 5000:5000 --name registry registry:2
 - name: Allow connecting to our own insecure registry
-  copy: src=daemon.json owner=root group=root dest=/etc/docker/daemon.json
+  copy:
+    content: "{ \"insecure-registries\":[\"{{ ember_insecure_registry }}\"] }"
+    dest: /etc/docker/daemon.json
+    owner: root
+    group: root
 
 - name: enable kube services
   service: name={{ item }} state=started enabled=yes

@@ -36,12 +36,30 @@
 - name: Restart Scheduler and Manager containers
   shell: docker restart $(docker ps --filter "name=scheduler_kube|manager_kube" --format "{{'{{'}}.ID{{'}}'}}") || true
 
-- name: Copy YML files
-  copy:
-    src: kubeyml
-    dest: /home/vagrant
+- name: Create kubeyml directory
+  file:
+    path: /home/vagrant/kubeyml
+    state: directory
     owner: vagrant
     group: vagrant
+
+- name: Create kubeyml backend directories
+  file:
+    path: /home/vagrant/kubeyml/{{ item.path }}
+    state: directory
+    owner: vagrant
+    group: vagrant
+  with_filetree: kubeyml/
+  when: item.state == 'directory'
+
+- name: Copy rendered YAML files
+  template:
+    src: "{{ item.src }}"
+    dest: "/home/vagrant/kubeyml/{{ item.path }}"
+    owner: vagrant
+    group: vagrant
+  with_filetree: kubeyml/
+  when: item.state == 'file'
 
 - wait_for: timeout=20
   delegate_to: localhost

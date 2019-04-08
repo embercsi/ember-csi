@@ -112,15 +112,14 @@ $ docker run -d -p 5000:5000 --name registry registry:2
 $ docker push -t $MY_IP:5000/ember-csi:testing
 ```
 
-Then, we edit file `roles/common/files/daemon.json` and replace the IP with our own, so that docker can pull images from our insecure registry, and change the images we want to use:
+Then, we edit file `global_vars.yml` and replace the IP with our own, so that docker can pull images from our insecure registry, and change the images we want to use:
 
 ```
-$ sed -i "s/192.168.1.11:5000/$MY_IP:5000/" roles/common/files/daemon.json
-$ sed -i "s/embercsi\/ember-csi:master/$MY_IP:5000\/ember-csi:testing/" kubeyml/node.yml
-$ sed -i "s/embercsi\/ember-csi:master/$MY_IP:5000\/ember-csi:testing/" kubeyml/controller.yml
+$ sed -i "s/192.168.1.11:5000/$MY_IP:5000/" global_vars.yml
+$ sed -i "s/embercsi\/ember-csi:master/$MY_IP:5000\/ember-csi:testing/" global_vars.yml
 ```
 
-With that, we are now ready to use our own custom image when deploying Ember-CSI in this example, but since we wanted to use the 3PAR backend we have to change the configuration editing `kubeyml/controller.yml` and changing the value of the environmental vairiable `X_CSI_BACKEND_CONFIG` with our backend's configuration.
+With that, we are now ready to use our own custom image when deploying Ember-CSI in this example, but since we wanted to use the 3PAR backend we will also have to change the configuration editing `global_vars.yml` and changing the value of either `ember_lvm_config` or `ember_rbd_config` to replace one of the two backends.
 
 ### Deploy sysfiles secret (for adding backend specific file requirements)
 
@@ -134,19 +133,16 @@ With that, we are now ready to use our own custom image when deploying Ember-CSI
 
 - Create the archive:
     ```
-    $ tar -cvf system-files.tar etc
+    $ tar -cvf roles/master/files/system-files.tar etc
     ```
 
-#### Modify 'kubeyml/rbd/01-controller.yml'
+#### Modify 'global_vars.yml'
 
-##### Modify values of X_CSI_BACKEND_CONFIG and X_CSI_SYSTEM_FILES
+##### Modify values of ember_rbd_config
 
 ######  Example for an external Ceph backend
 ```
-- name: X_CSI_BACKEND_CONFIG
-  value: '{"name":"rbd","driver":"RBD","rbd_user":"admin","rbd_pool":"volumes","rbd_ceph_conf":"/etc/ceph/ceph.conf","rbd_keyring_conf":"/etc/ceph/ceph.client.admin.keyring"}'
-- name: X_CSI_SYSTEM_FILES
-  value: '/tmp/ember-csi/system-files.tar'
+  ember_rbd_config: '{"name":"rbd","driver":"RBD","rbd_user":"admin","rbd_pool":"volumes","rbd_ceph_conf":"/etc/ceph/ceph.conf","rbd_keyring_conf":"/etc/ceph/ceph.client.admin.keyring"}'
 ```
 
 ## Usage

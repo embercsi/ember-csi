@@ -134,7 +134,7 @@ spec:
         - mountPath: /csi-data
           name: socket-dir
       - name: csi-driver
-        image: embercsi/ember-csi:master
+        image: "{{ ember_image }}"
         # command: ["tail"]
         # args: ["-f", "/dev/null"]
         imagePullPolicy: Always
@@ -164,7 +164,7 @@ spec:
         - name: X_CSI_TOPOLOGIES
           value: '[{"iscsi":"true"}]'
         - name: X_CSI_BACKEND_CONFIG
-          value: '{"target_protocol":"iscsi","target_ip_address":"192.168.10.90","name":"lvm","driver":"LVMVolume","volume_group":"ember-volumes","target_helper":"lioadm","multipath":false}'
+          value: '{{ ember_lvm_config }}'
         livenessProbe:
           exec:
             command:
