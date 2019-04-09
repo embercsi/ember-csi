@@ -64,6 +64,7 @@ class CSIMeta(type):
 
 class IdentityBase(object):
     __metaclass__ = CSIMeta
+
     # CSI and TYPES attributes must be defined on inheriting classes
     CSI = None
     TYPES = None
