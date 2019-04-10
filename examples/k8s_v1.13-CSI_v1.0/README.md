@@ -56,7 +56,7 @@ Bringing machine 'node1' up with 'libvirt' provider...
 [ . . . ]
 
 PLAY RECAP *********************************************************************
-master                     : ok=64   changed=52   unreachable=0    failed=0
+master                     : ok=69   changed=57   unreachable=0    failed=0
 node0                      : ok=22   changed=20   unreachable=0    failed=0
 node1                      : ok=22   changed=20   unreachable=0    failed=0
 ```
@@ -78,7 +78,7 @@ Bringing machine 'node1' up with 'libvirt' provider...
 [ . . . ]
 
 PLAY RECAP *********************************************************************
-master                     : ok=64   changed=52   unreachable=0    failed=0
+master                     : ok=69   changed=57   unreachable=0    failed=0
 node0                      : ok=22   changed=20   unreachable=0    failed=0
 node1                      : ok=22   changed=20   unreachable=0    failed=0
 ```
@@ -173,7 +173,6 @@ Unless stated otherwise, all the following commands are run assuming we are in t
 We can check that the CSI *controller* services are running in master and that they have been registered in Kubernetes as `CSIDrivers.csi.storage.k8s.io` objects:
 
 ```
-[vagrant@master ~]$ kubectl get pod csi-controller-0 csi-rbd-0
 [vagrant@master ~]$ kubectl get pod csi-controller-0 csi-rbd-0
 NAME               READY   STATUS    RESTARTS   AGE
 csi-controller-0   6/6     Running   0          8m50s
@@ -965,3 +964,5 @@ Remember that, for debugging purposes, besides the logs, you can also get a Pyth
 ```
 $ kubectl exec csi-controller-0 -c csi-driver -- kill -USR1 1
 ```
+
+You can also enabled the debug mode in the logs just changing the `ember_debug_logs` value to `true` in the `global_vars.yml` file.

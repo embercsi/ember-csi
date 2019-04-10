@@ -154,9 +154,7 @@ spec:
         - name: X_CSI_PERSISTENCE_CONFIG
           value: '{"storage":"crd"}'
         - name: X_CSI_EMBER_CONFIG
-          # Comment next line and uncomment the one after it for debug logs
-          value: '{"plugin_name":"rbd","enable_probe":true}'
-          # value: '{"debug": true,"plugin_name":"rbd","enable_probe":true}'
+          value: '{"plugin_name":"rbd","debug":{{ ember_debug_logs | to_json }},"enable_probe":true}'
         - name: X_CSI_TOPOLOGIES
           value: '[{"rbd":"true"}]'
         - name: X_CSI_BACKEND_CONFIG
