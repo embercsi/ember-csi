@@ -185,7 +185,7 @@ spec:
         # In a real deployment we should be mounting container's
         # /var/lib-ember-csi on the host
       - name: ceph-cluster
-        image: ceph/daemon:latest-luminous
+        image: ceph/daemon:latest-mimic
         args: ["demo"]
         env:
           - name: MON_IP
