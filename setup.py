@@ -10,20 +10,17 @@ with open('HISTORY.md') as history_file:
     history = history_file.read()
 
 requirements = [
-    # Once we release cinderlib with cinder we must pin this one
-    'cinder',
-    'grpcio==1.12.0',
+    'cinderlib>=0.9.0',
+    'grpcio==1.15.0',
     # GRPCIO v1.12.0 has broken dependencies, so we include them here
     'protobuf>=3.5.0.post1',
     # For the CRD persistent metadata plugin
     'kubernetes==7.0.0',
     # Needed because some Kubernetes dependencies use version in format of 4.*
-    'setuptools==40.0.0',
+    'setuptools>=40.0.0',
 ]
 
 dependency_links = [
-    # From github until cinderlib's latest code is published in pip
-    'git+https://github.com/akrog/cinderlib.git@master#egg=cinderlib-1',
 ]
 
 test_requirements = [
