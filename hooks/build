@@ -7,8 +7,7 @@ if [ "$SOURCE_BRANCH" == "master" ]
 then
   STABLE_RELEASE=`tail -1 hooks/rdo-releases`
   docker build --build-arg VERSION=$EMBER_VERSION --build-arg RELEASE=master -t $DOCKER_REPO:master -f Dockerfile .
-  # TODO: Uncomment once we release cinderlib in Stein
-  # docker build --build-arg VERSION=$EMBER_VERSION --build-arg RELEASE=$STABLE_RELEASE -t $DOCKER_REPO:latest -f Dockerfile .
+  docker build --build-arg VERSION=$EMBER_VERSION --build-arg RELEASE=$STABLE_RELEASE -t $DOCKER_REPO:latest -f Dockerfile .
 
 else
   RDO_RELEASES=`cat hooks/rdo-releases`

@@ -4,8 +4,7 @@ set -e
 # Push ember-csi master branches
 if [ "$SOURCE_BRANCH" == "master" ]
 then
-  # TODO: Add latest once we release cinderlib in Stein
-  for tag in master; do
+  for tag in master latest; do
     echo "Pushing $tag ..."
     docker push $DOCKER_REPO:$tag
   done
