@@ -15,17 +15,16 @@ ENV PYTHONUNBUFFERED=true
 # For the Master version expose RPDB port to support remote debugging
 EXPOSE 50051 4444
 
-# We first check that we have access to the PyPi server
 RUN yum -y install targetcli iscsi-initiator-utils device-mapper-multipath epel-release lvm2 which && \
-    yum -y install python2-pip pywbem centos-release-openstack-${RELEASE} && \
-    yum -y install cinderlib xfsprogs e2fsprogs btrfs-progs nmap-ncat && \
+    yum -y install python2-pip pywbem python2-kubernetes centos-release-openstack-${RELEASE} && \
+    yum -y install python-cinderlib xfsprogs e2fsprogs btrfs-progs nmap-ncat && \
     # We need to upgrade pyasn1 because the package for RDO is not new enough for
     # pyasn1_modules, which is used by some of the Google's libraries
     pip install --no-cache-dir --upgrade 'pyasn1<0.5.0,>=0.4.1' future && \
     # Install driver specific RPM dependencies
-    yum -y install python-rbd ceph-common && \
+    yum -y install python-rbd ceph-common pyOpenSSL && \
     # Install driver specific PyPi dependencies
-    pip install --no-cache-dir krest purestorage pyxcli pyOpenSSL && \
+    pip install --no-cache-dir krest purestorage pyxcli && \
     yum clean all && \
     rm -rf /var/cache/yum
 
