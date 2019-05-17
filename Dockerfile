@@ -23,7 +23,7 @@ EXPOSE 50051 4444
 
 # We first check that we have access to the PyPi server
 RUN yum -y install targetcli iscsi-initiator-utils device-mapper-multipath epel-release lvm2 which && \
-    yum -y install python2-pip pywbem && \
+    yum -y install python2-pip pywbem python2-kubernetes && \
     yum -y install xfsprogs e2fsprogs btrfs-progs nmap-ncat && \
     # We need to upgrade pyasn1 because the package for RDO is not new enough for
     # pyasn1_modules, which is used by some of the Google's libraries
@@ -32,9 +32,9 @@ RUN yum -y install targetcli iscsi-initiator-utils device-mapper-multipath epel-
     if [ "$RELEASE" = "master" ]; then curl -o /etc/yum.repos.d/rdo-trunk-runtime-deps.repo https://trunk.rdoproject.org/centos7-master/rdo-trunk-runtime-deps.repo; curl -o /etc/yum.repos.d/delorean.repo https://trunk.rdoproject.org/centos7-master/current/delorean.repo; else yum -y install centos-release-openstack-${RELEASE}; fi && \
     yum -y install python-cinderlib && \
     # Install driver specific RPM dependencies
-    yum -y install python-rbd ceph-common && \
+    yum -y install python-rbd ceph-common pyOpenSSL && \
     # Install driver specific PyPi dependencies
-    pip install --no-cache-dir krest purestorage pyxcli pyOpenSSL && \
+    pip install --no-cache-dir krest purestorage pyxcli && \
     yum clean all && \
     rm -rf /var/cache/yum
 

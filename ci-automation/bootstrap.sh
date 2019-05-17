@@ -10,12 +10,10 @@ curl -o /etc/yum.repos.d/delorean.repo https://trunk.rdoproject.org/centos7-mast
 
 PKGS=(epel-release)
 yum install --setopt=skip_missing_names_on_install=False -y "${PKGS[@]}"
-PKGS=(git gcc python-devel lvm2 docker python2-pip e2fsprogs iscsi-initiator-utils python-cinderlib)
+PKGS=(git gcc python-devel lvm2 docker python2-pip e2fsprogs iscsi-initiator-utils python2-kubernetes python-cinderlib)
 yum install --setopt=skip_missing_names_on_install=False -y "${PKGS[@]}"
 
 systemctl start docker.service iscsid.service
 
-# We need to upgrade setuptools to >= 40.0.0 to support 4.* format in requirements
-pip install --upgrade setuptools
 pip install -r $home/requirements_dev.txt
 pip install -e $home/..
