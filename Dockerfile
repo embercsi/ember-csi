@@ -6,11 +6,21 @@
 FROM centos:7
 ARG RELEASE=master
 ARG VERSION=master
+ARG BUILD_DATE
+ARG VCS_REF
+ARG TAG
 
 LABEL maintainers="Gorka Eguileor <geguileo@redhat.com>" \
-      description="Ember CSI Plugin" \
+      openstack_release=${RELEASE} \
       version=${VERSION} \
-      cinderlib_release=${RELEASE}
+      description="Ember CSI Plugin" \
+      org.label-schema.schema-version="1.0" \
+      org.label-schema.name="ember-csi" \
+      org.label-schema.description="Ember CSI Plugin" \
+      org.label-schema.url="https://ember-csi.io" \
+      org.label-schema.build-date=${BUILD_DATE} \
+      org.label-schema.vcs-url="https://github.com/embercsi/ember-csi" \
+      org.label-schema.vcs-ref=${VCS_REF}
 
 # Enable RPDB debugging on this container by default
 ENV X_CSI_DEBUG_MODE=rpdb \
