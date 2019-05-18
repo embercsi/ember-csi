@@ -30,7 +30,7 @@ test_requirements = [
 
 setuptools.setup(
     name='ember-csi',
-    version='0.0.2',
+    version='0.9.0rc1',
     description=("Multi-vendor CSI plugin supporting over 80 storage drivers"),
     long_description=readme + '\n---\n' + history,
     long_description_content_type='text/markdown',
@@ -47,8 +47,9 @@ setuptools.setup(
     zip_safe=True,
     keywords='ember_csi',
     classifiers=[
-        'Development Status :: 2 - Pre-Alpha',
+        'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',
+        'Intended Audience :: Information Technology',
         'License :: OSI Approved :: Apache Software License',
         'Natural Language :: English',
         "Programming Language :: Python :: 2",

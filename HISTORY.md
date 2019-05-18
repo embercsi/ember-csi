@@ -1,18 +1,26 @@
 # History
 
 
-## 0.0.x (2018-XX-XX)
+## 0.9.0 (2019-05-20)
+
+Beta release with full CSI v0.2, v0.3, and v1.0 spec support.
 
 ### Features
 
+- Multi-driver support on single container
 - Support for mount filesystems
-- Check presence of REQUIRED fields
-- Log requests and responses
-- Support defining default mount filesystem
-- Show supported CSI spec version on start
+- Support for block
+- Topology support
+- Snapshot support
+- Liveness probe
+- CRD metadata persistence plugin
+- Multi-version support on single container
+- Aliases for configuration
+- Storage driver list tool
 - Support live debugging of running driver
-- Add CRD metadata persistence plugin for Kubernetes
-- Support queuing duplicated requests
+- Duplicated requests queuing support (for k8s)
+- Support of mocked probe
+- Configurable default mount filesystem
 
 ### Bugs
 
