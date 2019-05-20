@@ -31,7 +31,7 @@ else
            --build-arg BUILD_DATE=`date -u +"%Y-%m-%dT%H:%M:%SZ"` \
            --build-arg VCS_REF=`git rev-parse --short HEAD` \
            --build-arg TAG=$SOURCE_BRANCH \
-           --build -t $DOCKER_REPO:$release \
+           -t $DOCKER_REPO:$release \
            -f Dockerfile-release .
   done <<< "$RDO_RELEASES"
 fi

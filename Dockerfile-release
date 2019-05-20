@@ -1,12 +1,10 @@
-ARG RELEASE=master
-ARG VERSION=master
+FROM centos:7
+ARG RELEASE
+ARG VERSION
 ARG BUILD_DATE
 ARG VCS_REF
 ARG TAG
 
-org.label-schema.vcs-ref=$VCS_REF \
-
-FROM centos:7
 LABEL maintainers="Gorka Eguileor <geguileo@redhat.com>" \
       openstack_release=${RELEASE} \
       version=${VERSION} \
@@ -28,14 +26,14 @@ ENV PYTHONUNBUFFERED=true
 # For the Master version expose RPDB port to support remote debugging
 EXPOSE 50051 4444
 
-RUN yum -y install targetcli iscsi-initiator-utils device-mapper-multipath epel-release lvm2 which && \
-    yum -y install python2-pip pywbem python2-kubernetes centos-release-openstack-${RELEASE} && \
-    yum -y install python-cinderlib xfsprogs e2fsprogs btrfs-progs nmap-ncat && \
+RUN yum -y install --setopt=skip_missing_names_on_install=False targetcli iscsi-initiator-utils device-mapper-multipath epel-release lvm2 which && \
+    yum -y install --setopt=skip_missing_names_on_install=False python2-pip pywbem python2-kubernetes centos-release-openstack-${RELEASE} && \
+    yum -y install --setopt=skip_missing_names_on_install=False python-cinderlib xfsprogs e2fsprogs btrfs-progs nmap-ncat && \
     # We need to upgrade pyasn1 because the package for RDO is not new enough for
     # pyasn1_modules, which is used by some of the Google's libraries
-    pip install --no-cache-dir --upgrade 'pyasn1<0.5.0,>=0.4.1' future "ember-csi==$TAG" && \
+    pip install --no-cache-dir --upgrade 'pyasn1<0.5.0,>=0.4.1' future "ember-csi==${TAG}" && \
     # Install driver specific RPM dependencies
-    yum -y install python-rbd ceph-common pyOpenSSL && \
+    yum -y install --setopt=skip_missing_names_on_install=False python-rbd ceph-common pyOpenSSL && \
     # Install driver specific PyPi dependencies
     pip install --no-cache-dir krest purestorage pyxcli && \
     yum clean all && \
