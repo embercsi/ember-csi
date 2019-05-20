@@ -33,7 +33,7 @@ RUN yum -y install targetcli iscsi-initiator-utils device-mapper-multipath epel-
     yum -y install python-cinderlib xfsprogs e2fsprogs btrfs-progs nmap-ncat && \
     # We need to upgrade pyasn1 because the package for RDO is not new enough for
     # pyasn1_modules, which is used by some of the Google's libraries
-    pip install --no-cache-dir --upgrade 'pyasn1<0.5.0,>=0.4.1' future ember-csi && \
+    pip install --no-cache-dir --upgrade 'pyasn1<0.5.0,>=0.4.1' future "ember-csi==${TAG}" && \
     # Install driver specific RPM dependencies
     yum -y install python-rbd ceph-common pyOpenSSL && \
     # Install driver specific PyPi dependencies
