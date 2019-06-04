@@ -1,7 +1,7 @@
 # History
 
 
-## 0.9.0 (2019-05-20)
+## 0.9.0 (2019-06-04)
 
 Beta release with full CSI v0.2, v0.3, and v1.0 spec support.
 
