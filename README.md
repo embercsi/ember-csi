@@ -440,14 +440,11 @@ For any questions or concerns please file an issue with the [ember-csi](https://
 There are many things that need to be done in this POC driver, and here's a non exhaustive list:
 
 - Support for NFS volumes
-- Support for Kubernetes CRDs as the persistence storage
 - Unit tests
 - Functional tests
 - Improve received parameters checking
 - Make driver more resilient
-- Test driver in Kubernetes
 - Review some of the returned error codes
-- Support volume attributes via volume types
 - Look into multi-attaching
 - Support read-only mode
 - Report capacity based on over provisioning values
