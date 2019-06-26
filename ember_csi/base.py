@@ -457,6 +457,7 @@ class ControllerBase(IdentityBase):
     def _paginate(self, request, context, resources):
         resources = sorted(resources, key=lambda res: res.created_at)
 
+        end = len(resources)
         if request.starting_token:
             try:
                 marker = common.nano_to_date(request.starting_token)
@@ -468,13 +469,14 @@ class ControllerBase(IdentityBase):
                 if res.created_at > marker:
                     start = i
                     break
+            else:
+                start = end
         else:
             start = 0
 
-        if not resources:
+        if not resources or start == end:
             return [], None
 
-        end = len(resources)
         if request.max_entries:
             end = min(start + request.max_entries, end)
 

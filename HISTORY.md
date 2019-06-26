@@ -5,6 +5,7 @@
 ## Bugs:
 
 - Fix listings with invalid token
+- Fix list pagination with future tokens
 
 ## 0.9.0 (2019-06-04)
 
