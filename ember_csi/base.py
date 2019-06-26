@@ -457,21 +457,22 @@ class ControllerBase(IdentityBase):
     def _paginate(self, request, context, resources):
         resources = sorted(resources, key=lambda res: res.created_at)
 
-        if not resources:
-            return [], None
-
         if request.starting_token:
             try:
                 marker = common.nano_to_date(request.starting_token)
             except ValueError:
                 context.abort(grpc.StatusCode.ABORTED,
                               'Invalid starting_token')
+
             for i, res in enumerate(resources):
                 if res.created_at > marker:
                     start = i
                     break
         else:
             start = 0
+
+        if not resources:
+            return [], None
 
         end = len(resources)
         if request.max_entries:

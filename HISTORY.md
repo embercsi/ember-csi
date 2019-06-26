@@ -1,5 +1,10 @@
 # History
 
+## 1.0.0 (2019-xx-yy)
+
+## Bugs:
+
+- Fix listings with invalid token
 
 ## 0.9.0 (2019-06-04)
 
