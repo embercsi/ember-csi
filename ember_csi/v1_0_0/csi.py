@@ -69,7 +69,7 @@ class Controller(base.TopologyBase, base.SnapshotBase, base.ControllerBase):
         if src_vol.status not in ('available', 'in-use'):
             context.abort(grpc.StatusCode.INVALID_ARGUMENT,
                           'Volume %s is not available' % vol_id)
-        if src_vol.volume_size > vol_size:
+        if src_vol.size > vol_size:
             context.abort(grpc.StatusCode.OUT_OF_RANGE,
                           'Volume %s is bigger than requested volume' % vol_id)
         vol = src_vol.clone(name=name, size=vol_size, **params)
