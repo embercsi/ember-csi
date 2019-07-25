@@ -1,5 +1,13 @@
 # History
 
+## 1.0.0 (2019-xx-yy)
+
+## Bugs:
+
+- Fix listings with invalid token
+- Fix list pagination with future tokens
+- Fix volume cloning
+- Fix getting volume stats
 
 ## 0.9.0 (2019-06-04)
 

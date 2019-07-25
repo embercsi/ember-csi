@@ -73,6 +73,7 @@ class IdentityBase(object):
     DEFAULT_MKFS_ARGS = tuple()
     MKFS_ARGS = {'ext4': ('-F',)}
     PLUGIN_CAPABILITIES = []
+    CONTAINERIZED = os.stat('/proc').st_dev > 4
 
     def __init__(self, server, cinderlib_cfg):
         # Skip if we've already been initialized (happens on class All)
@@ -457,23 +458,26 @@ class ControllerBase(IdentityBase):
     def _paginate(self, request, context, resources):
         resources = sorted(resources, key=lambda res: res.created_at)
 
-        if not resources:
-            return [], None
-
+        end = len(resources)
         if request.starting_token:
             try:
                 marker = common.nano_to_date(request.starting_token)
             except ValueError:
                 context.abort(grpc.StatusCode.ABORTED,
                               'Invalid starting_token')
+
             for i, res in enumerate(resources):
                 if res.created_at > marker:
                     start = i
                     break
+            else:
+                start = end
         else:
             start = 0
 
-        end = len(resources)
+        if not resources or start == end:
+            return [], None
+
         if request.max_entries:
             end = min(start + request.max_entries, end)
 
@@ -565,7 +569,10 @@ class NodeBase(IdentityBase):
     def _get_device(self, path):
         for line in self._get_mountinfo():
             if line[4] == path:
-                return line[9] if line[9].startswith('/') else line[3]
+                position = 8 if self.CONTAINERIZED else 9
+                if line[position].startswith('/'):
+                    return line[position]
+                return line[3]
         return None
 
     IS_RO_REGEX = re.compile(r'(^|.+,)ro($|,.+)')
