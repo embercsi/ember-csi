@@ -173,6 +173,8 @@ class Config(object):
         return name, project_name
 
     def validate(self):
+        self._untar_file(self.SYSTEM_FILES)
+
         if self.MODE not in ('controller', 'node', 'all'):
             LOG.error('Invalid mode value (%s)' % self.MODE)
             exit(constants.ERROR_MODE)
@@ -216,7 +218,6 @@ class Config(object):
         self._map_backend_config(self.BACKEND_CONFIG)
         self._set_topology_config()
         self._create_default_dirs_files()
-        self._untar_file(self.SYSTEM_FILES)
 
     @staticmethod
     def _get_drivers_map():
