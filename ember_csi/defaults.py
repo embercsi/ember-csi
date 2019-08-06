@@ -25,11 +25,13 @@ LOCKS_DIR = '$state_path/locks'
 REQUEST_MULTIPATH = False
 WORKERS = 30
 ENABLE_PROBE = False
+HAS_SLOW_OPERATIONS = True
 EMBER_CFG = {'project_id': NAME, 'user_id': NAME, 'plugin_name': '',
              'root_helper': ROOT_HELPER,
              'request_multipath': REQUEST_MULTIPATH,
              'file_locks_path': LOCKS_DIR, 'state_path': STATE_PATH,
-             'enable_probe': ENABLE_PROBE, 'grpc_workers': WORKERS}
+             'enable_probe': ENABLE_PROBE, 'grpc_workers': WORKERS,
+             'slow_operations': HAS_SLOW_OPERATIONS}
 
 LOGGING_FORMAT = ('%(asctime)s %(project_name)s %(levelname)s %(name)s '
                   '[%(request_id)s] %(message)s')
