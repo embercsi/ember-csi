@@ -40,8 +40,24 @@ def main():
     CONF.validate()
     server_class = _get_csi_server_class(class_name=CONF.MODE.title())
 
-    server = grpc.server(
-        futures.ThreadPoolExecutor(max_workers=CONF.WORKERS))
+    if CONF.HAS_SLOW_OPERATIONS:
+        options = (
+            # allow keepalive pings when there's no gRPC calls
+            ('grpc.keepalive_permit_without_calls', True),
+            # allow unlimited amount of keepalive pings without data
+            ('grpc.http2.max_pings_without_data', 0),
+            # allow grpc pings from client every 1 seconds
+            ('grpc.http2.min_time_between_pings_ms', 1000),
+            # allow grpc pings from client without data every 1 seconds
+            ('grpc.http2.min_ping_interval_without_data_ms',  1000),
+            # Support unlimited misbehaving pings
+            ('grpc.http2.max_ping_strikes', 0),
+        )
+    else:
+        options = None
+
+    server = grpc.server(futures.ThreadPoolExecutor(max_workers=CONF.WORKERS),
+                         options=options)
     workarounds.grpc_eventlet(server)
     node_id = CONF.NAME + '.' + CONF.NODE_ID
     csi_plugin = server_class(server=server,

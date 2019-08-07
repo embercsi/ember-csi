@@ -134,6 +134,7 @@ class Config(object):
         self.PLUGIN_NAME = EMBER_CONFIG['plugin_name']
         self.ENABLE_PROBE = EMBER_CONFIG.pop('enable_probe',
                                              defaults.ENABLE_PROBE)
+        self.HAS_SLOW_OPERATIONS = EMBER_CONFIG.pop('slow_operations')
         self.EMBER_CONFIG = EMBER_CONFIG
 
         self._set_logging(self.EMBER_CONFIG)
