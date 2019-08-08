@@ -44,7 +44,7 @@ RUN yum -y install targetcli iscsi-initiator-utils device-mapper-multipath epel-
     # Install driver specific RPM dependencies
     yum -y install python-rbd ceph-common pyOpenSSL && \
     # Install driver specific PyPi dependencies
-    pip install --no-cache-dir krest purestorage pyxcli && \
+    pip install --no-cache-dir krest purestorage pyxcli python-3parclient && \
     yum clean all && \
     rm -rf /var/cache/yum
 
