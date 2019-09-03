@@ -32,6 +32,8 @@ RUN yum -y install --setopt=skip_missing_names_on_install=False targetcli iscsi-
     # We need to upgrade pyasn1 because the package for RDO is not new enough for
     # pyasn1_modules, which is used by some of the Google's libraries
     pip install --no-cache-dir --upgrade 'pyasn1<0.5.0,>=0.4.1' future "ember-csi==${TAG}" && \
+    # Add build metadata (date and time when the container was generated) to the version reported by Ember-CSI following semver notation: https://semver.org/#spec-item-10
+    sed -i -r "s/^(VENDOR_VERSION = ').+'/\1${VERSION}+`date +%d%m%Y%H%M%S%N`'/" /ember-csi/ember_csi/constants.py && \
     # Install driver specific RPM dependencies
     yum -y install --setopt=skip_missing_names_on_install=False python-rbd ceph-common pyOpenSSL && \
     # Install driver specific PyPi dependencies

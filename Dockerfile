@@ -50,7 +50,14 @@ RUN yum -y install targetcli iscsi-initiator-utils device-mapper-multipath epel-
 
 COPY . /ember-csi
 
-RUN pip install --no-cache-dir -e /ember-csi
+# Add build metadata (date and time when the container was generated) to the
+# version reported by Ember-CSI following semver notation:
+# https://semver.org/#spec-item-10
+# TODO: Maybe use pbr instead of doing it manually
+RUN sed -i -r "s/^(VENDOR_VERSION = ').+'/\1${VERSION}+`date +%d%m%Y%H%M%S%N`'/" /ember-csi/ember_csi/constants.py && \
+    sed -i -r "s/(version=').+'/\1$VERSION+`date +%d%m%Y%H%M%S%N`'/" /ember-csi/setup.py && \
+    sed -i -r "s/^(__version__ = ').*'$/\1${VERSION}+`date +%d%m%Y%H%M%S%N`'/" /ember-csi/ember_csi/__init__.py && \
+    pip install --no-cache-dir -e /ember-csi
 
 # Define default command
 CMD ["ember-csi"]
