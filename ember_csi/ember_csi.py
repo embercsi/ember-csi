@@ -18,6 +18,9 @@
 from __future__ import absolute_import
 from concurrent import futures
 import importlib
+import os
+import signal
+import threading
 import time
 
 import eventlet
@@ -34,6 +37,10 @@ from ember_csi import workarounds
 
 CONF = config.CONF
 LOG = logging.getLogger(__name__)
+SHUTDOWN_EVENT = threading.Event()
+# Give priority to graceful stop (30 minutes timeout) over quick stop, and let
+# the operator kill us sooner if necessary.
+GRACEFUL_TIMEOUT = 30
 
 
 def main():
@@ -58,6 +65,10 @@ def main():
 
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=CONF.WORKERS),
                          options=options)
+
+    signal.signal(signal.SIGTERM, shutdown_handler)
+    signal.signal(signal.SIGINT, shutdown_handler)
+
     workarounds.grpc_eventlet(server)
     node_id = CONF.NAME + '.' + CONF.NODE_ID
     csi_plugin = server_class(server=server,
@@ -76,11 +87,35 @@ def main():
     server.start()
     LOG.info('Now serving on %s...' % CONF.ENDPOINT)
 
-    try:
-        while True:
-            time.sleep(constants.ONE_DAY_IN_SECONDS)
-    except KeyboardInterrupt:
-        server.stop(0)
+    # Wait until we receive a signal to stop the server
+    SHUTDOWN_EVENT.wait()
+
+    stop_server(server)
+
+
+def shutdown_handler(signum, stack):
+    # NOTE: We cannot stop everything here because if we call server.stop we
+    # get error: "AssertionError: Cannot switch to MAINLOOP from MAINLOOP", so
+    # we let the main loop stop the server
+    signal_name = 'SIGTERM' if signum == signal.SIGTERM else 'SIGINT'
+    LOG.info('Received signal %s' % signal_name)
+    SHUTDOWN_EVENT.set()
+
+
+def stop_server(server):
+    def force_stop():
+        time.sleep(2)
+        LOG.error('Failed to stop process, killing ourselves')
+        os.kill(os.getpid(), signal.SIGKILL)
+
+    LOG.info('Gracefully stopping server')
+    shutdown_hadler = server.stop(60 * GRACEFUL_TIMEOUT)
+    shutdown_hadler.wait()
+
+    # There is threading issue and the process doesn't actually stop until all
+    # the threads have completed.  So we start a thread that forcefully kills
+    # us in 2 seconds if that's the case.
+    threading.Thread(target=force_stop).start()
 
 
 def _get_csi_server_class(class_name):
