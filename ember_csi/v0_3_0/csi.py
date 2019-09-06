@@ -33,12 +33,12 @@ class Controller(base.TopologyBase, base.SnapshotBase, base.ControllerBase):
     CSI = csi
     TYPES = types
     DELETE_SNAP_RESP = types.DeleteSnapResp()
-    CTRL_CAPABILITIES = (types.CtrlCapabilityType.CREATE_DELETE_VOLUME,
+    CTRL_CAPABILITIES = [types.CtrlCapabilityType.CREATE_DELETE_VOLUME,
                          types.CtrlCapabilityType.PUBLISH_UNPUBLISH_VOLUME,
                          types.CtrlCapabilityType.LIST_VOLUMES,
                          types.CtrlCapabilityType.GET_CAPACITY,
                          types.CtrlCapabilityType.CREATE_DELETE_SNAPSHOT,
-                         types.CtrlCapabilityType.LIST_SNAPSHOTS)
+                         types.CtrlCapabilityType.LIST_SNAPSHOTS]
 
     def __init__(self, server, persistence_config, backend_config,
                  ember_config=None, **kwargs):
@@ -60,6 +60,7 @@ class Controller(base.TopologyBase, base.SnapshotBase, base.ControllerBase):
                                                           request, context,
                                                           **params)
         # Check size
+        self._fail_if_disabled(context, constants.SNAPSHOT_FEATURE)
         source = request.volume_content_source
         vol = self._create_from_snap(source.snapshot.snapshot_id, vol_size,
                                      request.name, context, **params)

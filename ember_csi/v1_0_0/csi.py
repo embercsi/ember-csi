@@ -36,15 +36,14 @@ class Controller(base.TopologyBase, base.SnapshotBase, base.ControllerBase):
     CSI = csi
     TYPES = types
     DELETE_SNAP_RESP = types.DeleteSnapResp()
-    CTRL_CAPABILITIES = (types.CtrlCapabilityType.CREATE_DELETE_VOLUME,
+    CTRL_CAPABILITIES = [types.CtrlCapabilityType.CREATE_DELETE_VOLUME,
                          types.CtrlCapabilityType.PUBLISH_UNPUBLISH_VOLUME,
                          types.CtrlCapabilityType.LIST_VOLUMES,
                          types.CtrlCapabilityType.GET_CAPACITY,
                          types.CtrlCapabilityType.CREATE_DELETE_SNAPSHOT,
                          types.CtrlCapabilityType.LIST_SNAPSHOTS,
                          types.CtrlCapabilityType.CLONE_VOLUME,
-                         types.CtrlCapabilityType.PUBLISH_READONLY,
-                         )
+                         types.CtrlCapabilityType.PUBLISH_READONLY]
 
     def __init__(self, server, persistence_config, backend_config,
                  ember_config=None, **kwargs):
@@ -59,6 +58,13 @@ class Controller(base.TopologyBase, base.SnapshotBase, base.ControllerBase):
     def _validate_requirements(self, request, context):
         super(Controller, self)._validate_requirements(request, context)
         self._validate_accessibility(request, context)
+
+    def _disable_features(self, features):
+        if constants.CLONE_FEATURE not in features:
+            return
+        capab = types.CtrlCapabilityType.CLONE_VOLUME
+        if capab in self.CTRL_CAPABILITIES:
+                self.CTRL_CAPABILITIES.remove(capab)
 
     def _create_from_vol(self, vol_id, vol_size, name, context, **params):
         src_vol = self._get_vol(volume_id=vol_id)
@@ -83,10 +89,12 @@ class Controller(base.TopologyBase, base.SnapshotBase, base.ControllerBase):
         # Check size
         source = request.volume_content_source
         if source.HasField('snapshot'):
+            self._fail_if_disabled(context, constants.SNAPSHOT_FEATURE)
             vol = self._create_from_snap(source.snapshot.snapshot_id, vol_size,
                                          request.name, context, **params)
 
         else:
+            self._fail_if_disabled(context, constants.CLONE_FEATURE)
             vol = self._create_from_vol(source.volume.volume_id, vol_size,
                                         request.name, context, **params)
         return vol

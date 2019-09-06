@@ -31,7 +31,7 @@ EMBER_CFG = {'project_id': NAME, 'user_id': NAME, 'plugin_name': '',
              'request_multipath': REQUEST_MULTIPATH,
              'file_locks_path': LOCKS_DIR, 'state_path': STATE_PATH,
              'enable_probe': ENABLE_PROBE, 'grpc_workers': WORKERS,
-             'slow_operations': HAS_SLOW_OPERATIONS}
+             'slow_operations': HAS_SLOW_OPERATIONS, 'disabled': tuple()}
 
 LOGGING_FORMAT = ('%(asctime)s %(project_name)s %(levelname)s %(name)s '
                   '[%(request_id)s] %(message)s')

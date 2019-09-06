@@ -75,10 +75,12 @@ class IdentityBase(object):
     PLUGIN_CAPABILITIES = []
     CONTAINERIZED = os.stat('/proc').st_dev > 4
 
-    def __init__(self, server, cinderlib_cfg):
+    def __init__(self, server, ember_config):
         # Skip if we've already been initialized (happens on class All)
         if self.manifest is not None:
             return
+
+        self.disable_features(ember_config)
 
         self.csi_version = version.StrictVersion(CONF.CSI_SPEC)
         self.PLUGIN_CAPABILITIES.append(
@@ -88,7 +90,7 @@ class IdentityBase(object):
         self.PLUGIN_CAPABILITIES_RESP = self.TYPES.CapabilitiesResp(
             capabilities=caps)
 
-        self.root_helper = ((cinderlib_cfg or {}).get('root_helper') or
+        self.root_helper = ((ember_config or {}).get('root_helper') or
                             defaults.ROOT_HELPER)
 
         manifest = {
@@ -117,6 +119,32 @@ class IdentityBase(object):
         self.manifest = manifest
         self.PROBE_KV = cinderlib.objects.KeyValue('%s.%s.%s.%s' % (
             CONF.NAME, CONF.MODE, socket.getfqdn(), 'probe'), '0')
+
+    @classmethod
+    def _get_all_classes(cls, has_method=None):
+        result = set()
+        bases = [cls]
+        while bases:
+            parent = bases.pop()
+            for cls in parent.__bases__:
+                if (cls not in result and
+                        (not has_method or hasattr(cls, has_method))):
+                    result.add(cls)
+                    bases.append(cls)
+        return result
+
+    def disable_features(self, ember_config):
+        bases = self._get_all_classes('_disable_features')
+        self.disabled_features = ember_config['disabled']
+        for cls in bases:
+            cls._disable_features(self, self.disabled_features)
+
+    def _fail_if_disabled(self, context, feature):
+        if feature in self.disabled_features:
+            context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+            msg = feature + ' feature is disabled!'
+            context.set_details(msg)
+            raise ValueError(msg)
 
     def _unsupported_mode(self, capability):
         return capability.access_mode.mode not in self.SUPPORTED_ACCESS
@@ -229,6 +257,8 @@ class ControllerBase(IdentityBase):
 
     def __init__(self, server, persistence_config, backend_config,
                  ember_config=None, **kwargs):
+        cinderlib_extra_config = ember_config.copy()
+        cinderlib_extra_config.pop('disabled')
         cinderlib.setup(persistence_config=persistence_config,
                         **ember_config)
         self.backend = cinderlib.Backend(**backend_config)
@@ -529,9 +559,11 @@ class NodeBase(IdentityBase):
         # When running as Node only we have to initialize cinderlib telling it
         # not to fail when there's no backend configured.
         if persistence_config:
+            cinderlib_extra_config = ember_config.copy()
+            cinderlib_extra_config.pop('disabled')
             ember_config['fail_on_missing_backend'] = False
             cinderlib.setup(persistence_config=persistence_config,
-                            **ember_config)
+                            **cinderlib_extra_config)
             IdentityBase.__init__(self, server, ember_config)
 
         self.node_info = common.NodeInfo.set(node_id, storage_nw_ip)
@@ -1014,3 +1046,21 @@ class SnapshotBase(object):
         if token:
             fields['next_token'] = token
         return self.TYPES.ListSnapResp(**fields)
+
+    def _unimplemented(self, request, context, *args, **kwargs):
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def _disable_features(self, features):
+        if constants.SNAPSHOT_FEATURE not in features:
+            return
+
+        for capab in (self.TYPES.CtrlCapabilityType.CREATE_DELETE_SNAPSHOT,
+                      self.TYPES.CtrlCapabilityType.LIST_SNAPSHOTS):
+            if capab in self.CTRL_CAPABILITIES:
+                self.CTRL_CAPABILITIES.remove(capab)
+
+        self.CreateSnapshot = self._unimplemented
+        self.DeleteSnapshot = self._unimplemented
+        self.ListSnapshots = self._unimplemented
