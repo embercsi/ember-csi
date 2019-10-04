@@ -50,3 +50,6 @@ ERROR_DEBUG_MODE = 13
 BACKEND_KEY_MAPPINGS = (('driver', 'volume_driver'),
                         ('multipath', 'use_multipath_for_image_xfer'),
                         ('name', 'volume_backend_name'))
+
+CLONE_FEATURE = 'clone'
+SNAPSHOT_FEATURE = 'snapshot'

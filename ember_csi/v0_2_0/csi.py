@@ -28,10 +28,10 @@ from ember_csi.v0_2_0 import csi_types as types
 class Controller(base.ControllerBase):
     CSI = csi
     TYPES = types
-    CTRL_CAPABILITIES = (types.CtrlCapabilityType.CREATE_DELETE_VOLUME,
+    CTRL_CAPABILITIES = [types.CtrlCapabilityType.CREATE_DELETE_VOLUME,
                          types.CtrlCapabilityType.PUBLISH_UNPUBLISH_VOLUME,
                          types.CtrlCapabilityType.LIST_VOLUMES,
-                         types.CtrlCapabilityType.GET_CAPACITY)
+                         types.CtrlCapabilityType.GET_CAPACITY]
 
     # CreateVolume implemented on base Controller class.
     # Requires _convert_volume_type method.
