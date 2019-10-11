@@ -561,7 +561,7 @@ class NodeBase(IdentityBase):
         if persistence_config:
             cinderlib_extra_config = ember_config.copy()
             cinderlib_extra_config.pop('disabled')
-            ember_config['fail_on_missing_backend'] = False
+            cinderlib_extra_config['fail_on_missing_backend'] = False
             cinderlib.setup(persistence_config=persistence_config,
                             **cinderlib_extra_config)
             IdentityBase.__init__(self, server, ember_config)
