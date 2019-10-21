@@ -73,6 +73,7 @@ class IdentityBase(object):
     DEFAULT_MKFS_ARGS = tuple()
     MKFS_ARGS = {'ext4': ('-F',)}
     PLUGIN_CAPABILITIES = []
+    PLUGIN_GRPC_CAPABILITIES = []
     CONTAINERIZED = os.stat('/proc').st_dev > 4
 
     def __init__(self, server, ember_config):
@@ -87,6 +88,7 @@ class IdentityBase(object):
             self.TYPES.ServiceType.CONTROLLER_SERVICE)
         caps = [self.TYPES.Capability(service=self.TYPES.Service(type=t))
                 for t in self.PLUGIN_CAPABILITIES]
+        caps.extend(self.PLUGIN_GRPC_CAPABILITIES)
         self.PLUGIN_CAPABILITIES_RESP = self.TYPES.CapabilitiesResp(
             capabilities=caps)
 
@@ -251,6 +253,48 @@ class IdentityBase(object):
                 time.sleep(delay)
                 delay *= backoff
 
+    def _get_size(self, what, request, default):
+        vol_size = getattr(request.capacity_range, what + '_bytes', None)
+        if vol_size:
+            return vol_size / constants.GB
+        return default
+
+    def _calculate_size(self, request, context):
+        # Must be idempotent
+        min_size = self._get_size('required', request, defaults.VOLUME_SIZE)
+        max_size = self._get_size('limit', request, min_size)
+        if max_size < min_size:
+            context.abort(grpc.StatusCode.INVALID_ARGUMENT,
+                          'Limit_bytes is smaller than required_bytes')
+
+        vol_size = min(min_size, max_size)
+
+        if vol_size < 1:
+            if max_size < 1:
+                context.abort(grpc.StatusCode.OUT_OF_RANGE,
+                              'Unsupported capacity_range (min size is 1GB)')
+            vol_size = max_size
+        return (vol_size, min_size, max_size)
+
+    @staticmethod
+    def _set_metadata(vol, _save_if_changed=True, **values):
+        # We do the update this way instead of just setting
+        # `vol.admin_metadata['fs_type']` because then the attribute would not
+        # be marked as dirty an we would have to manually call insternal method
+        # `vol._ovo._changed_fields.add('admin_metadata')`
+        metadata = vol._ovo.admin_metadata or {}
+        original = metadata.copy()
+        metadata.update(values)
+        vol._ovo.admin_metadata = metadata
+        if _save_if_changed and metadata != original:
+            vol.save()
+
+    @staticmethod
+    def _get_fs_type(vol):
+        if not vol.admin_metadata:
+            return None
+        return vol.admin_metadata.get('fs_type')
+
 
 class ControllerBase(IdentityBase):
     FORBIDDEN_VOL_PARAMS = ('id', 'name', 'size', 'volume_size')
@@ -276,29 +320,6 @@ class ControllerBase(IdentityBase):
         if len(self.backend.pool_names) > 1:
             LOG.info('Available pools: %s' %
                      ', '.join(self.backend.pool_names))
-
-    def _get_size(self, what, request, default):
-        vol_size = getattr(request.capacity_range, what + '_bytes', None)
-        if vol_size:
-            return vol_size / constants.GB
-        return default
-
-    def _calculate_size(self, request, context):
-        # Must be idempotent
-        min_size = self._get_size('required', request, defaults.VOLUME_SIZE)
-        max_size = self._get_size('limit', request, min_size)
-        if max_size < min_size:
-            context.abort(grpc.StatusCode.INVALID_ARGUMENT,
-                          'Limit_bytes is greater than required_bytes')
-
-        vol_size = min(min_size, max_size)
-
-        if vol_size < 1:
-            if max_size < 1:
-                context.abort(grpc.StatusCode.OUT_OF_RANGE,
-                              'Unsupported capacity_range (min size is 1GB)')
-            vol_size = max_size
-        return (vol_size, min_size, max_size)
 
     def _get_vol_node(self, request, context):
         if request.node_id:
@@ -751,10 +772,14 @@ class NodeBase(IdentityBase):
                                             private_bind, target, context):
                 fs_type = (request.volume_capability.mount.fs_type or
                            CONF.DEFAULT_MOUNT_FS)
-                self._format_device(fs_type, private_bind, context)
-                self._mount(fs_type,
-                            request.volume_capability.mount.mount_flags,
-                            private_bind, target)
+                # Skip if we already formatted it correctly
+                if self._get_fs_type(vol) != fs_type:
+                    self._format_device(fs_type, private_bind, context)
+                    # Store that the volume is being used as a mount.
+                    self._set_metadata(vol, fs_type=fs_type)
+
+                flags = request.volume_capability.mount.mount_flags
+                self._mount(fs_type, flags, private_bind, target)
         return self.STAGE_RESP
 
     @common.debuggable
