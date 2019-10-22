@@ -1,7 +1,54 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import glob
+import os
+import subprocess
+
 import setuptools
+from setuptools.command import develop
+from setuptools.command import egg_info
+from setuptools.command import install
+from setuptools.command import sdist
+
+
+PATCH_FILES = True
+PATCH_FILE_NAMES = glob.glob('patches/*.patch')
+
+
+def _patch_libraries():
+    if not PATCH_FILES:
+        return
+
+    packages_dir = setuptools.__file__.rsplit(os.path.sep, 2)[0]
+    print('Patching libraries in %s' % packages_dir)
+    subprocess.check_call('patches/apply-patches ' + packages_dir, shell=True)
+
+
+class CustomInstall(install.install):
+    def run(self):
+        _patch_libraries()
+        install.install.run(self)
+
+
+class CustomDevelop(develop.develop):
+    def run(self):
+        _patch_libraries()
+        develop.develop.run(self)
+
+
+class CustomEggInfo(egg_info.egg_info):
+    def run(self):
+        _patch_libraries()
+        egg_info.egg_info.run(self)
+
+
+class CustomSdist(sdist.sdist):
+    def run(self):
+        global PATCH_FILES
+        PATCH_FILES = False
+        sdist.sdist.run(self)
+
 
 with open('README.md') as readme_file:
     readme = readme_file.read()
@@ -29,6 +76,12 @@ test_requirements = [
 ]
 
 setuptools.setup(
+    cmdclass={
+        'sdist': CustomSdist,
+        'install': CustomInstall,
+        'develop': CustomDevelop,
+        'egg_info': CustomEggInfo,
+    },
     name='ember-csi',
     version='0.9.0',
     description=("Multi-vendor CSI plugin supporting over 80 storage drivers"),
@@ -43,7 +96,10 @@ setuptools.setup(
     dependency_links=dependency_links,
     install_requires=requirements,
     license="Apache Software License 2.0",
-    data_files=[('./', ['HISTORY.md', 'README.md'])],
+    data_files=[
+        ('./', ['HISTORY.md', 'README.md']),
+        ('./patches', ['patches/apply-patches'] + PATCH_FILE_NAMES),
+    ],
     zip_safe=True,
     keywords='ember_csi',
     classifiers=[

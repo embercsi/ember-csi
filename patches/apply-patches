@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -ev
+PACKAGES_DIR=${1:-/usr/lib/python2.7/site-packages}
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+# Use a manual list instead of file listing in case we have a required order
+# Generated to avoid including tests using:
+#   git diff HEAD~1 --no-prefix -- cinderlib/objects.py > filename.patch
+declare -a PATCHES=("cinderlib-bugs-1849339-1849828.patch")
+
+for patch_file in "${PATCHES[@]}"; do
+   echo "Patching $PACKAGES_DIR with $patch_file"
+   PATCH_FILE="$SCRIPT_DIR/$patch_file"
+   # Check if already applied
+   if ! patch -R -p0 -s -f --dry-run -d $PACKAGES_DIR <$PATCH_FILE; then
+     patch -p0 -N --silent -d $PACKAGES_DIR <$PATCH_FILE
+   else
+     echo "Patch already applied, skipping"
+   fi
+done

@@ -1,0 +1,27 @@
+diff --git cinderlib/objects.py cinderlib/objects.py
+index 2586954..ea65f6f 100644
+--- cinderlib/objects.py
++++ cinderlib/objects.py
+@@ -501,18 +501,18 @@ class Volume(NamedObject):
+             self.save()
+ 
+     def clone(self, **new_vol_attrs):
+-        new_vol_attrs['source_vol_id'] = self.id
++        new_vol_attrs['source_volid'] = self.id
+         new_vol = Volume(self, **new_vol_attrs)
+         self.backend._start_creating_volume(new_vol)
+         try:
+             model_update = self.backend.driver.create_cloned_volume(
+                 new_vol._ovo, self._ovo)
+-            new_vol.status = 'available'
++            new_vol._ovo.status = 'available'
+             if model_update:
+-                new_vol.update(model_update)
++                new_vol._ovo.update(model_update)
+             self.backend._volume_created(new_vol)
+         except Exception:
+-            new_vol.status = 'error'
++            new_vol._ovo.status = 'error'
+             new_vol._raise_with_resource()
+         finally:
+             new_vol.save()
