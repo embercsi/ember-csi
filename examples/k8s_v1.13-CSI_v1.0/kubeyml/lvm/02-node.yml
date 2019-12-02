@@ -155,8 +155,10 @@ spec:
             - name: iscsi-info
               mountPath: /var/lib/iscsi
               mountPropagation: Bidirectional
-            # In a real deployment we should be mounting container's
-            # /var/lib-ember-csi on the host
+            # So we don't lose our private bindmounts on container reboot
+            - name: ember-csi-data
+              mountPath: /var/lib/ember-csi
+              mountPropagation: Bidirectional
         - name: csc
           image: embercsi/csc:v1.0.0
           command: ["tail"]
@@ -211,6 +213,9 @@ spec:
         - name: iscsi-info
           hostPath:
             path: /var/lib/iscsi
+        - name: ember-csi-data
+          hostPath:
+            path: /var/lib/ember-csi/lvm
 ---
 # Node 0 cannot access LVM iSCSI backend
 # We need this pod because CSI needs all nodes to be running the plugin
@@ -322,8 +327,10 @@ spec:
             - name: iscsi-info
               mountPath: /var/lib/iscsi
               mountPropagation: Bidirectional
-            # In a real deployment we should be mounting container's
-            # /var/lib-ember-csi on the host
+            # So we don't lose our private bindmounts on container reboot
+            - name: ember-csi-data
+              mountPath: /var/lib/ember-csi
+              mountPropagation: Bidirectional
         - name: csc
           image: embercsi/csc:v1.0.0
           command: ["tail"]
@@ -378,3 +385,6 @@ spec:
         - name: iscsi-info
           hostPath:
             path: /var/lib/iscsi
+        - name: ember-csi-data
+          hostPath:
+            path: /var/lib/ember-csi/lvm

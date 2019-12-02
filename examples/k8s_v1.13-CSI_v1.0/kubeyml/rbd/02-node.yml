@@ -126,9 +126,10 @@ spec:
             - name: udev-data
               mountPath: /run/udev
               mountPropagation: HostToContainer
-            # Required to preserve the node targets between restarts
-            # In a real deployment we should be mounting container's
-            # /var/lib-ember-csi on the host
+            # So we don't lose our private bindmounts on container reboot
+            - name: ember-csi-data
+              mountPath: /var/lib/ember-csi
+              mountPropagation: Bidirectional
         - name: csc
           image: embercsi/csc:v1.0.0
           command: ["tail"]
@@ -164,3 +165,6 @@ spec:
         - name: udev-data
           hostPath:
             path: /run/udev
+        - name: ember-csi-data
+          hostPath:
+            path: /var/lib/ember-csi/rbd
