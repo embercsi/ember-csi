@@ -110,7 +110,7 @@ class Controller(base.TopologyBase, base.SnapshotBase, base.ControllerBase):
         #    parameters['content_source'] = request.content_source
         if vol.source_volid:
             parameters['content_source'] = types.VolumeContentSource(
-                volume=types.VolumeSource(volume_id=vol.source_vol_id))
+                volume=types.VolumeSource(volume_id=vol.source_volid))
 
         elif vol.snapshot_id:
             parameters['content_source'] = types.VolumeContentSource(
