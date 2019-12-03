@@ -977,7 +977,7 @@ class SnapshotBase(object):
             context.abort(grpc.StatusCode.OUT_OF_RANGE,
                           'Snapshot %s is bigger than requested volume' %
                           snap_id)
-        vol = src_snap.create_volume(name=name, **params)
+        vol = src_snap.create_volume(name=name, size=vol_size, **params)
         return vol
 
     # Inheriting classes must implement
