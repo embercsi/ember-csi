@@ -109,4 +109,4 @@
   delegate_to: localhost
 
 - name: Change Ceph default features
-  command: kubectl exec csi-rbd-0 -c csi-driver -- /bin/bash -c 'echo -e "\nrbd default features = 3" >> /etc/ceph/ceph.conf'
+  command: kubectl exec csi-rbd-0 -c csi-driver -- /bin/bash -c 'sed -i "s/\[global\]/[global]\nrbd default features = 3/" /etc/ceph/ceph.conf'
