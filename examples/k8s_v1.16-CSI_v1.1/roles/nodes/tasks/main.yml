@@ -1,0 +1,8 @@
+- name: Create ember-csi directory for bind mounts
+  file: path=/var/lib/ember-csi/ state=directory
+
+- file: path=/var/lib/ember-csi/rbd state=directory
+- file: path=/var/lib/ember-csi/lvm state=directory
+
+- name: join with master
+  command: kubeadm join --ignore-preflight-errors=cri --discovery-token-unsafe-skip-ca-verification --token={{ kubernetes_token }} {{ hostvars['master'].ansible_eth1.ipv4.address }}:6443

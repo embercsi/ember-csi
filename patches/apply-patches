@@ -5,7 +5,9 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 # Use a manual list instead of file listing in case we have a required order
 # Generated to avoid including tests using:
 #   git diff HEAD~1 --no-prefix -- cinderlib/objects.py > filename.patch
-declare -a PATCHES=("cinderlib-bugs-1849339-1849828.patch")
+declare -a PATCHES=("cinderlib-bugs-1849339-1849828.patch"
+                    "cinderlib-bug-1852629.patch"
+                    "cinderlib-extend-rbd.patch")
 
 for patch_file in "${PATCHES[@]}"; do
    echo "Patching $PACKAGES_DIR with $patch_file"

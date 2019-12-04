@@ -72,6 +72,8 @@ examples/kubernetes/kubeconfig.conf
 examples/kubernetes/site.retry
 examples/k8s_v1.13-CSI_v1.0/kubeconfig.conf
 examples/k8s_v1.13-CSI_v1.0/site.retry
+examples/k8s_v1.16-CSI_v1.1/kubeconfig.conf
+examples/k8s_v1.16-CSI_v1.1/site.retry
 
 .vagrant
 *.class

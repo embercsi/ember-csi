@@ -1,0 +1,18 @@
+kind: Pod
+apiVersion: v1
+metadata:
+  name: my-csi-cloned-block-app
+spec:
+  containers:
+    - name: my-frontend
+      image: busybox
+      volumeDevices:
+      - devicePath: /dev/ember0
+        name: my-csi-block-volume
+      command: [ "sleep", "1000000" ]
+  # We don't pin the pod, but due to the topology restrictions of the PV/PVC
+  # it'll never go to node 0
+  volumes:
+    - name: my-csi-block-volume
+      persistentVolumeClaim:
+        claimName: vol-from-vol # defined in pvc.yml
