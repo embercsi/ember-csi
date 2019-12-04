@@ -66,9 +66,14 @@ import cinderlib
 from cinderlib import objects
 from cinderlib.persistence import base
 import kubernetes as k8s
+from oslo_log import log as logging
+import six
 
 from ember_csi import defaults
 from ember_csi import workarounds
+
+
+LOG = logging.getLogger(__name__)
 
 
 class CRD(object):
@@ -141,6 +146,24 @@ class CRD(object):
                                   'categories': ['all', 'ember']}}}
         K8S.ext_api.create_custom_resource_definition(crd)
 
+    @staticmethod
+    def _prepare_labels(labels):
+        """Prepare labels for K8s, removing empty and splitting long ones."""
+        result = {}
+        for k, v in labels.items():
+            if not v:
+                continue
+            # Split strings that are too long
+            if isinstance(v, six.string_types) and len(v) > 63:
+                j = 2
+                for i in range(63, len(v), 63):
+                    key = '%s%s' % (k, j)
+                    result[key] = v[i:i+63]
+                    j += 1
+                v = v[:63]
+            result[k] = v
+        return result
+
     @classmethod
     def get(cls, **kwargs):
         """Get a cinderlib object.
@@ -149,7 +172,7 @@ class CRD(object):
 
         Received CROs are then deserialized using cinderlib's load method.
         """
-        selector = {k: v for k, v in kwargs.items() if v is not None}
+        selector = cls._prepare_labels(kwargs)
         res_id = selector.get(cls.singular + '_id')
         if res_id is not None:
             try:
@@ -166,6 +189,9 @@ class CRD(object):
             # Check that the other fields also match
             for k, v in selector.items():
                 if res['metadata']['labels'][k] != v:
+                    LOG.error("%s %s has wrong label %s. %s != %s",
+                              cls.kind, res_id, k, v,
+                              res['metadata']['labels'][k])
                     return []
             res = [res]
         else:
@@ -204,9 +230,10 @@ class CRD(object):
         Creates labels to facilitate filtering when retrieving them.
         """
         json_data = resource.to_jsons(simplified=True)
+        labels = cls._prepare_labels(cls._get_labels(resource))
         cro = {'kind': cls.kind,
                'apiVersion': cls.api_version,
-               'metadata': {'labels': cls._get_labels(resource),
+               'metadata': {'labels': labels,
                             'name': resource.id,
                             'annotations': {'json': json_data}}}
         cls._set_dict_resource_version(resource, cro)
