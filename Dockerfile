@@ -43,6 +43,8 @@ RUN yum -y install targetcli iscsi-initiator-utils device-mapper-multipath epel-
     yum -y install python-cinderlib && \
     # Install driver specific RPM dependencies
     yum -y install python-rbd ceph-common pyOpenSSL && \
+    # Required to apply patches
+    yum -y install patch && \
     # Install driver specific PyPi dependencies
     pip install --no-cache-dir krest purestorage pyxcli python-3parclient && \
     yum clean all && \
