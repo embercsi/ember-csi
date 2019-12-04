@@ -13,13 +13,15 @@ then
          --build-arg VCS_REF=`git rev-parse --short HEAD` \
          -t $DOCKER_REPO:master \
          -f Dockerfile .
-  docker build \
-         --build-arg RELEASE=$STABLE_RELEASE \
-         --build-arg VERSION=$EMBER_VERSION \
-         --build-arg BUILD_DATE=`date -u +"%Y-%m-%dT%H:%M:%SZ"` \
-         --build-arg VCS_REF=`git rev-parse --short HEAD` \
-         -t $DOCKER_REPO:latest \
-         -f Dockerfile .
+  # Disable building from stable for now, since cinderlib has bugs there and
+  # we cannot patch Stein yet
+  # docker build \
+  #        --build-arg RELEASE=$STABLE_RELEASE \
+  #        --build-arg VERSION=$EMBER_VERSION \
+  #        --build-arg BUILD_DATE=`date -u +"%Y-%m-%dT%H:%M:%SZ"` \
+  #        --build-arg VCS_REF=`git rev-parse --short HEAD` \
+  #        -t $DOCKER_REPO:latest \
+  #        -f Dockerfile .
 
 else
   RDO_RELEASES=`cat hooks/rdo-releases`
