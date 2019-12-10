@@ -27,6 +27,7 @@ from cinderlib import exception
 import grpc
 from oslo_concurrency import processutils as putils
 from oslo_log import log as logging
+import six
 
 from ember_csi import common
 from ember_csi import config
@@ -572,6 +573,55 @@ class ControllerBase(IdentityBase):
         return self.CTRL_CAPABILITIES_RESP
 
 
+# As per http://man7.org/linux/man-pages/man5/proc.5.html
+class MountInfo(object):
+    # Data to return instead of failing
+    BAD_MOUNTINFO = ('', '', '', '', '', '', '-', '', '', '')
+
+    def __init__(self, data):
+        # Don't fail on bad data, just log it and return whatever we can.
+        if isinstance(data, six.string_types):
+            data = data.split()
+        self.original_data = data
+
+        length = len(data)
+        if (length < 10):
+            LOG.error('Mount info data is too short: %s', data)
+            data = self.BAD_MOUNTINFO
+
+        self.mount_id = data[0]
+        self.parent_id = data[1]
+        self.st_dev = data[2]
+        self.root = data[3]
+        self.mount_point = data[4]
+        self.mount_options = data[5]
+
+        i = 6
+        optional_fields = []
+        while i < length and data[i] != '-':
+            optional_fields.append(data[i])
+            i += 1
+
+        # We must have found the optional fields separator
+        if i == length:
+            LOG.error('Bad mount info data, missing separator')
+            data = self.BAD_MOUNTINFO
+            i = 6
+
+        self.optional_fields = optional_fields
+
+        self.fs_type = data[i+1]
+        self.mount_source = data[i+2]
+        self.super_options = data[i+3]
+
+    @property
+    def source(self):
+        # Bindmounts will have devtmpfs and we want the root instead
+        if self.mount_source.startswith('/'):
+            return self.mount_source
+        return self.root
+
+
 class NodeBase(IdentityBase):
     STAGED_NAME = 'stage'
 
@@ -608,7 +658,8 @@ class NodeBase(IdentityBase):
         return result
 
     def _get_mountinfo(self):
-        return self._get_split_file('/proc/self/mountinfo')
+        return [MountInfo(mount)
+                for mount in self._get_split_file('/proc/self/mountinfo')]
 
     def _vol_private_location(self, volume_id):
         private_bind = os.path.join(defaults.VOL_BINDS_DIR, volume_id)
@@ -620,23 +671,33 @@ class NodeBase(IdentityBase):
         return result
 
     def _get_device(self, path):
-        for line in self._get_mountinfo():
-            if line[4] == path:
-                position = 8 if self.CONTAINERIZED else 9
-                if line[position].startswith('/'):
-                    return line[position]
-                return line[3]
+        """Return the source device for a path.
+
+        The source of a mounted path will either be the mount source of the
+        mount point or the root if it's a bind mount.
+        """
+        for mount in self._get_mountinfo():
+            if mount.mount_point == path:
+                return mount.source
         return None
 
     IS_RO_REGEX = re.compile(r'(^|.+,)ro($|,.+)')
 
     def _is_ro_mount(self, path):
-        for line in self._get_mountinfo():
-            if line[4] == path:
-                return bool(self.IS_RO_REGEX.match(line[5]))
+        for mount in self._get_mountinfo():
+            if mount.mount_point == path:
+                return bool(self.IS_RO_REGEX.match(mount.mount_options))
         return None
 
     def _get_vol_device(self, volume_id):
+        """Given a volume id return the local device and private bind.
+
+        The private bind is not checked, just returned what it should be if it
+        existed.
+
+        The local device is only returned if it exists and it will be a real
+        device under /dev.
+        """
         private_bind = self._vol_private_location(volume_id)
         device = self._get_device(private_bind)
         return device, private_bind
@@ -795,14 +856,12 @@ class NodeBase(IdentityBase):
 
         device, private_bind = self._get_vol_device(vol.id)
         # If it's not already unstaged
+        expected = (device, private_bind)
         if device:
             count = 0
-            for line in self._get_mountinfo():
-                if line[3] in (device, private_bind):
+            for mount in self._get_mountinfo():
+                if mount.source in expected:
                     count += 1
-
-            if self._get_mount(private_bind):
-                count += 1
 
             # If the volume is still in use we cannot unstage (one use is for
             # our private volume reference and the other for staging path
