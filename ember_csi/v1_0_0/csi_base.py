@@ -16,10 +16,10 @@
 from __future__ import absolute_import
 from builtins import int
 import os
-import stat
 
 from google.protobuf import timestamp_pb2
 import grpc
+from oslo_log import log as logging
 
 from ember_csi import base
 from ember_csi import common
@@ -199,33 +199,44 @@ class Node(base.NodeBase):
     @common.require('volume_id', 'volume_path')
     @common.Worker.unique('volume_id')
     def NodeGetVolumeStats(self, request, context):
+        # Path can be a staging block, a staging mount, published block, or
+        # published mount.
         path = request.volume_path
-        try:
-            st_mode = os.stat(path).st_mode
-        except OSError:
+        if not os.path.exists(path):
             context.abort(grpc.StatusCode.NOT_FOUND,
                           'Cannot access path %s' % path)
 
+        # Check if this is a publish path
         device_for_path = self._get_device(path)
+
+        # If it wasn't a publish path, check if it's a staging path
+        if not device_for_path:
+            path = os.path.join(path, self.STAGED_NAME)
+            device_for_path = self._get_device(path)
+
+        if not device_for_path:
+            context.abort(grpc.StatusCode.NOT_FOUND,
+                          'Could not find the device in path %s' %
+                          request.volume_path)
+
         device_for_vol, private_bind = self._get_vol_device(request.volume_id)
 
-        if not device_for_vol or device_for_path != private_bind:
-            context.abort(grpc.StatusCode.NOT_FOUND,
-                          'Path does not match with requested volume')
-
-        if stat.S_ISDIR(st_mode):
-            stats = os.statvfs(path)
-            size = stats.f_frsize * stats.f_blocks
-            available = stats.f_frsize * stats.f_bavail
-            used = size - available
-
-        else:  # is block
+        # Check that the path matches the volume
+        if device_for_path == device_for_vol:  # Is block (bind to real dev)
             size_name = os.path.join('/sys/class/block',
                                      os.path.basename(device_for_vol), 'size')
             with open(size_name) as f:
                 blocks = int(f.read())
             size = 512 * blocks
             used = available = None
+        elif device_for_path == private_bind:  # Is mount (mounted from bind)
+            stats = os.statvfs(path)
+            size = stats.f_frsize * stats.f_blocks
+            available = stats.f_frsize * stats.f_bavail
+            used = size - available
+        else:
+            context.abort(grpc.StatusCode.INVALID_ARGUMENT,
+                          'Path does not match with requested volume')
 
         return self.TYPES.VolumeStatsResp(usage=[self.TYPES.VolumeUsage(
             unit=self.TYPES.UsageUnit.BYTES,
