@@ -131,7 +131,7 @@ class Config(object):
                                                   defaults.REQUEST_MULTIPATH)
         self.WORKERS = EMBER_CONFIG.pop('grpc_workers', defaults.WORKERS)
 
-        self.PLUGIN_NAME = EMBER_CONFIG['plugin_name']
+        self.PLUGIN_NAME = EMBER_CONFIG.pop('plugin_name')
         self.ENABLE_PROBE = EMBER_CONFIG.pop('enable_probe',
                                              defaults.ENABLE_PROBE)
         self.HAS_SLOW_OPERATIONS = EMBER_CONFIG.pop('slow_operations')

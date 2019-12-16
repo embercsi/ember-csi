@@ -305,7 +305,7 @@ class ControllerBase(IdentityBase):
         cinderlib_extra_config = ember_config.copy()
         cinderlib_extra_config.pop('disabled')
         cinderlib.setup(persistence_config=persistence_config,
-                        **ember_config)
+                        **cinderlib_extra_config)
         self.backend = cinderlib.Backend(**backend_config)
         IdentityBase.__init__(self, server, ember_config)
         self.CSI.add_ControllerServicer_to_server(self, server)
