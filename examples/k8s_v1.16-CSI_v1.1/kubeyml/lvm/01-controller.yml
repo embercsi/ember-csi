@@ -231,7 +231,7 @@ spec:
         # In a real deployment we should be mounting container's
         # /var/lib-ember-csi on the host
       - name: csc
-        image: embercsi/csc:v1.0.0
+        image: embercsi/csc:v1.1.0
         command: ["tail"]
         args: ["-f", "/dev/null"]
         env:
