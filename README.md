@@ -1,6 +1,6 @@
 # Ember CSI
 
-[![Docker build status](https://img.shields.io/docker/build/akrog/ember-csi.svg)](https://hub.docker.com/r/akrog/ember-csi/) [![Docker build](https://img.shields.io/docker/automated/akrog/ember-csi.svg)](https://hub.docker.com/r/akrog/ember-csi/builds/) [![PyPi](https://img.shields.io/pypi/v/ember_csi.svg)](https://pypi.python.org/pypi/ember_csi) [![PyVersion](https://img.shields.io/pypi/pyversions/ember_csi.svg)](https://pypi.python.org/pypi/ember_csi) [![License](https://img.shields.io/:license-apache-blue.svg)](http://www.apache.org/licenses/LICENSE-2.0)
+[![Docker build status](https://img.shields.io/docker/cloud/build/embercsi/ember-csi.svg)](https://hub.docker.com/r/embercsi/ember-csi/) [![Docker build](https://img.shields.io/docker/cloud/automated/embercsi/ember-csi.svg)](https://hub.docker.com/r/embercsi/ember-csi/builds/) [![PyPi](https://img.shields.io/pypi/v/ember_csi.svg)](https://pypi.python.org/pypi/ember_csi) [![PyVersion](https://img.shields.io/pypi/pyversions/ember_csi.svg)](https://pypi.python.org/pypi/ember_csi) [![License](https://img.shields.io/:license-apache-blue.svg)](http://www.apache.org/licenses/LICENSE-2.0)
 
 
 Multi-vendor CSI plugin driver supporting over 80 storage drivers in a single plugin to provide `block` and `mount` storage to Container Orchestration systems.
