@@ -63,6 +63,7 @@
 
 - wait_for: timeout=20
   delegate_to: localhost
+  become: no
 
 # We don't support kubernetes CSDriver additional info, so we don't pass pod-info-mount-version to the cluster-driver-registrar
 # https://github.com/kubernetes/kubernetes/blob/8f1082c6aff6df3cb5e103474d9d846b6f8ebf90/pkg/volume/csi/csi_mounter.go#L256
@@ -73,12 +74,14 @@
 
 - wait_for: timeout=90
   delegate_to: localhost
+  become: no
 
 - name: Set CSI LVM controller
   command: kubectl create -f /home/vagrant/kubeyml/lvm/01-controller.yml
 
 - wait_for: timeout=90
   delegate_to: localhost
+  become: no
 
 - name: Start CSI LVM nodes
   command: kubectl create -f /home/vagrant/kubeyml/lvm/02-node.yml
@@ -89,6 +92,7 @@
 # We need to wait for VolumeSnapshotClass to exist
 - wait_for: timeout=180
   delegate_to: localhost
+  become: no
 
 - name: Create LVM Snapshot Storage Class
   command: kubectl create -f /home/vagrant/kubeyml/lvm/04-snapshot-class.yml
@@ -107,6 +111,7 @@
 
 - wait_for: timeout=60
   delegate_to: localhost
+  become: no
 
 - name: Change Ceph default features
   command: kubectl exec csi-rbd-0 -c csi-driver -- /bin/bash -c 'sed -i "s/\[global\]/[global]\nrbd default features = 3/" /etc/ceph/ceph.conf'
