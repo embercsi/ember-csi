@@ -14,19 +14,27 @@ This demo is based on Luis Pabon's [Kubeup repository](https://github.com/lpabon
 
 ## Requirements
 
-* Install qemu-kvm, libvirt, vagrant-libvirt and ansible.
+* Install vagrant, ansible, and a hypervisor
 
     - Fedora
 
     ```
-    $ sudo dnf -y install qemu-kvm libvirt vagrant-libvirt ansible
+    $ sudo dnf -y install vagrant ansible
     ```
 
-* Start libvirt service.
-    - Fedora
-    ```
-    $ sudo systemctl start libvirtd
-    ```
+* Hypervisor:
+
+  1. QEMU-KVM is the default hypervisor -KVM and you'll need to install qemu-kvm, libvirt, and vagrant-libvirt packages, as well as start the libvirt service:
+
+     - Fedora
+
+     ```
+     $ sudo dnf -y install qemu-kvm libvirt vagrant-libvirt
+
+     $ sudo systemctl start libvirtd
+     ```
+
+  2. Virtualbox is also supported
 
 
 ## Configuration
@@ -42,7 +50,28 @@ The `Vagranfile` defines 2 nodes and a master, each with 4GB and 2 cores.  This 
 
 The demo supports local and remote libvirt, for those that use an external box where they run their VMs.
 
-Local setup of the demo can be done running the `up.sh` script, be aware that this will take a while:
+Local setup of the demo can be done running the `up.sh` script, and for the default hypervisor you'll only need to call it, but for other hypervisors you'll have to pass the hypervisor on the call.  Be aware that this command takes a while to run:
+
+For VirtualBox:
+
+```
+$ ./up.sh virtualbox
+Bringing machine 'master' up with 'virtualbox' provider...
+Bringing machine 'node0' up with 'virtualbox' provider...
+Bringing machine 'node1' up with 'virtualbox' provider...
+==> master: Checking if box 'centos/7' is up to date...
+==> node1: Checking if box 'centos/7' is up to date...
+==> node0: Checking if box 'centos/7' is up to date...
+
+[ . . . ]
+
+PLAY RECAP *********************************************************************
+master                     : ok=69   changed=57   unreachable=0    failed=0
+node0                      : ok=22   changed=20   unreachable=0    failed=0
+node1                      : ok=22   changed=20   unreachable=0    failed=0
+```
+
+For QEMU-KVM:
 
 ```
 $ ./up.sh
@@ -60,6 +89,8 @@ master                     : ok=69   changed=57   unreachable=0    failed=0
 node0                      : ok=22   changed=20   unreachable=0    failed=0
 node1                      : ok=22   changed=20   unreachable=0    failed=0
 ```
+
+
 
 Remote configuration requires defining our remote libvirt system using `LIBVIRT_HOST` and `LIBVIRT_USER` environmental variables before calling the `up.sh` script.
 
