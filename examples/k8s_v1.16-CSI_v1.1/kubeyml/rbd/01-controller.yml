@@ -233,7 +233,7 @@ spec:
         - mountPath: /etc/ceph
           name: ceph-config
       - name: csc
-        image: embercsi/csc:v1.0.0
+        image: embercsi/csc:v1.1.0
         command: ["tail"]
         args: ["-f", "/dev/null"]
         env:

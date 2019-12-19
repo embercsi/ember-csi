@@ -36,25 +36,27 @@ EMBER_CFG = {'project_id': NAME, 'user_id': NAME, 'plugin_name': '',
 LOGGING_FORMAT = ('%(asctime)s %(project_name)s %(levelname)s %(name)s '
                   '[%(request_id)s] %(message)s')
 
-LOG_LEVELS = ('amqp=WARN,amqplib=WARN,boto=WARN,qpid=WARN,sqlalchemy=WARN,'
-              'suds=WARN,oslo.messaging=WARN,oslo_messaging=WARN,iso8601=WARN,'
-              'requests.packages.urllib3.connectionpool=WARN,'
-              'urllib3.connectionpool=WARN,websocket=WARN,'
-              'requests.packages.urllib3.util.retry=WARN,'
-              'urllib3.util.retry=WARN,keystonemiddleware=WARN,'
-              'routes.middleware=WARN,stevedore=WARN,taskflow=WARN,'
-              'keystoneauth=WARN,oslo.cache=WARN,dogpile.core.dogpile=WARN,'
-              'cinderlib=WARN,cinder=WARN,os_brick=WARN')
+LOG_LEVELS = ('amqp=WARN', 'amqplib=WARN', 'boto=WARN', 'qpid=WARN',
+              'sqlalchemy=WARN', 'suds=WARN', 'oslo.messaging=WARN',
+              'oslo_messaging=WARN', 'iso8601=WARN',
+              'requests.packages.urllib3.connectionpool=WARN',
+              'urllib3.connectionpool=WARN', 'websocket=WARN',
+              'requests.packages.urllib3.util.retry=WARN',
+              'urllib3.util.retry=WARN', 'keystonemiddleware=WARN',
+              'routes.middleware=WARN', 'stevedore=WARN', 'taskflow=WARN',
+              'keystoneauth=WARN', 'oslo.cache=WARN',
+              'dogpile.core.dogpile=WARN', 'cinderlib=WARN', 'cinder=WARN',
+              'os_brick=WARN')
 
-DEBUG_LOG_LEVELS = ('amqp=WARN,amqplib=WARN,boto=WARN,qpid=WARN,'
-                    'sqlalchemy=WARN,suds=INFO,oslo.messaging=INFO,'
-                    'oslo_messaging=INFO,iso8601=WARN,'
-                    'requests.packages.urllib3.connectionpool=WARN,'
-                    'urllib3.connectionpool=WARN,websocket=WARN,'
-                    'requests.packages.urllib3.util.retry=WARN,'
-                    'urllib3.util.retry=WARN,keystonemiddleware=WARN,'
-                    'routes.middleware=WARN,stevedore=WARN,taskflow=WARN,'
-                    'keystoneauth=WARN,oslo.cache=INFO,'
+DEBUG_LOG_LEVELS = ('amqp=WARN', 'amqplib=WARN', 'boto=WARN', 'qpid=WARN',
+                    'sqlalchemy=WARN', 'suds=INFO', 'oslo.messaging=INFO',
+                    'oslo_messaging=INFO', 'iso8601=WARN',
+                    'requests.packages.urllib3.connectionpool=WARN',
+                    'urllib3.connectionpool=WARN', 'websocket=WARN',
+                    'requests.packages.urllib3.util.retry=WARN',
+                    'urllib3.util.retry=WARN', 'keystonemiddleware=WARN',
+                    'routes.middleware=WARN', 'stevedore=WARN',
+                    'taskflow=WARN', 'keystoneauth=WARN', 'oslo.cache=INFO',
                     'dogpile.core.dogpile=INFO')
 
 MOUNT_FS = 'ext4'

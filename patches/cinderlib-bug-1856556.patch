@@ -1,0 +1,244 @@
+diff --git cinderlib/cinderlib.py cinderlib/cinderlib.py
+index a0322a7..26222b9 100644
+--- cinderlib/cinderlib.py
++++ cinderlib/cinderlib.py
+@@ -18,7 +18,6 @@ import json as json_lib
+ import logging
+ import multiprocessing
+ import os
+-import six
+ 
+ from cinder import coordination
+ from cinder.db import api as db_api
+@@ -31,7 +30,7 @@ cinder_objects.register_all()  # noqa
+ from cinder.interface import util as cinder_interface_util
+ from cinder import utils
+ from cinder.volume import configuration
+-from cinder.volume import manager
++from cinder.volume import manager  # noqa We need to import config options
+ from oslo_config import cfg
+ from oslo_log import log as oslo_logging
+ from oslo_utils import importutils
+@@ -76,7 +75,8 @@ class Backend(object):
+         driver_cfg['volume_backend_name'] = volume_backend_name
+         Backend.backends[volume_backend_name] = self
+ 
+-        conf = self._set_backend_config(driver_cfg)
++        conf = self._get_backend_config(driver_cfg)
++        self._apply_backend_workarounds(conf)
+         self.driver = importutils.import_object(
+             conf.volume_driver,
+             configuration=conf,
+@@ -190,164 +190,59 @@ class Backend(object):
+         # the persistence plugin.
+         db_api.IMPL = cls.persistence.db
+ 
+-    # NOTE(geguileo): Staticmethod used instead of classmethod to make it work
+-    # on Python3 when assigning the unbound method.
+-    @staticmethod
+-    def _config_parse(self):
+-        """Replacer oslo_config.cfg.ConfigParser.parse for in-memory cfg."""
+-        res = super(cfg.ConfigParser, self).parse(Backend._config_string_io)
+-        return res
+-
+-    @classmethod
+-    def _update_cinder_config(cls):
+-        """Parse in-memory file to update OSLO configuration used by Cinder."""
+-        cls._config_string_io.seek(0)
+-        cls._parser.write(cls._config_string_io)
+-
+-        # Check if we have any multiopt
+-        cls._config_string_io.seek(0)
+-        current_cfg = cls._config_string_io.read()
+-        if '\n\t' in current_cfg:
+-            cls._config_string_io.seek(0)
+-            cls._config_string_io.write(current_cfg.replace('\n\t', '\n'))
+-
+-        cls._config_string_io.seek(0)
+-        cfg.CONF.reload_config_files()
+-
+     @classmethod
+     def _set_cinder_config(cls, host, locks_path, cinder_config_params):
+         """Setup the parser with all the known Cinder configuration."""
+         cfg.CONF.set_default('state_path', os.getcwd())
+         cfg.CONF.set_default('lock_path', '$state_path', 'oslo_concurrency')
+-
+-        cls._parser = six.moves.configparser.SafeConfigParser()
+-        cls._parser.set('DEFAULT', 'enabled_backends', '')
++        cfg.CONF.version = cinderlib.__version__
+ 
+         if locks_path:
+-            cls._parser.add_section('oslo_concurrency')
+-            cls._parser.set('oslo_concurrency', 'lock_path', locks_path)
+-            cls._parser.add_section('coordination')
+-            cls._parser.set('coordination',
+-                            'backend_url',
+-                            'file://' + locks_path)
+-        if host:
+-            cls._parser.set('DEFAULT', 'host', host)
++            cfg.CONF.oslo_concurrency.lock_path = locks_path
++            cfg.CONF.coordination.backend_url = 'file://' + locks_path
+ 
+-        # All other configuration options go into the DEFAULT section
+-        cls.__set_parser_kv(cinder_config_params, 'DEFAULT')
++        if host:
++            cfg.CONF.host = host
+ 
+-        # We replace the OSLO's default parser to read from a StringIO instead
+-        # of reading from a file.
+-        cls._config_string_io = six.moves.StringIO()
+-        cfg.ConfigParser.parse = six.create_unbound_method(cls._config_parse,
+-                                                           cfg.ConfigParser)
++        cls._validate_options(cinder_config_params)
++        for k, v in cinder_config_params.items():
++            setattr(cfg.CONF, k, v)
+ 
+         # Replace command line arg parser so we ignore caller's args
+         cfg._CachedArgumentParser.parse_args = lambda *a, **kw: None
+ 
+-        # Update the configuration with the options we have configured
+-        cfg.CONF(project='cinder', version=cinderlib.__version__,
+-                 default_config_files=['in_memory_file'])
+-        cls._update_cinder_config()
+-
+-    @staticmethod
+-    def __get_options_types(kvs):
+-        """Get loaded oslo options and load driver if we know it."""
++    @classmethod
++    def _validate_options(cls, kvs, group=None):
+         # Dynamically loading the driver triggers adding the specific
+         # configuration options to the backend_defaults section
+-        if 'volume_driver' in kvs:
++        if kvs.get('volume_driver'):
+             driver_ns = kvs['volume_driver'].rsplit('.', 1)[0]
+             __import__(driver_ns)
+-        opts = configuration.CONF._groups['backend_defaults']._opts
+-        return opts
++            group = group or 'backend_defaults'
+ 
+-    @classmethod
+-    def __val_to_str(cls, val):
+-        """Convert an oslo config value to its string representation.
+-
+-        Lists and tuples are treated as ListOpt classes and converted to
+-        "[value1,value2]" instead of the standard string representation of
+-        "['value1','value2']".
+-
+-        Dictionaries are treated as DictOpt and converted to 'k1:v1,k2:v2"
+-        instead of the standard representation of "{'k1':'v1','k2':'v2'}".
+-
+-        Anything else is converted to a string.
+-        """
+-        if isinstance(val, six.string_types):
+-            return val
+-
+-        # Recursion is used to to handle options like u4p_failover_target that
+-        # is a MultiOpt where each entry is a dictionary.
+-        if isinstance(val, (list, tuple)):
+-            return '[' + ','.join((cls.__val_to_str(v) for v in val)) + ']'
+-
+-        if isinstance(val, dict):
+-            return ','.join('%s:%s' % (k, cls.__val_to_str(v))
+-                            for k, v in val.items())
+-
+-        return six.text_type(val)
++        for k, v in kvs.items():
++            try:
++                # set_override does the validation
++                cfg.CONF.set_override(k, v, group)
++                # for correctness, don't leave it there
++                cfg.CONF.clear_override(k, group)
++            except cfg.NoSuchOptError:
++                # Don't fail on unknown variables, behave like cinder
++                LOG.warning('Unknown config option %s', k)
++
++    def _get_backend_config(self, driver_cfg):
++        # Create the group for the backend
++        backend_name = driver_cfg['volume_backend_name']
++        cfg.CONF.register_group(cfg.OptGroup(backend_name))
+ 
+-    @classmethod
+-    def __convert_option_to_string(cls, key, val, opts):
+-        """Convert a Cinder driver cfg option into oslo config file format.
+-
+-        A single Python object represents multiple Oslo config types. For
+-        example a list can be a ListOpt or a MultOpt, and their string
+-        representations on a file are different.
+-
+-        This method uses the configuration option types to return the right
+-        string representation.
+-        """
+-        opt = opts[key]['opt']
+-
+-        # Convert to a list for ListOpt opts were the caller didn't pass a list
+-        if (isinstance(opt, cfg.ListOpt) and
+-                not isinstance(val, (list, tuple))):
+-            val = [val]
+-
+-        # For MultiOpt we need multiple entries in the file but ConfigParser
+-        # doesn't support repeating the same entry multiple times, so we hack
+-        # our way around it
+-        elif isinstance(opt, cfg.MultiOpt):
+-            if not isinstance(val, (list, tuple)):
+-                val = [val] if val else []
+-            val = [cls.__val_to_str(v) for v in val]
+-            if not val:
+-                val = ''
+-            elif len(val) == 1:
+-                val = val[0]
+-            else:
+-                val = (('%s\n' % val[0]) +
+-                       '\n'.join('%s = %s' % (key, v) for v in val[1:]))
+-
+-        # This will handle DictOpt and ListOpt
+-        if not isinstance(val, six.string_types):
+-            val = cls.__val_to_str(val)
+-        return val
++        # Validate and set config options
++        backend_group = getattr(cfg.CONF, backend_name)
++        self._validate_options(driver_cfg)
++        for key, value in driver_cfg.items():
++            setattr(backend_group, key, value)
+ 
+-    @classmethod
+-    def __set_parser_kv(cls, kvs, section):
+-        """Set Oslo configuration options in our parser.
+-
+-        The Oslo parser needs to have the configuration options like they are
+-        in a file, but we have them as Python objects, so we need to set them
+-        for the parser in the format it is expecting them, strings.
+-        """
+-        opts = cls.__get_options_types(kvs)
+-        for key, val in kvs.items():
+-            string_val = cls.__convert_option_to_string(key, val, opts)
+-            cls._parser.set(section, key, string_val)
+-
+-    def _set_backend_config(self, driver_cfg):
+-        backend_name = driver_cfg['volume_backend_name']
+-        self._parser.add_section(backend_name)
+-        self.__set_parser_kv(driver_cfg, backend_name)
+-        self._parser.set('DEFAULT', 'enabled_backends',
+-                         ','.join(self.backends.keys()))
+-        self._update_cinder_config()
+-        config = configuration.Configuration(manager.volume_backend_opts,
+-                                             config_group=backend_name)
++        # Return the Configuration that will be passed to the driver
++        config = configuration.Configuration([], config_group=backend_name)
+         return config
+ 
+     @classmethod
+@@ -384,6 +279,14 @@ class Backend(object):
+         cls.global_initialization = True
+         cls.output_all_backend_info = output_all_backend_info
+ 
++    def _apply_backend_workarounds(self, config):
++        """Apply workarounds for drivers that do bad stuff."""
++        if 'netapp' in config.volume_driver:
++            # Workaround NetApp's weird replication stuff that makes it reload
++            # config sections in get_backend_configuration.  OK since we don't
++            # support replication.
++            cfg.CONF.list_all_sections = lambda: config.volume_backend_name
++
+     @classmethod
+     def _set_logging(cls, disable_logs):
+         if disable_logs:

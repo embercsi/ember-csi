@@ -3,3 +3,4 @@ grpcio==1.15.0
 protobuf>=3.5.0.post1
 kubernetes>=7.0.0
 setuptools>=40.0.0
+future;python_version<"3.0"

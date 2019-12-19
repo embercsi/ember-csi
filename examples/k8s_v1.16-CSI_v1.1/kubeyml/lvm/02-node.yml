@@ -162,7 +162,7 @@ spec:
               mountPath: /var/lib/ember-csi
               mountPropagation: Bidirectional
         - name: csc
-          image: embercsi/csc:v1.0.0
+          image: embercsi/csc:v1.1.0
           command: ["tail"]
           args: ["-f", "/dev/null"]
           env:
@@ -334,7 +334,7 @@ spec:
               mountPath: /var/lib/ember-csi
               mountPropagation: Bidirectional
         - name: csc
-          image: embercsi/csc:v1.0.0
+          image: embercsi/csc:v1.1.0
           command: ["tail"]
           args: ["-f", "/dev/null"]
           env:
