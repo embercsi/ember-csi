@@ -4,12 +4,18 @@
 import glob
 import os
 import subprocess
+import sys
 
 import setuptools
 from setuptools.command import develop
-from setuptools.command import egg_info
 from setuptools.command import install
 from setuptools.command import sdist
+
+# Wheel only necessary on the host to publish to PyPi, not on the container
+try:
+    from wheel import bdist_wheel
+except ImportError:
+    bdist_wheel = None
 
 
 PATCH_FILES = True
@@ -37,12 +43,6 @@ class CustomDevelop(develop.develop):
         develop.develop.run(self)
 
 
-class CustomEggInfo(egg_info.egg_info):
-    def run(self):
-        _patch_libraries()
-        egg_info.egg_info.run(self)
-
-
 class CustomSdist(sdist.sdist):
     def run(self):
         global PATCH_FILES
@@ -50,11 +50,22 @@ class CustomSdist(sdist.sdist):
         sdist.sdist.run(self)
 
 
+if not bdist_wheel:
+    CustomBdist = None
+else:
+    class CustomBdist(bdist_wheel.bdist_wheel):
+        def run(self):
+            global PATCH_FILES
+            PATCH_FILES = False
+            bdist_wheel.bdist_wheel.run(self)
+
+
 with open('README.md') as readme_file:
     readme = readme_file.read()
 
 with open('HISTORY.md') as history_file:
     history = history_file.read()
+
 
 requirements = [
     'cinderlib>=0.9.0',
@@ -68,6 +79,12 @@ requirements = [
     # 'setuptools>=40.0.0',
 ]
 
+# We can't use 'future ; python_version<"3.0"', because it requires setuptools
+# version 36.2 or higher
+if sys.version_info[0] < 3:
+    requirements.append('future')
+
+
 dependency_links = [
 ]
 
@@ -78,9 +95,9 @@ test_requirements = [
 setuptools.setup(
     cmdclass={
         'sdist': CustomSdist,
+        'bdist_wheel': CustomBdist,
         'install': CustomInstall,
         'develop': CustomDevelop,
-        'egg_info': CustomEggInfo,
     },
     name='ember-csi',
     version='0.9.0',
@@ -90,7 +107,8 @@ setuptools.setup(
     author="Gorka Eguileor",
     author_email='gorka@eguileor.com',
     url='https://github.com/akrog/ember-csi',
-    packages=setuptools.find_packages(exclude=['tmp', 'tests*']),
+    packages=setuptools.find_packages(
+        exclude=['tmp', 'tests*', 'examples', 'docs']),
     package_dir={'ember_csi': 'ember_csi'},
     include_package_data=True,
     dependency_links=dependency_links,
