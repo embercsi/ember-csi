@@ -11,7 +11,7 @@ Vagrant.configure("2") do |config|
 
     # Override
     config.vm.provider :libvirt do |v,override|
-        override.vm.synced_folder '.', '/home/vagrant/sync', disabled: true
+        override.vm.synced_folder '.', '/vagrant', disabled: true
         v.memory = MEMORY
         v.cpus = CPUS
         v.nested = true
