@@ -116,7 +116,10 @@ class IdentityBase(object):
         # NOTE(geguileo): For now let's only support single reader/writer modes
         self.SUPPORTED_ACCESS = (
             self.TYPES.AccessModeType.SINGLE_NODE_WRITER,
-            self.TYPES.AccessModeType.SINGLE_NODE_READER_ONLY)
+            self.TYPES.AccessModeType.SINGLE_NODE_READER_ONLY,
+            self.TYPES.AccessModeType.MULTI_NODE_READER_ONLY,
+            self.TYPES.AccessModeType.MULTI_NODE_SINGLE_WRITER,
+            self.TYPES.AccessModeType.MULTI_NODE_MULTI_WRITER)
 
         self.CSI.add_IdentityServicer_to_server(self, server)
         self.manifest = manifest
