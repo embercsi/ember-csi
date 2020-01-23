@@ -73,8 +73,8 @@ spec:
           image: quay.io/k8scsi/csi-node-driver-registrar:v1.2.0
           args:
           - --v=5
-          - --csi-address=/csi-data/csi.sock
-          - --kubelet-registration-path=/var/lib/kubelet/plugins/ember-csi.io/csi.sock
+          - --csi-address=/var/lib/ember-csi/csi.sock
+          - --kubelet-registration-path=/var/lib/ember-csi/ember-csi.io/csi.sock
           env:
             - name: KUBE_NODE_NAME
               valueFrom:
@@ -82,8 +82,8 @@ spec:
                   apiVersion: v1
                   fieldPath: spec.nodeName
           volumeMounts:
-            - mountPath: /csi-data
-              name: socket-dir
+            - mountPath: /var/lib/ember-csi
+              name: ember-csi-data
             - name: registration-dir
               mountPath: /registration
         - name: csi-driver
@@ -100,7 +100,7 @@ spec:
             - name: X_CSI_SPEC_VERSION
               value: v1.1
             - name: CSI_ENDPOINT
-              value: unix:///csi-data/csi.sock
+              value: unix:///var/lib/ember-csi/csi.sock
             - name: CSI_MODE
               value: node
             - name: X_CSI_PERSISTENCE_CONFIG
@@ -121,8 +121,11 @@ spec:
             periodSeconds: 90
             timeoutSeconds: 60
           volumeMounts:
-            - name: socket-dir
-              mountPath: /csi-data
+            # So we don't lose our private bindmounts on container reboot and
+            # this is also where our socket lives
+            - name: ember-csi-data
+              mountPath: /var/lib/ember-csi
+              mountPropagation: Bidirectional
             - name: mountpoint-dir
               mountPath: /var/lib/kubelet
               mountPropagation: Bidirectional
@@ -157,25 +160,17 @@ spec:
             - name: iscsi-info
               mountPath: /var/lib/iscsi
               mountPropagation: Bidirectional
-            # So we don't lose our private bindmounts on container reboot
-            - name: ember-csi-data
-              mountPath: /var/lib/ember-csi
-              mountPropagation: Bidirectional
         - name: csc
           image: embercsi/csc:v1.1.0
           command: ["tail"]
           args: ["-f", "/dev/null"]
           env:
             - name: CSI_ENDPOINT
-              value: unix:///csi-data/csi.sock
+              value: unix:///var/lib/ember-csi/csi.sock
           volumeMounts:
-            - name: socket-dir
-              mountPath: /csi-data
+            - name: ember-csi-data
+              mountPath: /var/lib/ember-csi
       volumes:
-        - name: socket-dir
-          hostPath:
-            path: /var/lib/kubelet/plugins/ember-csi.io
-            type: DirectoryOrCreate
         - name: registration-dir
           hostPath:
             path: /var/lib/kubelet/plugins_registry
@@ -217,7 +212,8 @@ spec:
             path: /var/lib/iscsi
         - name: ember-csi-data
           hostPath:
-            path: /var/lib/ember-csi/lvm
+            path: /var/lib/ember-csi/ember-csi.io
+            type: DirectoryOrCreate
 ---
 # Node 0 cannot access LVM iSCSI backend
 # We need this pod because CSI needs all nodes to be running the plugin
@@ -247,8 +243,8 @@ spec:
           image: quay.io/k8scsi/csi-node-driver-registrar:v1.1.0
           args:
           - --v=5
-          - --csi-address=/csi-data/csi.sock
-          - --kubelet-registration-path=/var/lib/kubelet/plugins/ember-csi.io/csi.sock
+          - --csi-address=/var/lib/ember-csi/csi.sock
+          - --kubelet-registration-path=/var/lib/ember-csi/ember-csi.io/csi.sock
           env:
             - name: KUBE_NODE_NAME
               valueFrom:
@@ -256,8 +252,8 @@ spec:
                   apiVersion: v1
                   fieldPath: spec.nodeName
           volumeMounts:
-            - mountPath: /csi-data
-              name: socket-dir
+            - mountPath: /var/lib/ember-csi
+              name: ember-csi-data
             - name: registration-dir
               mountPath: /registration
         - name: csi-driver
@@ -272,7 +268,7 @@ spec:
             - name: X_CSI_SPEC_VERSION
               value: v1.1
             - name: CSI_ENDPOINT
-              value: unix:///csi-data/csi.sock
+              value: unix:///var/lib/ember-csi/csi.sock
             - name: CSI_MODE
               value: node
             - name: X_CSI_PERSISTENCE_CONFIG
@@ -293,8 +289,11 @@ spec:
             periodSeconds: 90
             timeoutSeconds: 60
           volumeMounts:
-            - name: socket-dir
-              mountPath: /csi-data
+            # So we don't lose our private bindmounts on container reboot and
+            # this is also where our socket lives
+            - name: ember-csi-data
+              mountPath: /var/lib/ember-csi
+              mountPropagation: Bidirectional
             - name: mountpoint-dir
               mountPath: /var/lib/kubelet
               mountPropagation: Bidirectional
@@ -329,24 +328,20 @@ spec:
             - name: iscsi-info
               mountPath: /var/lib/iscsi
               mountPropagation: Bidirectional
-            # So we don't lose our private bindmounts on container reboot
-            - name: ember-csi-data
-              mountPath: /var/lib/ember-csi
-              mountPropagation: Bidirectional
         - name: csc
           image: embercsi/csc:v1.1.0
           command: ["tail"]
           args: ["-f", "/dev/null"]
           env:
             - name: CSI_ENDPOINT
-              value: unix:///csi-data/csi.sock
+              value: unix:///var/lib/ember-csi/csi.sock
           volumeMounts:
-            - name: socket-dir
-              mountPath: /csi-data
+            - name: ember-csi-data
+              mountPath: /var/lib/ember-csi
       volumes:
-        - name: socket-dir
+        - name: ember-csi-data
           hostPath:
-            path: /var/lib/kubelet/plugins/ember-csi.io
+            path: /var/lib/ember-csi/ember-csi.io
             type: DirectoryOrCreate
         - name: registration-dir
           hostPath:
@@ -387,6 +382,3 @@ spec:
         - name: iscsi-info
           hostPath:
             path: /var/lib/iscsi
-        - name: ember-csi-data
-          hostPath:
-            path: /var/lib/ember-csi/lvm
