@@ -621,6 +621,12 @@ class MountInfo(object):
             return self.mount_source
         return self.root
 
+    def __str__(self):
+        return ('<root: %s, dest: %s, src: %s>' %
+                (self.root, self.mount_point, self.mount_source))
+
+    __repr__ = __str__
+
 
 class NodeBase(IdentityBase):
     STAGED_NAME = 'stage'
@@ -870,14 +876,14 @@ class NodeBase(IdentityBase):
         # If it's not already unstaged
         expected = (device, private_bind)
         if device:
-            count = 0
-            for mount in self._get_mountinfo():
-                if mount.source in expected:
-                    count += 1
+            do_match = [mount for mount in self._get_mountinfo()
+                        if mount.source in expected]
+            count = len(do_match)
 
             # If the volume is still in use we cannot unstage (one use is for
             # our private volume reference and the other for staging path
             if count > 2:
+                LOG.debug('Volume still in use. Mountpoints: %s' % do_match)
                 context.abort(grpc.StatusCode.ABORTED,
                               'Operation pending for volume')
 
