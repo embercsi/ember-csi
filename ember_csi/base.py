@@ -621,6 +621,12 @@ class MountInfo(object):
             return self.mount_source
         return self.root
 
+    def __str__(self):
+        return ('<root: %s, dest: %s, src: %s>' %
+                (self.root, self.mount_point, self.mount_source))
+
+    __repr__ = __str__
+
 
 class NodeBase(IdentityBase):
     STAGED_NAME = 'stage'
@@ -702,22 +708,39 @@ class NodeBase(IdentityBase):
         device = self._get_device(private_bind)
         return device, private_bind
 
-    def _format_device(self, fs_type, device, context):
+    def _format_device(self, vol, requested_fs, device, context):
+        metadata_fs = self._get_fs_type(vol)
+
         # We don't use the util-linux Python library to reduce dependencies
         stdout, stderr = self.sudo('lsblk', '-nlfoFSTYPE', device, retries=5,
                                    errors=[1, 32], delay=2)
         fs_types = filter(None, stdout.split())
-        if fs_types:
-            if fs_types[0] == fs_type:
-                return
+        current_fs = fs_types[0] if fs_types else None
+
+        if current_fs != metadata_fs:
+            LOG.warning("Inconsistent fs-type: %s in metadata, %s in lsblk.  "
+                        "Probable cause is that this volume was created from a"
+                        " source (snapshot/volume) right between building the "
+                        "FS and flushing the data.",
+                        metadata_fs, current_fs)
+
+        if current_fs == requested_fs:
+            return
+
+        if current_fs:
             context.abort(grpc.StatusCode.ALREADY_EXISTS,
                           'Cannot stage filesystem %s on device that '
                           'already has filesystem %s' %
-                          (fs_type, fs_types[0]))
-        cmd = [defaults.MKFS + fs_type]
-        cmd.extend(self.MKFS_ARGS.get(fs_type, self.DEFAULT_MKFS_ARGS))
+                          (requested_fs, current_fs))
+
+        cmd = [defaults.MKFS + requested_fs]
+        cmd.extend(self.MKFS_ARGS.get(requested_fs, self.DEFAULT_MKFS_ARGS))
         cmd.append(device)
         self.sudo(*cmd)
+
+        # Store that the volume is being used as a mount.
+        if metadata_fs != requested_fs:
+            self._set_metadata(vol, fs_type=requested_fs)
 
     def _check_mount_exists(self, capability, private_bind, target, context):
         mounts = self._get_mount(private_bind)
@@ -833,12 +856,7 @@ class NodeBase(IdentityBase):
                                             private_bind, target, context):
                 fs_type = (request.volume_capability.mount.fs_type or
                            CONF.DEFAULT_MOUNT_FS)
-                # Skip if we already formatted it correctly
-                if self._get_fs_type(vol) != fs_type:
-                    self._format_device(fs_type, private_bind, context)
-                    # Store that the volume is being used as a mount.
-                    self._set_metadata(vol, fs_type=fs_type)
-
+                self._format_device(vol, fs_type, private_bind, context)
                 flags = request.volume_capability.mount.mount_flags
                 self._mount(fs_type, flags, private_bind, target)
         return self.STAGE_RESP
@@ -858,14 +876,14 @@ class NodeBase(IdentityBase):
         # If it's not already unstaged
         expected = (device, private_bind)
         if device:
-            count = 0
-            for mount in self._get_mountinfo():
-                if mount.source in expected:
-                    count += 1
+            do_match = [mount for mount in self._get_mountinfo()
+                        if mount.source in expected]
+            count = len(do_match)
 
             # If the volume is still in use we cannot unstage (one use is for
             # our private volume reference and the other for staging path
             if count > 2:
+                LOG.debug('Volume still in use. Mountpoints: %s' % do_match)
                 context.abort(grpc.StatusCode.ABORTED,
                               'Operation pending for volume')
 
