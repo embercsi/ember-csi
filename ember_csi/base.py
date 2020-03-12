@@ -20,6 +20,7 @@ import os
 import stat
 import re
 import socket
+import sys
 import time
 
 import cinderlib
@@ -263,18 +264,18 @@ class IdentityBase(object):
     def _calculate_size(self, request, context):
         # Must be idempotent
         min_size = self._get_size('required', request, defaults.VOLUME_SIZE)
-        max_size = self._get_size('limit', request, min_size)
+        max_size = self._get_size('limit', request, sys.maxint)
         if max_size < min_size:
             context.abort(grpc.StatusCode.INVALID_ARGUMENT,
                           'Limit_bytes is smaller than required_bytes')
 
-        vol_size = min(min_size, max_size)
+        if max_size < 1:
+            context.abort(grpc.StatusCode.OUT_OF_RANGE,
+                          'Unsupported capacity_range (min size is 1GB)')
 
-        if vol_size < 1:
-            if max_size < 1:
-                context.abort(grpc.StatusCode.OUT_OF_RANGE,
-                              'Unsupported capacity_range (min size is 1GB)')
-            vol_size = max_size
+        # Create the smallest volume that matches the request and is at least
+        # 1GBi
+        vol_size = max(min_size, defaults.VOLUME_SIZE)
         return (vol_size, min_size, max_size)
 
     @staticmethod
