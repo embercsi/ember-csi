@@ -88,6 +88,7 @@ spec:
               mountPath: /registration
         - name: csi-driver
           image: "{{ ember_image }}"
+          terminationMessagePath: /tmp/termination-log
           securityContext:
             privileged: true
             allowPrivilegeEscalation: true
@@ -260,6 +261,7 @@ spec:
               mountPath: /registration
         - name: csi-driver
           image: "{{ ember_image }}"
+          terminationMessagePath: /tmp/termination-log
           securityContext:
             privileged: true
             allowPrivilegeEscalation: true
