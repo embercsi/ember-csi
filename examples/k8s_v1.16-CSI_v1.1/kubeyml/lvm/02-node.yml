@@ -88,6 +88,7 @@ spec:
               mountPath: /registration
         - name: csi-driver
           image: "{{ ember_image }}"
+          terminationMessagePath: /tmp/termination-log
           #command: ["tail"]
           #args: ["-f", "/dev/null"]
           securityContext:
@@ -258,6 +259,7 @@ spec:
               mountPath: /registration
         - name: csi-driver
           image: "{{ ember_image }}"
+          terminationMessagePath: /tmp/termination-log
           securityContext:
             privileged: true
             allowPrivilegeEscalation: true
