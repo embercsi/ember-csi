@@ -475,6 +475,7 @@ class ControllerBase(IdentityBase):
     def ControllerPublishVolume(self, request, context):
         vol, node = self._get_vol_node(request, context)
 
+        attach_mode = 'ro' if request.readonly else 'rw'
         # The volume is already attached
         if vol.status == 'in-use':
             for conn in vol.connections:
@@ -482,19 +483,14 @@ class ControllerBase(IdentityBase):
                 if conn.attached_host != request.node_id:
                     context.abort(grpc.StatusCode.FAILED_PRECONDITION,
                                   'Volume published to another node')
-                expected_mode = 'ro' if request.readonly else 'rw'
-                if conn.attach_mode != expected_mode:
+                if conn.attach_mode != attach_mode:
                     context.abort(grpc.StatusCode.ALREADY_EXISTS,
                                   'Volume published with readonly=%s. Cannot '
                                   'publish now as readonly=%s' %
                                   (not request.readonly, request.readonly))
         else:
-            c = vol.connect(node.connector_dict, attached_host=node.id)
-            # TODO(geguileo): Once cinderlib supports changing attach_mode on
-            # the connect call pass it there and remove this.
-            if request.readonly:
-                c._ovo.attach_mode = 'ro'
-                c.save()
+            vol.connect(node.connector_dict, attached_host=node.id,
+                        attach_mode=attach_mode)
         return self.TYPES.CtrlPublishResp()
 
     @common.debuggable
