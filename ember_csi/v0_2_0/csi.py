@@ -49,12 +49,8 @@ class Controller(base.ControllerBase):
     @common.logrpc
     @common.require('volume_id', 'volume_capabilities')
     def ValidateVolumeCapabilities(self, request, context):
-        vol = self._get_vol(request.volume_id)
-        if not vol:
-            context.abort(grpc.StatusCode.NOT_FOUND,
-                          'Volume %s does not exist' % request.volume_id)
-
-        message = self._validate_capabilities(request.volume_capabilities)
+        vol = self._get_vol(request.volume_id, context=context)
+        message = self._assert_req_cap_matches_vol(vol, request)
         # TODO(geguileo): Add support for attributes via volume types
         if not message and request.volume_attributes:
             message = "Parameters don't match"
@@ -94,6 +90,9 @@ class Node(base.NodeBase):
 
     # NodeGetCapabilities implemented on base Controller class using
     # NODE_CAPABILITIES attribute.
+
+    def _get_pod_uid(self, request):
+        return request.volume_attributes.get('csi.storage.k8s.io/pod.uid')
 
 
 class All(Controller, Node):

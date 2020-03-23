@@ -19,7 +19,6 @@ import os
 
 from google.protobuf import timestamp_pb2
 import grpc
-from oslo_log import log as logging
 
 from ember_csi import base
 from ember_csi import common
@@ -57,11 +56,7 @@ class Controller(base.TopologyBase, base.SnapshotBase, base.ControllerBase):
             self.CTRL_CAPABILITIES.remove(capab)
 
     def _create_from_vol(self, vol_id, vol_size, name, context, **params):
-        src_vol = self._get_vol(volume_id=vol_id)
-
-        if not src_vol:
-            context.abort(grpc.StatusCode.NOT_FOUND,
-                          'Volume %s does not exist' % vol_id)
+        src_vol = self._get_vol(volume_id=vol_id, context=context)
         if src_vol.status not in ('available', 'in-use'):
             context.abort(grpc.StatusCode.INVALID_ARGUMENT,
                           'Volume %s is not available' % vol_id)
@@ -124,24 +119,23 @@ class Controller(base.TopologyBase, base.SnapshotBase, base.ControllerBase):
     @common.logrpc
     @common.require('volume_id', 'volume_capabilities')
     def ValidateVolumeCapabilities(self, request, context):
-        vol = self._get_vol(request.volume_id)
-        if not vol:
-            context.abort(grpc.StatusCode.NOT_FOUND,
-                          'Volume %s does not exist' % request.volume_id)
-
-        message = self._validate_capabilities(request.volume_capabilities)
+        vol = self._get_vol(request.volume_id, context=context)
+        message = self._assert_req_cap_matches_vol(vol, request)
         if message:
             return self.TYPES.ValidateResp(message=message)
 
+        # TODO: If not present get it from the volume itself
+        vol_params = request.volume_context
+
         if request.parameters:
             for k, v in request.parameters.items():
-                v2 = request.volume_context.get(k)
+                v2 = vol_params.get(k)
                 if v != v2:
                     message = 'Parameter %s does not match' % k
                     return self.TYPES.ValidateResp(message=message)
 
         confirmed = self.TYPES.ValidateResp.Confirmed(
-            volume_context=request.volume_context,
+            volume_context=vol_params,
             volume_capabilities=request.volume_capabilities,
             parameters=request.parameters)
         return self.TYPES.ValidateResp(confirmed=confirmed)
@@ -251,3 +245,6 @@ class Node(base.NodeBase):
     @common.logrpc
     def NodeGetInfo(self, request, context):
         return self.node_info_resp
+
+    def _get_pod_uid(self, request):
+        return request.volume_context.get('csi.storage.k8s.io/pod.uid')

@@ -85,10 +85,7 @@ class Controller(v1_base.Controller):
     @common.require('volume_id', 'capacity_range')
     @common.Worker.unique('volume_id')
     def ControllerExpandVolume(self, request, context):
-        vol = self._get_vol(request.volume_id)
-        if not vol:
-            context.abort(grpc.StatusCode.NOT_FOUND,
-                          'Volume %s does not exist' % request.volume_id)
+        vol = self._get_vol(request.volume_id, context=context)
 
         # Validate and get requested sizes
         vol_size, min_size, max_size = self._calculate_size(request, context)
@@ -157,11 +154,7 @@ class Node(v1_base.Node):
     @common.require('volume_id', 'volume_path')
     @common.Worker.unique('volume_id')
     def NodeExpandVolume(self, request, context):
-        vol = self._get_vol(request.volume_id)
-        if not vol:
-            context.abort(grpc.StatusCode.NOT_FOUND,
-                          'Volume %s does not exist' % request.volume_id)
-
+        vol = self._get_vol(request.volume_id, context=context)
         vol_size = vol.size
         # If the size is given, check that it makes sense
         if request.HasField('capacity_range'):
