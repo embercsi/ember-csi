@@ -65,7 +65,7 @@ metadata:
   name: rbd.ember-csi.io
 spec:
   attachRequired: true
-  podInfoOnMount: false
+  podInfoOnMount: true
   # volumeLifecycleModes: # added in Kubernetes 1.16, we use default
   # - Persistent
 ---
