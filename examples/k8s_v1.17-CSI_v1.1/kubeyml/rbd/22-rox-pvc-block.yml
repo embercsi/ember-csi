@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: csi-rox-rbd-block-pvc
+spec:
+  accessModes:
+    - ReadOnlyMany
+  volumeMode: Block
+  dataSource:
+    name: csi-rwx-rbd-block-pvc
+    kind: PersistentVolumeClaim
+  resources:
+    requests:
+      storage: 3Gi
+  storageClassName: csi-rbd

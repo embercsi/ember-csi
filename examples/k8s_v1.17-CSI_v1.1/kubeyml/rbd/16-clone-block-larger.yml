@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: larger-vol-from-vol-rbd
+spec:
+  storageClassName: csi-rbd
+  volumeMode: Block
+  dataSource:
+    name: csi-rbd-block
+    kind: PersistentVolumeClaim
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 4Gi

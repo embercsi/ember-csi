@@ -1,0 +1,99 @@
+- name: update
+  yum:
+    name: '*'
+    state: latest
+
+- name: build hosts file
+  lineinfile: dest=/etc/hosts regexp='.*{{ item }}$' line="{{ hostvars[item].ansible_eth1.ipv4.address }} {{item}}" state=present
+  when: hostvars[item].ansible_eth1.ipv4.address is defined
+  with_items: "{{ groups['all'] }}"
+
+- name: disable selinux
+  selinux: state=disabled
+
+- name: disable of selinux - now
+  command: setenforce 0
+
+- name: Ensure net.bridge.bridge-nf-call-iptables is set. See kubeadm
+  copy: src=k8s.conf owner=root group=root dest=/etc/sysctl.d/k8s.conf
+
+- name: Run sysctl
+  command: sysctl --system
+
+- name: Add Kubernetes yum repo
+  yum_repository:
+    name: kubernetes
+    description: Kubernetes kubeadm
+    baseurl: https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64
+    gpgkey: https://packages.cloud.google.com/yum/doc/yum-key.gpg
+    gpgcheck: yes
+
+# Pin kubernetes related packages to ensure we don't break every other day
+- name: install utility programs
+  yum:
+    name: ['wget', 'ntp', 'screen', 'epel-release', 'vim', 'iptables', 'iptables-utils', 'iptables-services', 'ncurses-term', 'docker', 'kubelet-1.17.4', 'kubeadm-1.17.4', 'kubectl-1.17.4']
+    state: present
+    disable_gpg_check: yes
+
+# Workaround for bugs:
+#  - https://github.com/kubernetes/kubernetes/issues/56850
+#  - https://github.com/kubernetes/kubernetes/issues/63804
+- lineinfile:
+    path: /etc/sysconfig/kubelet
+    regexp: '^KUBELET_EXTRA_ARGS='
+    line: 'KUBELET_EXTRA_ARGS=--runtime-cgroups=/systemd/system.slice --kubelet-cgroups=/systemd/system.slice'
+
+# Note(geguileo): If we want to use our own registry for developtment we just
+# need to edit the roles/common/files/daemon.json with the IP of our registry.
+# We can easily run a registry with:
+#     docker run -d -p 5000:5000 --name registry registry:2
+- name: Allow connecting to our own insecure registry
+  copy:
+    content: "{ \"insecure-registries\":[\"{{ ember_insecure_registry }}\"] }"
+    dest: /etc/docker/daemon.json
+    owner: root
+    group: root
+
+- name: enable kube services
+  service: name={{ item }} state=started enabled=yes
+  with_items:
+    - docker
+    - ntpd
+    - kubelet
+
+- name: turn off swap
+  command: swapoff -a
+
+- name: remove swap from /etc/fstab
+  lineinfile:
+    path: /etc/fstab
+    state: absent
+    regexp: "swap"
+
+- name: iptables open ports
+  command: iptables -A INPUT -p tcp -m state --state NEW -m multiport --dports 9000:9200 -j ACCEPT
+
+- name: save iptables
+  command: service iptables save
+
+# Accept loop devices for the LVM ember-volumes VG and reject anything else
+- name: Disable new LVM volumes
+  lineinfile:
+    path: /etc/lvm/lvm.conf
+    state: present
+    insertafter: '# filter ='
+    line: "\tfilter = [ \"a|loop|\", \"r|.*\\/|\" ]\n\tglobal_filter = [ \"a|loop|\", \"r|.*\\/|\" ]"
+
+- name: Install iSCSI
+  yum:
+    name: ['iscsi-initiator-utils', 'device-mapper-multipath']
+    state: present
+
+- name: Configure multipath
+  command: mpathconf --enable --with_multipathd y --user_friendly_names n --find_multipaths y
+
+- name: Enable connection services
+  service: name={{ item }} state=restarted enabled=yes
+  with_items:
+    - iscsid
+    - multipathd
