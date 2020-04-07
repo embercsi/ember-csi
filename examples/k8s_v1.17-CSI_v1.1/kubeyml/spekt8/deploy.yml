@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spekt8
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      component: spekt8
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        component: spekt8
+    spec:
+      containers:
+        - name: spekt8
+          image: 192.168.1.11:5000/spekt8:master
+          ports:
+            - containerPort: 3000
+          env:
+            - name: SPEKT8_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+      serviceAccountName: default

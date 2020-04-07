@@ -1,0 +1,10 @@
+- file: path=/home/vagrant/files state=directory group=vagrant owner=vagrant
+- name: Copy sysfiles tar file (for X_CSI_SYSTEM_FILES)
+  copy:
+    src: "{{ role_path }}/files/system-files.tar"
+    dest: /home/vagrant/files/system-files.tar
+    owner: vagrant
+    group: vagrant
+
+- name: Deploy sysfiles secret
+  shell: kubectl create secret generic sysfiles-secret --from-file=/home/vagrant/files/system-files.tar
