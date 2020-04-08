@@ -807,6 +807,9 @@ class NodeBase(IdentityBase):
     def _get_mount(self, private_bind):
         mounts = self._get_split_file('/proc/self/mounts')
         result = [mount for mount in mounts if mount[0] == private_bind]
+        if not result:
+            LOG.debug('Private bind %s not found in %s' % (private_bind,
+                                                           mounts))
         return result
 
     def _get_device(self, path):
@@ -815,9 +818,11 @@ class NodeBase(IdentityBase):
         The source of a mounted path will either be the mount source of the
         mount point or the root if it's a bind mount.
         """
-        for mount in self._get_mountinfo():
+        mount_info = self._get_mountinfo()
+        for mount in mount_info:
             if mount.mount_point == path:
                 return mount.source
+        LOG.debug('Could not find %s as dest in %s' % (path, mount_info))
         return None
 
     IS_RO_REGEX = re.compile(r'(^|.+,)ro($|,.+)')
@@ -1137,6 +1142,7 @@ class NodeBase(IdentityBase):
                                                      target, request, context)
 
         if error or not conn:
+            LOG.debug('Failing because error=%s and conn=%s' % (error, conn))
             context.abort(grpc.StatusCode.FAILED_PRECONDITION,
                           'Staging has not been successfully called')
 
