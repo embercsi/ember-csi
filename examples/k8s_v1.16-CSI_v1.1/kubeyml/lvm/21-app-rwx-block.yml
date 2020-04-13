@@ -1,0 +1,29 @@
+kind: Pod
+apiVersion: v1
+metadata:
+  name: my-csi-rwx-block-app
+spec:
+  containers:
+    - name: my-frontend
+      image: busybox
+      volumeDevices:
+      - devicePath: /dev/ember0
+        name: my-csi-block-volume
+        readOnly: false
+      command: [ "tail" ]
+      args: ["-f", "/dev/null"]
+    - name: my-frontend-2
+      image: busybox
+      volumeDevices:
+      - devicePath: /dev/ember0
+        name: my-csi-block-volume
+        readOnly: false
+      command: [ "tail" ]
+      args: ["-f", "/dev/null"]
+  # We don't pin the pod, but due to the topology restrictions of the PV/PVC
+  # it'll never go to node 0
+  volumes:
+    - name: my-csi-block-volume
+      persistentVolumeClaim:
+        claimName: csi-rwx-block-pvc # defined in pvc.yml
+        readOnly: false

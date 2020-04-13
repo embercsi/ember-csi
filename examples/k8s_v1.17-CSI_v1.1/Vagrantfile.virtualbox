@@ -1,0 +1,43 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+NODES = 2
+MEMORY = 4096
+CPUS = 2
+
+Vagrant.configure("2") do |config|
+    config.ssh.insert_key = false
+    config.vm.box = "centos/7"
+
+    # Override
+    config.vm.provider :virtualbox do |v,override|
+        override.vm.synced_folder '.', '/vagrant', disabled: true
+        v.memory = MEMORY
+        v.cpus = CPUS
+    end
+
+    # Make kub master
+    config.vm.define :master do |master|
+        master.vm.network :private_network, ip: "192.168.10.90"
+        master.vm.host_name = "master"
+
+        # View the documentation for the provider you're using for more
+        # information on available options.
+        master.vm.provision :ansible do |ansible|
+            ansible.limit = "all"
+            ansible.playbook = "site.yml"
+            ansible.groups = {
+                "master_node" => ["master"],
+                "nodes" => (0..NODES-1).map {|j| "node#{j}"},
+            }
+        end
+    end
+
+    # Define the nodes' names and networks
+    (0..NODES-1).each do |i|
+        config.vm.define "node#{i}" do |node|
+            node.vm.hostname = "node#{i}"
+            node.vm.network :private_network, ip: "192.168.10.10#{i}"
+        end
+    end
+end

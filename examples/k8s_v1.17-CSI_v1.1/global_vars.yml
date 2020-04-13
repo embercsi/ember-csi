@@ -1,0 +1,7 @@
+---
+kubernetes_token: abcdef.1234567890abcdef
+ember_image: embercsi/ember-csi:master
+ember_insecure_registry: 192.168.1.11:5000
+ember_lvm_config: '{"target_protocol":"iscsi","target_ip_address":"192.168.10.90","name":"lvm","driver":"LVMVolume","volume_group":"ember-volumes","target_helper":"lioadm","multipath":false}'
+ember_rbd_config: '{"name":"ceph","driver":"RBD","rbd_user":"admin","rbd_pool":"rbd","rbd_ceph_conf":"/etc/ceph/ceph.conf","rbd_keyring_conf":"/etc/ceph/ceph.client.admin.keyring"}'
+ember_debug_logs: true

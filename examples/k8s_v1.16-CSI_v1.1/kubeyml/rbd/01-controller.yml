@@ -65,7 +65,7 @@ metadata:
   name: rbd.ember-csi.io
 spec:
   attachRequired: true
-  podInfoOnMount: false
+  podInfoOnMount: true
   # volumeLifecycleModes: # added in Kubernetes 1.16, we use default
   # - Persistent
 ---
@@ -146,6 +146,7 @@ spec:
           name: socket-dir
       - name: csi-driver
         image: "{{ ember_image }}"
+        terminationMessagePath: /tmp/termination-log
         imagePullPolicy: Always
         securityContext:
           privileged: true

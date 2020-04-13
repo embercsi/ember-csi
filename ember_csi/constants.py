@@ -55,3 +55,8 @@ CLONE_FEATURE = 'clone'
 SNAPSHOT_FEATURE = 'snapshot'
 EXPAND_FEATURE = 'expand'
 EXPAND_ONLINE_FEATURE = 'expand_online'
+BLOCK_RWX_FEATURE = 'block_rwx'
+
+CAPABILITY_KEY = '_capability'
+CAPABILITIES_KEY = '_capabilities'
+PUBLISHED_CAPABILITY_KEY = '_pub_cap'
