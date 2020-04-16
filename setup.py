@@ -3,9 +3,11 @@
 
 import glob
 import os
+import shutil
 import subprocess
 import sys
 
+from distutils import cmd
 import setuptools
 from setuptools.command import develop
 from setuptools.command import install
@@ -58,7 +60,31 @@ else:
         def run(self):
             global PATCH_FILES
             PATCH_FILES = False
+            self.run_command('csi_proto')
             bdist_wheel.bdist_wheel.run(self)
+
+
+class SetCSIProto(cmd.Command):
+    description = 'Set csi_pb2 and csi_pb2_grpc based on the Python version'
+    user_options = []
+
+    def initialize_options(self):
+        pass
+
+    def finalize_options(self):
+        pass
+
+    def run(self):
+        pyver = 'py3' if six.PY3 else 'py2'
+
+        # Use the code as reference, that way if we forget to add the file
+        # under csi_proto this method will crash
+        for directory in sorted(glob.glob('ember_csi/v*_*_*/')):
+            print('Setting csi_pb2 files in ' + directory)
+            name = os.path.basename(directory[:-1])
+            for filename in ('csi_pb2.py', 'csi_pb2_grpc.py'):
+                shutil.copy2(os.path.join('csi_proto', pyver, name, filename),
+                             os.path.join(directory, filename))
 
 
 with open('README.md') as readme_file:
@@ -99,6 +125,7 @@ setuptools.setup(
         'bdist_wheel': CustomBdist,
         'install': CustomInstall,
         'develop': CustomDevelop,
+        'csi_proto': SetCSIProto,
     },
     name='ember-csi',
     version='0.9.0',

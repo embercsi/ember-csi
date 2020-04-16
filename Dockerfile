@@ -59,6 +59,7 @@ COPY . /ember-csi
 RUN sed -i -r "s/^(VENDOR_VERSION = ').+'/\1${VERSION}+`date +%d%m%Y%H%M%S%N`'/" /ember-csi/ember_csi/constants.py && \
     sed -i -r "s/(version=').+'/\1$VERSION+`date +%d%m%Y%H%M%S%N`'/" /ember-csi/setup.py && \
     sed -i -r "s/^(__version__ = ').*'$/\1${VERSION}+`date +%d%m%Y%H%M%S%N`'/" /ember-csi/ember_csi/__init__.py && \
+    cd /ember-csi && python setup.py csi_proto && \
     pip install --no-cache-dir -e /ember-csi
 
 # Define default command
