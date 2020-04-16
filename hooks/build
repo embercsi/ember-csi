@@ -11,17 +11,30 @@ then
          --build-arg VERSION=$EMBER_VERSION \
          --build-arg BUILD_DATE=`date -u +"%Y-%m-%dT%H:%M:%SZ"` \
          --build-arg VCS_REF=`git rev-parse --short HEAD` \
-         -t $DOCKER_REPO:master \
+         -t $DOCKER_REPO:master7 \
          -f Dockerfile .
-  # Disable building from stable for now, since cinderlib has bugs there and
-  # we cannot patch Stein yet
+  docker build \
+         --build-arg RELEASE=master \
+         --build-arg VERSION=$EMBER_VERSION \
+         --build-arg BUILD_DATE=`date -u +"%Y-%m-%dT%H:%M:%SZ"` \
+         --build-arg VCS_REF=`git rev-parse --short HEAD` \
+         -t $DOCKER_REPO:master8 \
+         -f Dockerfile8 .
+
   # docker build \
   #        --build-arg RELEASE=$STABLE_RELEASE \
   #        --build-arg VERSION=$EMBER_VERSION \
   #        --build-arg BUILD_DATE=`date -u +"%Y-%m-%dT%H:%M:%SZ"` \
   #        --build-arg VCS_REF=`git rev-parse --short HEAD` \
-  #        -t $DOCKER_REPO:latest \
+  #        -t $DOCKER_REPO:latest7 \
   #        -f Dockerfile .
+  # docker build \
+  #        --build-arg RELEASE=$STABLE_RELEASE \
+  #        --build-arg VERSION=$EMBER_VERSION \
+  #        --build-arg BUILD_DATE=`date -u +"%Y-%m-%dT%H:%M:%SZ"` \
+  #        --build-arg VCS_REF=`git rev-parse --short HEAD` \
+  #        -t $DOCKER_REPO:latest8 \
+  #        -f Dockerfile8 .
 
 else
   RDO_RELEASES=`cat hooks/rdo-releases`
@@ -33,7 +46,15 @@ else
            --build-arg BUILD_DATE=`date -u +"%Y-%m-%dT%H:%M:%SZ"` \
            --build-arg VCS_REF=`git rev-parse --short HEAD` \
            --build-arg TAG=$SOURCE_BRANCH \
-           -t $DOCKER_REPO:$release \
+           -t $DOCKER_REPO:${release}7 \
            -f Dockerfile-release .
+    docker build \
+           --build-arg RELEASE=$release \
+           --build-arg VERSION=$EMBER_VERSION \
+           --build-arg BUILD_DATE=`date -u +"%Y-%m-%dT%H:%M:%SZ"` \
+           --build-arg VCS_REF=`git rev-parse --short HEAD` \
+           --build-arg TAG=$SOURCE_BRANCH \
+           -t $DOCKER_REPO:${release}8 \
+           -f Dockerfile8-release .
   done <<< "$RDO_RELEASES"
 fi

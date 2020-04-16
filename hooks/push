@@ -4,8 +4,14 @@ set -e
 # Push ember-csi master branches
 if [ "$SOURCE_BRANCH" == "master" ]
 then
-  for tag in master latest; do
+  # Add latest to the list once we are building it again
+  for tag in master; do
     echo "Pushing $tag ..."
+    docker push $DOCKER_REPO:${tag}7
+    docker push $DOCKER_REPO:${tag}8
+
+    # The main container is Centos 7, so we retag it
+    docker tag $DOCKER_REPO:${tag}7 $DOCKER_REPO:$tag
     docker push $DOCKER_REPO:$tag
   done
 
@@ -20,12 +26,24 @@ else
       # Push it also with the ember-csi version tag
       tag=ember_${SOURCE_BRANCH}-${release}
       echo "Tagging and pusshing it also as $tag..."
-      docker tag $DOCKER_REPO:$release $DOCKER_REPO:$tag
+      docker tag $DOCKER_REPO:${release}7 $DOCKER_REPO:${tag}7
+      docker tag $DOCKER_REPO:${release}8 $DOCKER_REPO:${tag}8
+      docker push $DOCKER_REPO:${tag}7
+      docker push $DOCKER_REPO:${tag}8
+
+      # The main container is Centos 7, so we retag it
+      docker tag $DOCKER_REPO:${tag}7 $DOCKER_REPO:$tag
       docker push $DOCKER_REPO:$tag
       last_release=$release
   done <<< "$RDO_RELEASES"
 
   echo "Tagging and pushing $last_release as stable"
-  docker tag $DOCKER_REPO:$last_release $DOCKER_REPO:stable
+  docker tag $DOCKER_REPO:${last_release}7 $DOCKER_REPO:stable7
+  docker tag $DOCKER_REPO:${last_release}8 $DOCKER_REPO:stable8
+  docker push $DOCKER_REPO:stable7
+  docker push $DOCKER_REPO:stable8
+
+  # The main container is Centos 7, so we retag it
+  docker tag $DOCKER_REPO:${last_release}7 $DOCKER_REPO:stable
   docker push $DOCKER_REPO:stable
 fi
