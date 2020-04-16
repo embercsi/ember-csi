@@ -1,0 +1,71 @@
+# Ember-CSI master and latest images
+# Ember uses current master
+# Cinderlib and Cinder:
+#  - Pull from master if RELEASE=master
+#  - Pull from RELEASE if RELEASE!=master
+FROM centos:8
+ARG RELEASE=master
+ARG VERSION=master
+ARG BUILD_DATE
+ARG VCS_REF
+ARG TAG
+
+LABEL maintainers="Gorka Eguileor <geguileo@redhat.com>" \
+      openstack_release=${RELEASE} \
+      version=${VERSION} \
+      description="Ember CSI Plugin" \
+      org.label-schema.schema-version="1.0" \
+      org.label-schema.name="ember-csi" \
+      org.label-schema.description="Ember CSI Plugin" \
+      org.label-schema.url="https://ember-csi.io" \
+      org.label-schema.build-date=${BUILD_DATE} \
+      org.label-schema.vcs-url="https://github.com/embercsi/ember-csi" \
+      org.label-schema.vcs-ref=${VCS_REF}
+
+# Enable RPDB debugging on this container by default
+ENV X_CSI_DEBUG_MODE=rpdb \
+    PYTHONUNBUFFERED=true
+
+# This is the default port, but if we change it via CSI_ENDPOINT then this will
+# no longer be relevant.
+# For the Master version expose RPDB port to support remote debugging
+EXPOSE 50051 4444
+
+# We first check that we have access to the PyPi server
+RUN yum -y install targetcli iscsi-initiator-utils device-mapper-multipath epel-release lvm2 which && \
+    yum -y install python3-pip python3-pywbem python3-kubernetes && \
+    yum -y install xfsprogs e2fsprogs nmap-ncat && \
+    # We need to upgrade pyasn1 because the package for RDO is not new enough for
+    # pyasn1_modules, which is used by some of the Google's libraries
+    pip3 install --no-cache-dir --upgrade 'pyasn1<0.5.0,>=0.4.1' 'pyasn1-modules<0.3.0,>=0.2.8' future && \
+    # Install the RDO repository
+    if [ "$RELEASE" = "master" ]; then curl -o /etc/yum.repos.d/rdo-trunk-runtime-deps.repo https://trunk.rdoproject.org/centos8-master/rdo-trunk-runtime-deps.repo; curl -o /etc/yum.repos.d/delorean.repo https://trunk.rdoproject.org/centos8-master/current/delorean.repo; else yum -y install centos-release-openstack-${RELEASE}; fi && \
+    # Enable PowerTools so we can access python3-httplib2
+    sed -i -r 's/^enabled=0/enabled=1/' /etc/yum.repos.d/CentOS-PowerTools.repo && \
+    yum -y install python3-cinderlib python3-grpcio protobuf && \
+    # Create the ceph repo for the ceph packages
+    echo -e "[ceph]\nname=Ceph packages for x86_64\nbaseurl=http://mirror.centos.org/centos/8/storage/x86_64/ceph-nautilus/\nenabled=1\ngpgcheck=1\ntype=rpm-md\ngpgkey=https://ceph.com/git/?p=ceph.git;a=blob_plain;f=keys/release.asc" > /etc/yum.repos.d/ceph.repo && \
+    # Install driver specific RPM dependencies
+    yum -y install --nogpgcheck python3-rbd ceph-common && \
+    yum -y install python3-pyOpenSSL && \
+    # Required to apply patches
+    yum -y install patch && \
+    # Install driver specific PyPi dependencies
+    pip3 install --no-cache-dir krest purestorage pyxcli python-3parclient python-lefthandclient && \
+    yum clean all && \
+    rm -rf /var/cache/yum
+
+COPY . /ember-csi
+
+# Add build metadata (date and time when the container was generated) to the
+# version reported by Ember-CSI following semver notation:
+# https://semver.org/#spec-item-10
+# TODO: Maybe use pbr instead of doing it manually
+RUN sed -i -r "s/^(VENDOR_VERSION = ').+'/\1${VERSION}+`date +%d%m%Y%H%M%S%N`'/" /ember-csi/ember_csi/constants.py && \
+    sed -i -r "s/(version=').+'/\1$VERSION+`date +%d%m%Y%H%M%S%N`'/" /ember-csi/setup.py && \
+    sed -i -r "s/^(__version__ = ').*'$/\1${VERSION}+`date +%d%m%Y%H%M%S%N`'/" /ember-csi/ember_csi/__init__.py && \
+    cd /ember-csi && python3 setup.py csi_proto && \
+    pip3 install --no-cache-dir -e /ember-csi
+
+# Define default command
+CMD ["ember-csi"]
