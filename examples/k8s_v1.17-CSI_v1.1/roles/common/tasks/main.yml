@@ -14,9 +14,6 @@
 - name: disable of selinux - now
   command: setenforce 0
 
-- name: Ensure net.bridge.bridge-nf-call-iptables is set. See kubeadm
-  copy: src=k8s.conf owner=root group=root dest=/etc/sysctl.d/k8s.conf
-
 - name: Run sysctl
   command: sysctl --system
 
@@ -31,17 +28,23 @@
 # Pin kubernetes related packages to ensure we don't break every other day
 - name: install utility programs
   yum:
-    name: ['wget', 'ntp', 'screen', 'epel-release', 'vim', 'iptables', 'iptables-utils', 'iptables-services', 'ncurses-term', 'docker', 'kubelet-1.17.4', 'kubeadm-1.17.4', 'kubectl-1.17.4']
+    name: ['wget', 'lvm2', 'chrony', 'epel-release', 'vim', 'ncurses-term', 'kubelet-1.17.4', 'kubeadm-1.17.4', 'kubectl-1.17.4']
     state: present
     disable_gpg_check: yes
 
-# Workaround for bugs:
-#  - https://github.com/kubernetes/kubernetes/issues/56850
-#  - https://github.com/kubernetes/kubernetes/issues/63804
-- lineinfile:
-    path: /etc/sysconfig/kubelet
-    regexp: '^KUBELET_EXTRA_ARGS='
-    line: 'KUBELET_EXTRA_ARGS=--runtime-cgroups=/systemd/system.slice --kubelet-cgroups=/systemd/system.slice'
+- name: Add docker repo
+  command: curl https://download.docker.com/linux/centos/docker-ce.repo -o /etc/yum.repos.d/docker-ce.repo
+
+- name: Install docker-ce
+  shell: dnf -y install docker-ce --nobest
+
+# Unlike the docker package, docker-ce doesn't create the directory until it
+# starts
+- file:
+    path: /etc/docker
+    state: directory
+    owner: root
+    group: root
 
 # Note(geguileo): If we want to use our own registry for developtment we just
 # need to edit the roles/common/files/daemon.json with the IP of our registry.
@@ -58,7 +61,7 @@
   service: name={{ item }} state=started enabled=yes
   with_items:
     - docker
-    - ntpd
+    - chronyd
     - kubelet
 
 - name: turn off swap
@@ -69,12 +72,6 @@
     path: /etc/fstab
     state: absent
     regexp: "swap"
-
-- name: iptables open ports
-  command: iptables -A INPUT -p tcp -m state --state NEW -m multiport --dports 9000:9200 -j ACCEPT
-
-- name: save iptables
-  command: service iptables save
 
 # Accept loop devices for the LVM ember-volumes VG and reject anything else
 - name: Disable new LVM volumes

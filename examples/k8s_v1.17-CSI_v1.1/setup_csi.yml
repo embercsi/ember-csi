@@ -1,14 +1,14 @@
 - name: Create VolumeSnapshotClass CRD for the Snapshot beta feature
-  command: kubectl create -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/release-2.0/config/crd/snapshot.storage.k8s.io_volumesnapshotclasses.yaml
+  command: kubectl create -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/release-2.1/config/crd/snapshot.storage.k8s.io_volumesnapshotclasses.yaml
 - name: Create VolumeSnapshotContents CRD for the Snapshot beta feature
-  command: kubectl create -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/release-2.0/config/crd/snapshot.storage.k8s.io_volumesnapshotcontents.yaml
+  command: kubectl create -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/release-2.1/config/crd/snapshot.storage.k8s.io_volumesnapshotcontents.yaml
 - name: Create VolumeSnapshot CRD for the Snapshot beta feature
-  command: kubectl create -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/release-2.0/config/crd/snapshot.storage.k8s.io_volumesnapshots.yaml
+  command: kubectl create -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/release-2.1/config/crd/snapshot.storage.k8s.io_volumesnapshots.yaml
 
 - name: Add RBACs for the Common Snapshot Controller
-  command: kubectl create -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/release-2.0/deploy/kubernetes/snapshot-controller/rbac-snapshot-controller.yaml
+  command: kubectl create -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/release-2.1/deploy/kubernetes/snapshot-controller/rbac-snapshot-controller.yaml
 - name: Deploy the Common Snapshot Controller
-  command: kubectl create -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/release-2.0/deploy/kubernetes/snapshot-controller/setup-snapshot-controller.yaml
+  command: kubectl create -f https://raw.githubusercontent.com/kubernetes-csi/external-snapshotter/release-2.1/deploy/kubernetes/snapshot-controller/setup-snapshot-controller.yaml
 
 # We need to retry this command, as the API may still be restarting
 - name: Allow Node role to create attachments
@@ -30,17 +30,6 @@
     path: /etc/kubernetes/manifests/kube-apiserver.yaml
     regexp: '- --enable-admission-plugins=NodeRestriction'
     state: absent
-
-# We would normally pass the features-gates to kubeadm init, but it complains
-# about not knowing the features
-- name: Remove API Node authorization and set required features
-  command: sed -i 's/    - --authorization-mode=Node,RBAC/    - --authorization-mode=RBAC/' /etc/kubernetes/manifests/kube-apiserver.yaml
-
-- name: Restart API containers
-  shell: docker restart $(docker ps --filter "name=apiserver_kube" --format "{{'{{'}}.ID{{'}}'}}") || true
-
-- name: Restart Scheduler and Manager containers
-  shell: docker restart $(docker ps --filter "name=scheduler_kube|manager_kube" --format "{{'{{'}}.ID{{'}}'}}") || true
 
 - name: Create kubeyml directory
   file:

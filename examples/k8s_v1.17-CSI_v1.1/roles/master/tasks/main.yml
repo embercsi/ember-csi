@@ -3,8 +3,10 @@
 - name: initialize kubeadm on master
   command: kubeadm init --pod-network-cidr=10.244.0.0/16 --token={{ kubernetes_token }} --apiserver-advertise-address={{ ansible_eth1.ipv4.address }}
 
-- name: create flannel network
-  shell: kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/023dc119c068d94590b2040d6550ff5ecfa190da/Documentation/kube-flannel.yml
+# We cannot use flannel because CentOS 8 only supports nftables
+- name: Install CNI plugin
+  copy: src=cni.yaml owner=root group=root dest=/root/cni.yaml
+- shell: kubectl apply -f /root/cni.yaml
 
 - name: get kubeconfig.conf
   fetch:
