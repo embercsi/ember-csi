@@ -1,0 +1,32 @@
+diff --git cinderlib/nos_brick.py cinderlib/nos_brick.py
+index bc1076d..ac8b72f 100644
+--- cinderlib/nos_brick.py
++++ cinderlib/nos_brick.py
+@@ -134,7 +134,7 @@ class RBDConnector(connectors.rbd.RBDConnector):
+         """Verify an existing RBD handle is connected and valid."""
+         if self.im_root:
+             try:
+-                with open(path, 'r') as f:
++                with open(path, 'r+b') as f:
+                     f.read(4096)
+             except Exception:
+                 return False
+diff --git cinderlib/objects.py cinderlib/objects.py
+index da3c3a5..1adf19f 100644
+--- cinderlib/objects.py
++++ cinderlib/objects.py
+@@ -836,10 +836,12 @@ class Connection(Object, LazyVolumeAttr):
+             LOG.exception(error_msg)
+ 
+         if error_msg:
+-            self.detach(force=True, ignore_errors=True)
+-            raise cinder_exception.DeviceUnavailable(
++            # Prepare exception while we still have the value of the path
++            exc = cinder_exception.DeviceUnavailable(
+                 path=self.path, attach_info=self._ovo.connection_info,
+                 reason=error_msg)
++            self.detach(force=True, ignore_errors=True)
++            raise exc
+         if self._volume:
+             self.volume.local_attach = self
+ 
