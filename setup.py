@@ -10,6 +10,7 @@ import setuptools
 from setuptools.command import develop
 from setuptools.command import install
 from setuptools.command import sdist
+import six
 
 # Wheel only necessary on the host to publish to PyPi, not on the container
 try:
@@ -69,7 +70,7 @@ with open('HISTORY.md') as history_file:
 
 requirements = [
     'cinderlib>=0.9.0',
-    'grpcio==1.15.0',
+    'grpcio>=1.15.0' if six.PY3 else 'grpcio==1.15.0',
     # GRPCIO v1.12.0 has broken dependencies, so we include them here
     'protobuf>=3.5.0.post1',
     # For the CRD persistent metadata plugin
@@ -127,7 +128,9 @@ setuptools.setup(
         'License :: OSI Approved :: Apache Software License',
         'Natural Language :: English',
         "Programming Language :: Python :: 2",
-        'Programming Language :: Python :: 2.7',
+        "Programming Language :: Python :: 2.7",
+        "Programming Language :: Python :: 3",
+        'Programming Language :: Python :: 3.6',
     ],
     test_suite='tests',
     tests_require=test_requirements,

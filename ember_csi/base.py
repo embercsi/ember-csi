@@ -288,7 +288,7 @@ class IdentityBase(object):
     def _calculate_size(self, request, context):
         # Must be idempotent
         min_size = self._get_size('required', request, defaults.VOLUME_SIZE)
-        max_size = self._get_size('limit', request, sys.maxint)
+        max_size = self._get_size('limit', request, six.MAXSIZE)
         if max_size < min_size:
             context.abort(grpc.StatusCode.INVALID_ARGUMENT,
                           'Limit_bytes is smaller than required_bytes')
@@ -852,7 +852,7 @@ class NodeBase(IdentityBase):
         # We don't use the util-linux Python library to reduce dependencies
         stdout, stderr = self.sudo('lsblk', '-nlfoFSTYPE', device, retries=5,
                                    errors=[1, 32], delay=2)
-        fs_types = filter(None, stdout.split())
+        fs_types = [line for line in stdout.split() if line]
         current_fs = fs_types[0] if fs_types else None
 
         if current_fs != metadata_fs:
