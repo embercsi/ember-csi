@@ -1,5 +1,6 @@
 cinderlib>=0.9.0
-grpcio==1.15.0
+grpcio>=1.15.0;python_version!='2.7'
+grpcio==1.15.0;python_version=='2.7'
 protobuf>=3.5.0.post1
 kubernetes>=7.0.0
 setuptools>=40.0.0
