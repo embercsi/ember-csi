@@ -177,11 +177,45 @@ For example to test with the LVM driver on our development environment we can ju
 ```
 
 
-There is also an example of testing a Ceph cluster using a user called "cinder" and the "volumes" pool.  For the Ceph/RBD backend, due to a limitation in Cinder, we need to have both the credentials and the configuration in `/etc/ceph` for it to work:
+There is also an example of testing a Ceph cluster using a user called "admin" and the "rdb" pool.  For the Ceph/RBD backend, due to a limitation in Cinder, we need to have both the credentials and the configuration in `/etc/ceph` for it to work:
 
 ```
+    # Install the ceph-common package on Centos 8
+    $ echo -e "[ceph]\nname=Ceph packages for x86_64\nbaseurl=http://mirror.centos.org/centos/8/storage/x86_64/ceph-nautilus/\nenabled=1\ngpgcheck=1\ntype=rpm-md\ngpgkey=https://ceph.com/git/?p=ceph.git;a=blob_plain;f=keys/release.asc" > /etc/yum.repos.d/ceph.repo
+
+    $ dnf -y install --nogpgcheck python3-rbd ceph-common
+    $ dnf config-manager --add-repo=https://download.docker.com/linux/centos/docker-ce.repo
+    $ dnf install podman-docker
+    # Start a demo Ceph cluster running in a container
+    $ docker run -d --name ceph-demo -e MON_IP=127.0.0.1 -e CEPH_PUBLIC_NETWORK=127.0.0.1/0 -e DEMO_DAEMONS="osd mds" --net=host --volume /etc/ceph:/etc/ceph --privileged ceph/daemon:latest-luminous demo
+    # Wait a moment for Ceph to generate a /etc/ceph/ceph.conf file. Once the
+    # file exists modify it via:
+    $ sed -i "s/\[global\]/[global]\nrbd default features = 3/" /etc/ceph/ceph.conf
+    # Check to make sure Ceph is running properly
+    $ docker logs ceph-demo
+    # Install python3 and virtualenv if not already available
+    $ dnf install python3 virtualenv
+    $ python3 setup.py csi_proto
+    # Make sure that your user has credentials to access the /etc/ceph files.
+    # From the base directory of the ember repository, we create a virtual
+    # environment with
+    $ virtualenv -p python3.6 --system-site-packages .venv
+    # Activate the virtual environment via
+    $ source .venv/bin/activate
+    # The following requires gcc/patch to be installed
+    $ dnf install patch gcc
+    # install all ember-csi requirements from PyPi and make Ember-CSI available in the virtual env with:
+    $ pip install --ignore-installed -e .
     $ cd examples/baremetal
     $ ./run.sh rbd
+
+    # Once ember-csi is runing - Container Storage Client (csc) may be used to
+    # issue commands.  For example:
+    $ csc controller  list-volumes -e tcp://127.0.0.1:50051
+    $ csc controller  create-volume test-volume  -e tcp://127.0.0.1:50051 --cap SINGLE_NODE_WRITER,block
+
+
+
     Starting Ember CSI v0.0.2 (cinderlib: v0.2.1, cinder: v11.1.2.dev5, CSI spec: v0.2.0)
     Supported filesystems are: fat, ext4dev, vfat, ext3, ext2, msdos, ext4, hfsplus, cramfs, xfs, ntfs, minix, btrfs
     Running backend LVMVolumeDriver v3.0.0
