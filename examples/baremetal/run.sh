@@ -3,8 +3,8 @@
 # Assume we are running the example from a dev environment, so activate virtual
 # environment to satisfy requirements.
 if [[ ! -v VIRTUAL_ENV ]]; then
-    tox -epy27 --notest
-    . ../../.tox/py27/bin/activate
+    tox -epy36 --notest
+    . ../../.tox/py36/bin/activate
 fi
 
 # Set configuration via environmental variables
