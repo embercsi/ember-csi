@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -e
+set -x
 
 # Push ember-csi master branches
 if [ "$SOURCE_BRANCH" == "master" ]

@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -e
+set -x
 
-EMBER_VERSION=`git describe --tags`
+EMBER_VERSION=${EMBER_VERSION:-`git describe --tags`}
 
 if [ "$SOURCE_BRANCH" == "master" ]
 then

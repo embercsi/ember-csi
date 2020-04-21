@@ -1,6 +1,7 @@
 # Byte-compiled / optimized / DLL files
 .*
 !.gitignore
+!.github/
 !.travis.yml
 .*.sw?
 __pycache__/
