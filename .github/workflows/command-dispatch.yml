@@ -10,9 +10,9 @@ jobs:
         uses: peter-evans/slash-command-dispatch@v1
         with:
           token: ${{ secrets.TOKEN }}
-          # commands: help, build
           issue-type: pull-request
-          reactions: false
+          reactions: true
+          # commands: help, build
           # repository: embercsi/3rd-party-ci
           # permission: write
           config: >
