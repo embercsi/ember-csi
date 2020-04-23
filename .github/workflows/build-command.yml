@@ -1,0 +1,76 @@
+name: build-command
+on:
+  repository_dispatch:
+    types: [build-command]
+jobs:
+  build:
+    env:
+      AUTHORIZED: ${{ github.actor != github.event.client_payload.pull_request.base.repo.owner.login }}
+      # github.actor == github.event.repository.owner.login
+      RESULT_REACTION: "+1"
+      RESULT_MESSAGE: ${{ null }}
+      SOURCE_BRANCH: master
+      DOCKER_REPO: embercsi/ci_images
+      IMAGE_TAG: ${{ format('{0}-{1}', github.event.client_payload.pull_request.number, github.event.client_payload.pull_request.head.sha) }}
+
+    # runs-on: ubuntu-latest
+    runs-on: self-hosted
+
+    steps:
+      # Checkout the pull request branch from the other repository
+      - uses: actions/checkout@v2
+        if: env.AUTHORIZED == 'true'
+        with:
+          token: ${{ secrets.TOKEN }}
+          repository: ${{ github.event.client_payload.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.client_payload.pull_request.head.ref }}
+
+      - name: Notify of start of command
+        if: env.AUTHORIZED == 'true'
+        uses: peter-evans/create-or-update-comment@v1
+        with:
+          token: ${{ secrets.TOKEN }}
+          repository: ${{ github.event.client_payload.github.payload.repository.full_name }}
+          comment-id: ${{ github.event.client_payload.github.payload.comment.id }}
+          reaction-type: rocket
+          body: |
+
+            > [Build run output][1]
+
+            [1]: ${{ format('https://github.com/{0}/actions/runs/{1}', github.repository, github.run_id) }}
+
+      # TODO: Check if image exists in docker and skip building if exists unless we receive the force parameter
+
+      - name: Build image
+        if: env.AUTHORIZED == 'true'
+        run: |
+          echo 'Start'
+          echo "::add-mask::${{ secrets.DOCKER_PASSWORD }}"
+          EMBER_VERSION=$IMAGE_TAG hooks/build
+          echo ${{ secrets.DOCKER_PASSWORD }} | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
+          docker tag $DOCKER_REPO:master7 $DOCKER_REPO:${IMAGE_TAG}-7
+          docker tag $DOCKER_REPO:master8 $DOCKER_REPO:${IMAGE_TAG}-8
+          docker push $DOCKER_REPO:${IMAGE_TAG}-7
+          docker push $DOCKER_REPO:${IMAGE_TAG}-8
+          echo 'Done'
+
+      - name: Set failed result
+        if: failure()
+        run: echo "::set-env name=RESULT_REACTION::-1"
+
+      - name: Set not authorized result
+        if: env.AUTHORIZED == 'false'
+        run: |
+          echo "::set-env name=RESULT_REACTION::confused"
+          echo "::set-env name=RESULT_MESSAGE::User not authorized to run command"
+
+      - name: Notify result on the comment
+        if: always()
+        uses: peter-evans/create-or-update-comment@v1
+        with:
+          token: ${{ secrets.TOKEN }}
+          repository: ${{ github.event.client_payload.github.payload.repository.full_name }}
+          comment-id: ${{ github.event.client_payload.github.payload.comment.id }}
+          reaction-type: ${{ env.RESULT_REACTION }}
+          body: ${{ env.RESULT_MESSAGE }}
+

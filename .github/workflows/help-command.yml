@@ -1,0 +1,32 @@
+name: help-command
+on:
+  repository_dispatch:
+    types: [help-command]
+jobs:
+  help:
+    runs-on: ubuntu-latest
+    env:
+      AUTHORIZED: ${{ github.actor != github.event.client_payload.pull_request.base.repo.owner.login }}
+      # github.actor == github.event.repository.owner.login
+      RESULT_MESSAGE: |
+        > Your available commands are:
+        > Command | Description
+        > --- | ---
+        > /help | Reply comment with help for available slash commands
+      ADMIN_COMMANDS: |
+        > /build | Build container image (maintainers only)
+    steps:
+        # run: echo ::set-output name=result_message::Sorry, slash commands are only available for maintainers.
+        # The true is necessary: https://github.community/t5/GitHub-Actions/Implementing-Dry-Run-Logic-If-and-env/td-p/49882
+      - if: env.AUTHORIZED == 'true'
+        run: echo "::set-env name=RESULT_MESSAGE::${RESULT_MESSAGE//$'\n'/'%0A'}${ADMIN_COMMANDS//$'\n'/'%0A'}"
+        # run: echo "::set-output name=result_message::${ADMIN_COMMANDS//$'\n'/'%0A'}"
+
+      - name: Update comment
+        uses: peter-evans/create-or-update-comment@v1
+        with:
+          token: ${{ secrets.TOKEN }}
+          repository: ${{ github.event.client_payload.github.payload.repository.full_name }}
+          comment-id: ${{ github.event.client_payload.github.payload.comment.id }}
+          body: ${{ env.RESULT_MESSAGE }}
+          # body: ${{ steps.vars.outputs.result_message }}
