@@ -1,0 +1,162 @@
+# TODO: Don't build if the PR is not based on master's HEAD
+# TODO: Only build the container if specific directories/files have changed, unless forced: https://coderwall.com/p/lz0uva/find-all-files-modified-between-commits-in-git
+name: test-command
+on:
+  repository_dispatch:
+    types: [test-command]
+env:
+  AUTHORIZED: ${{ github.actor != github.event.client_payload.pull_request.base.repo.owner.login }}
+  DETAILS_URL: ${{ format('https://github.com/{0}/actions/runs/{1}', github.repository, github.run_id) }}
+  DOCKER_REPO: embercsi/ci_images
+  IMAGE_TAG: ${{ format('{0}-{1}', github.event.client_payload.pull_request.number, github.event.client_payload.pull_request.head.sha) }}
+
+jobs:
+
+  build:
+    name: internal/build-pr-images
+    env:
+      JOB_NAME: internal/build-pr-images
+      TAGS_MISSING: false
+
+    # In the future we may want to return embercsi/ember-csi:{master,latest}
+    outputs:
+      image_base_name: ${{ format('{0}:{1}-', env.DOCKER_REPO, env.IMAGE_TAG) }}
+
+    runs-on: ubuntu-latest
+    steps:
+      # Checkout the pull request branch from the repository
+      - uses: actions/checkout@v2
+        if: env.AUTHORIZED == 'true'
+        with:
+          token: ${{ secrets.TOKEN }}
+          repository: ${{ github.event.client_payload.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.client_payload.pull_request.head.ref }}
+
+      - name: Write comment
+        uses: peter-evans/create-or-update-comment@v1
+        with:
+          token: ${{ secrets.EMBERIO_ACCESS_TOKEN }}
+          repository: ${{ github.event.client_payload.github.payload.repository.full_name }}
+          issue-number: ${{ github.event.client_payload.pull_request.number }}
+          # comment-id: ${{ github.event.client_payload.github.payload.comment.id }}
+          body: |
+            [Test workflow has started][1]
+
+            [1]: ${{ env.DETAILS_URL }}
+
+      - name: Notify in_progress
+        if: env.AUTHORIZED == 'true'
+        run: ./tools/notify-job-status.py ${{ env.JOB_NAME }} ${{ github.run_id }} pending ${{ github.repository }} ${{ github.event.client_payload.pull_request.head.sha }}
+        #run: |
+        #  curl -X POST -H "Authorization: token ${{ secrets.TOKEN }}" -H "Content-Type: application/json" -d '{"context": "${{ env.JOB_NAME }}","state": "pending","target_url": "${{ env.DETAILS_URL }}"}' "https://api.github.com/repos/${{ github.repository }}/statuses/${{ github.event.client_payload.pull_request.head.sha }}"
+        env:
+          TOKEN: ${{ secrets.TOKEN }}
+
+      - name: Check if images exist
+        if: env.AUTHORIZED == 'true'
+        run: |
+            for i in 7 8; do
+                tag_info=`curl -fL --silent ${{ format('https://hub.docker.com/v2/repositories/{0}/tags/{1}', env.DOCKER_REPO, env.IMAGE_TAG) }}-$i | true`
+                if [[ ! $tag_info == *'"name"'* ]]; then
+                    echo "::set-env name=TAGS_MISSING::true"
+                    break
+                fi
+            done
+
+      - name: Build images
+        if: env.AUTHORIZED == 'true' && env.TAGS_MISSING == 'true'
+        run: |
+          echo 'Start'
+          echo "::add-mask::${{ secrets.DOCKER_PASSWORD }}"
+          EMBER_VERSION=$IMAGE_TAG SOURCE_BRANCH=master hooks/build
+          echo ${{ secrets.DOCKER_PASSWORD }} | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
+          docker tag $DOCKER_REPO:master7 $DOCKER_REPO:${IMAGE_TAG}-7
+          docker tag $DOCKER_REPO:master8 $DOCKER_REPO:${IMAGE_TAG}-8
+          docker push $DOCKER_REPO:${IMAGE_TAG}-7
+          docker push $DOCKER_REPO:${IMAGE_TAG}-8
+          echo 'Done'
+
+      # - name: Get result status
+      #   if: always() && env.AUTHORIZED == 'true'
+      #   run: |
+      #       status=`echo "${{ job.status }}" | tr '[:upper:]' '[:lower:]'`
+      #       if [[ "$status" == "cancelled" ]]; then
+      #         echo "::set-env name=JOB_RESULT::error"
+      #       else
+      #         echo "::set-env name=JOB_RESULT::$status"
+      #       fi
+
+      - name: Notify result status
+        if: always() && env.AUTHORIZED == 'true'
+        run: ./tools/notify-job-status.py ${{ env.JOB_NAME }} ${{ github.run_id }} ${{ job.status }} ${{ github.repository }} ${{ github.event.client_payload.pull_request.head.sha }}
+        # run: |
+        #   curl -X POST -H "Authorization: token ${{ secrets.TOKEN }}" -H "Content-Type: application/json" -d '{"context": "${{ env.JOB_NAME }}","state": "${{ env.JOB_RESULT }}","target_url": "${{ env.DETAILS_URL }}"}' "https://api.github.com/repos/${{ github.repository }}/statuses/${{ github.event.client_payload.pull_request.head.sha }}"
+        env:
+          TOKEN: ${{ secrets.TOKEN }}
+
+
+  functional:
+    needs: build
+    strategy:
+      matrix:
+        # centos: [7, 8]
+        centos: [7, 7]
+        # backend: [lvm, ceph]
+        backend: [lvm, lvm]
+        # TODO: set fail-fast
+        # fail-fast: false
+    name: "3rdparty/${{ matrix.backend }}-functional-centos${{ matrix.centos }}"
+    runs-on: ${{ matrix.backend }}
+    # Fails:
+    # runs-on: [self-hosted, ${{ matrix.backend }}]
+    # runs-on: "[self-hosted, ${{ matrix.backend }}]"
+    # runs-on: ${{ format('[ self-hosted, {0} ]', matrix.backend) }}
+    # These work:
+    #runs-on: [self-hosted, lvm]
+    # runs-on: self-hosted
+    env:
+      JOB_NAME: "3rdparty/${{ matrix.backend }}-functional-centos${{ matrix.centos }}"
+      BACKEND_NAME: ${{ matrix.backend }}
+    steps:
+      # Checkout the pull request branch from the repository
+      - uses: actions/checkout@v2
+        if: env.AUTHORIZED == 'true'
+        with:
+          repository: embercsi/3rd-party-ci
+          ref: gh-actions
+
+      - name: Notify in_progress
+        # run: ./ci-scripts/notify-job-status.py ${{ env.JOB_NAME }} pending ${{ env.DETAILS_URL }} ${{ github.repository }} ${{ github.event.client_payload.pull_request.head.sha }}
+        run: ./ci-scripts/notify-job-status.py ${{ env.JOB_NAME }} ${{ github.run_id }} pending ${{ github.repository }} ${{ github.event.client_payload.pull_request.head.sha }}
+        env:
+          TOKEN: ${{ secrets.TOKEN }}
+
+      - name: Testing
+        run: |
+          pwd
+          export HOST_IP=$(/sbin/ip -o -4 addr list eth0 | awk '{print $4}' | cut -d/ -f1)
+          echo Running with backend ${{ matrix.backend }} on a Centos ${{ matrix.centos }} VM
+          echo 'Job is ${{ toJson(job) }}'
+          echo 'Job.container is ${{ toJson(job.container) }}'
+          echo 'Job.container.id is ${{ job.container.id }}'
+          echo "Path $PATH"
+          echo ${{needs.build.outputs.image_base_name}}
+          ./ci-scripts/vm-run-functional.sh
+        env:
+          EMBER_IMAGE: ${{needs.build.outputs.image_base_name}}
+          CENTOS_VERSION: ${{matrix.centos}}
+          JOB_ID: ${{github.run_id}}
+          # BACKEND_NAME: ${{matrix.backend}}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v2-preview
+        with:
+          name: ${{ format('{0}-artifacts', env.JOB_NAME) }}
+          path: 'artifacts/*'
+
+      - name: Notify result status
+        if: always()
+        # run: ./ci-scripts/notify-job-status.py ${{ env.JOB_NAME }} ${{ job.status }} ${{ env.DETAILS_URL }} ${{ github.repository }}
+        run: ./ci-scripts/notify-job-status.py ${{ env.JOB_NAME }} ${{ github.run_id }} ${{ job.status }} ${{ github.repository }} ${{ github.event.client_payload.pull_request.head.sha }}
+        env:
+          TOKEN: ${{ secrets.TOKEN }}
