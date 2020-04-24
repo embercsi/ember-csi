@@ -1,4 +1,5 @@
 # TODO: Don't build if the PR is not based on master's HEAD
+# TODO: Only build the container if specific directories/files have changed, unless forced: https://coderwall.com/p/lz0uva/find-all-files-modified-between-commits-in-git
 name: build-command
 on:
   repository_dispatch:

@@ -9,7 +9,7 @@ jobs:
       - name: Slash Command Dispatch
         uses: peter-evans/slash-command-dispatch@v1
         with:
-          token: ${{ secrets.TOKEN }}
+          token: ${{ secrets.EMBERIO_ACCESS_TOKEN }}
           issue-type: pull-request
           reactions: true
           # commands: help, build
@@ -24,6 +24,11 @@ jobs:
               },
               {
                 "command": "build",
+                "permission": "write",
+                "issue_type": "pull-request"
+              },
+              {
+                "command": "test",
                 "permission": "write",
                 "issue_type": "pull-request"
               }
