@@ -153,4 +153,5 @@ def _log_used_parameters(csi_plugin):
 
 
 if __name__ == '__main__':
+    print('Very simple change')
     main()
