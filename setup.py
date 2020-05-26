@@ -12,7 +12,9 @@ import setuptools
 from setuptools.command import develop
 from setuptools.command import install
 from setuptools.command import sdist
-import six
+
+
+PY3 = sys.version_info[0] == 3
 
 # Wheel only necessary on the host to publish to PyPi, not on the container
 try:
@@ -75,7 +77,7 @@ class SetCSIProto(cmd.Command):
         pass
 
     def run(self):
-        pyver = 'py3' if six.PY3 else 'py2'
+        pyver = 'py3' if PY3 else 'py2'
 
         # Use the code as reference, that way if we forget to add the file
         # under csi_proto this method will crash
@@ -96,7 +98,7 @@ with open('HISTORY.md') as history_file:
 
 requirements = [
     'cinderlib>=0.9.0',
-    'grpcio>=1.15.0' if six.PY3 else 'grpcio==1.15.0',
+    'grpcio>=1.15.0' if PY3 else 'grpcio==1.15.0',
     # GRPCIO v1.12.0 has broken dependencies, so we include them here
     'protobuf>=3.5.0.post1',
     # For the CRD persistent metadata plugin
