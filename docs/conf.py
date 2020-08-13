@@ -15,8 +15,8 @@
 
 import sys
 import os
-import recommonmark
-from recommonmark import transform as md_transform
+# import recommonmark
+# from recommonmark import transform as md_transform
 
 # If extensions (or modules to document with autodoc) are in another
 # directory, add these directories to sys.path here. If the directory is
@@ -37,7 +37,8 @@ import modulefaker
 
 for module in ('cinderlib', 'google', 'google.protobuf', 'eventlet',
                'kubernetes', 'grpc', 'concurrent', 'os_brick',
-               'os_brick.initiator', 'oslo_concurrency'):
+               'os_brick.initiator', 'oslo_concurrency', 'oslo_log',
+               'oslo_context'):
     modulefaker.fake_module(module)
 
 
@@ -55,10 +56,6 @@ extensions = ['sphinx.ext.autodoc', 'sphinx.ext.viewcode']
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 
-source_parsers = {
-   '.md': 'recommonmark.parser.CommonMarkParser',
-}
-
 # The suffix of source filenames.
 source_suffix = ['.rst', '.md']
 
@@ -69,8 +66,8 @@ source_suffix = ['.rst', '.md']
 master_doc = 'index'
 
 # General information about the project.
-project = u'Ember CSI plugin'
-copyright = u"2018, Gorka Eguileor"
+project = u'Ember CSI'
+copyright = u"2018, Red Hat"
 
 # The version info for the project you're documenting, acts as replacement
 # for |version| and |release|, also used in various other places throughout
@@ -145,18 +142,23 @@ html_theme = 'default'
 
 # The name of an image file (relative to this directory) to place at the
 # top of the sidebar.
-#html_logo = None
+html_logo = "img/logo.svg"
 
 # The name of an image file (within the static path) to use as favicon
 # of the docs.  This file should be a Windows icon file (.ico) being
 # 16x16 or 32x32 pixels large.
-#html_favicon = None
+html_favicon = "img/favicon.png"
 
 # Add any paths that contain custom static files (such as style sheets)
 # here, relative to this directory. They are copied after the builtin
 # static files, so a file named "default.css" will overwrite the builtin
 # "default.css".
 html_static_path = ['_static']
+
+html_css_files = [
+    'css/custom.css',
+    'custom.css',
+]
 
 # If not '', a 'Last updated on:' timestamp is inserted at every page
 # bottom, using the given strftime format.
@@ -288,11 +290,21 @@ texinfo_documents = [
 # If true, do not generate a @detailmenu in the "Top" node's menu.
 #texinfo_no_detailmenu = False
 
-github_doc_root = 'https://github.com/akrog/ember-csi/tree/master/docs/'
+rst_prolog = """
+.. |br| raw:: html
+
+  <br/>
+"""
+
+github_doc_root = 'https://github.com/embercsi/ember-csi/tree/master/docs/'
 
 def setup(app):
-    app.add_config_value('recommonmark_config', {
-            'url_resolver': lambda url: github_doc_root + url,
-            'auto_toc_tree_section': 'Contents',
-            }, True)
-    app.add_transform(md_transform.AutoStructify)
+    for filename in html_css_files:
+        app.add_stylesheet(filename)
+
+# def setup(app):
+#     app.add_config_value('recommonmark_config', {
+#             'url_resolver': lambda url: github_doc_root + url,
+#             'auto_toc_tree_section': 'Contents',
+#             }, True)
+#     app.add_transform(md_transform.AutoStructify)
