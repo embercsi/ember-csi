@@ -48,6 +48,8 @@ Ember-CSI includes a good number of storage drivers, but due to limitation on ha
 - LVMVolume
 - PowerMaxFC
 - PowerMaxISCSI
+- PureFC
+- PureISCSI
 - QnapISCSI
 - RBD
 - SolidFire
@@ -88,8 +90,6 @@ The remaining drivers included in Ember-CSI have not been validated yet:
 - NetAppCmodeISCSI
 - NexentaISCSI
 - PSSeriesISCSI
-- PureFC
-- PureISCSI
 - Quobyte
 - RSD
 - SCFC
