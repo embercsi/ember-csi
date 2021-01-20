@@ -473,7 +473,8 @@ class K8sConnection(object):
         else:
             k8s.config.load_kube_config()
         config = k8s.client.Configuration()
-        config.assert_hostname = False
+        if config.host.startswith('https://'):
+            config.assert_hostname = False
         self.api = k8s.client.api_client.ApiClient(configuration=config)
         self.ext_api = k8s.client.ApiextensionsV1beta1Api(self.api)
         self.crd_api = k8s.client.CustomObjectsApi(self.api)
