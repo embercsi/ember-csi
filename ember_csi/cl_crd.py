@@ -217,8 +217,7 @@ class CRD(object):
                                                         cls.CRD_VERSION,
                                                         cls.NAMESPACE,
                                                         cls.plural,
-                                                        name,
-                                                        {})
+                                                        name)
         except k8s.client.rest.ApiException as exc:
             if exc.status != 404:
                 raise
