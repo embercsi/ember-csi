@@ -17,3 +17,4 @@ for patch_file in "${PATCHES[@]}"; do
      echo -e "\tPatch already applied, skipping"
    fi
 done
+echo "Done Applying Patches"
