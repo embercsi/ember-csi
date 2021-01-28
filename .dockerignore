@@ -14,3 +14,4 @@ tools/
 Dockerfile*
 csi_proto/csi-v*.proto
 travis-scripts/
+cache/

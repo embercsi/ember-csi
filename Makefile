@@ -26,8 +26,10 @@ BROWSER := python -c "$$BROWSER_PYSCRIPT"
 help:
 	@python -c "$$PRINT_HELP_PYSCRIPT" < $(MAKEFILE_LIST)
 
-clean: clean-build clean-pyc clean-test ## remove all build, test, coverage and Python artifacts
+clean: clean-build clean-pyc clean-test clean-cache ## remove all build, test, coverage and Python artifacts
 
+clean-cache:
+	rm -rf cache
 
 clean-build: ## remove build artifacts
 	rm -fr build/
@@ -110,3 +112,9 @@ dist: clean ## builds source and wheel package
 
 install: clean ## install the package to the active Python's site-packages
 	python setup.py install
+
+7:
+	./build.sh 7
+
+8:
+	./build.sh 8

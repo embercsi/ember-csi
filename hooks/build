@@ -23,14 +23,14 @@ then
          -f Dockerfile8 .
 
   # docker build \
-  #        --build-arg RELEASE=$STABLE_RELEASE \
+  #        --build-arg RELEASE=stable/$STABLE_RELEASE \
   #        --build-arg VERSION=$EMBER_VERSION \
   #        --build-arg BUILD_DATE=`date -u +"%Y-%m-%dT%H:%M:%SZ"` \
   #        --build-arg VCS_REF=`git rev-parse --short HEAD` \
   #        -t $DOCKER_REPO:latest7 \
   #        -f Dockerfile .
   # docker build \
-  #        --build-arg RELEASE=$STABLE_RELEASE \
+  #        --build-arg RELEASE=stable/$STABLE_RELEASE \
   #        --build-arg VERSION=$EMBER_VERSION \
   #        --build-arg BUILD_DATE=`date -u +"%Y-%m-%dT%H:%M:%SZ"` \
   #        --build-arg VCS_REF=`git rev-parse --short HEAD` \
