@@ -106,7 +106,7 @@ EXPOSE 50051 4444
 
 # We first check that we have access to the PyPi server
 RUN sed -i 's/keepcache=0/keepcache=1/g' /etc/yum.conf && \
-    yum -y install targetcli iscsi-initiator-utils device-mapper-multipath epel-release lvm2 which && \
+    yum -y install lsscsi targetcli epel-release lvm2 which && \
     yum -y install python3 python3-pip && \
     yum -y install xfsprogs e2fsprogs btrfs-progs nmap-ncat && \
     # Install driver specific RPM dependencies
@@ -120,7 +120,8 @@ RUN sed -i 's/keepcache=0/keepcache=1/g' /etc/yum.conf && \
     yum -y install patch && \
     # Install driver specific PyPi dependencies
     pip3 install --cache-dir=$PIP_CACHE --no-index --find-links=$WHEEL_CACHE krest purestorage pyxcli python-3parclient python-lefthandclient pyOpenSSL && \
-    pip3 install --pre --cache-dir=$PIP_CACHE --no-index --find-links=$WHEEL_CACHE ember-csi
+    pip3 install --pre --cache-dir=$PIP_CACHE --no-index --find-links=$WHEEL_CACHE ember-csi && \
+    cp `find ${CODE_CACHE} -maxdepth 1 -type f` /usr/local/sbin
 
 # Define default command
 CMD ["ember-csi"]

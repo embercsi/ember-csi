@@ -34,7 +34,7 @@ EXPOSE 50051 4444
 
 # We first check that we have access to the PyPi server
 RUN echo 'keepcache=true' >> /etc/dnf/dnf.conf && \
-    dnf -y install targetcli iscsi-initiator-utils device-mapper-multipath epel-release lvm2 which && \
+    dnf -y install targetcli epel-release lvm2 which && \
     dnf -y install python3-pip python3-kubernetes && \
     dnf -y install xfsprogs e2fsprogs nmap-ncat && \
     mkdir -p $PIP_CACHE $WHEEL_CACHE && \
@@ -63,7 +63,10 @@ RUN sed -i -r "s/^VENDOR_VERSION = '(.+)'/VENDOR_VERSION = '$VERSION'/" /ember-c
     sed -i -r "s/version='(.+)'/version='$VERSION'/" /ember-csi/setup.py && \
     sed -i -r "s/^__version__ = '(.*)'$/__version__ = '$VERSION'/" /ember-csi/ember_csi/__init__.py && \
     cd /ember-csi && python3 setup.py csi_proto && \
-    pip3 install --cache-dir=$PIP_CACHE --find-links=$WHEEL_CACHE -ve /ember-csi
+    pip3 install --cache-dir=$PIP_CACHE --find-links=$WHEEL_CACHE -ve /ember-csi && \
+
+    cp /ember-csi/nsenter-commands/* /usr/local/sbin && \
+    rm /usr/local/sbin/nsenter
 
 # Define default command
 CMD ["ember-csi"]
