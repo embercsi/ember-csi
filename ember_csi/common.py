@@ -135,7 +135,7 @@ def logrpc(f):
                 tback = ''
             else:
                 code = 'Unexpected exception'
-                details = exc.message
+                details = getattr(exc, 'message', '-')
                 tback = '\n' + tab(traceback.format_exc())
             LOG.error('!! GRPC %s failed in %.0fs with %s (%s)%s' %
                       (f.__name__, (end - start).total_seconds(), code,
