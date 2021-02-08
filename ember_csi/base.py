@@ -1168,6 +1168,11 @@ class NodeBase(IdentityBase):
     def NodeUnpublishVolume(self, request, context):
         device = self._get_device(request.target_path)
         if device:
+            # NOTE: According to k8s e2e csi tests they expect the data to be
+            # flushed after the unpublish, but in our case it wouldn't be until
+            # the unstage, so we have to force the sync here.
+            vol_dev = self._vol_private_location(request.volume_id)
+            self.sudo('sync', vol_dev)
             self.sudo('umount', request.target_path, retries=4)
             self._clean_file_or_dir(request.target_path)
         vol = self._get_vol(request.volume_id)
