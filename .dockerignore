@@ -15,3 +15,9 @@ Dockerfile*
 csi_proto/csi-v*.proto
 travis-scripts/
 cache/
+build.sh
+requirements_dev.txt
+requirements_docs.txt
+tox.ini
+Makefile
+ember_csi.egg-info
