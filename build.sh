@@ -24,9 +24,6 @@ elif [[ "${GIT_TAG}" == heads/* ]]; then
   DOCKER_FILE='Dockerfile'
   EMBER_VERSION=$(echo "${PY_VERSION}.dev`date +%d%m%Y%H%M%S%N`")
   CONTAINER_TAG=`echo ${GIT_TAG} | cut -c7-`
-  if [[ $CONTAINER_TAG == 'master' ]]; then
-    CONTAINER_TAG='latest'
-  fi
   BRANCH='master'
 
 # If it's a feature branch
