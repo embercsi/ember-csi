@@ -4,58 +4,31 @@ set -x
 
 EMBER_VERSION=${EMBER_VERSION:-`git describe --tags`}
 
+PY_VERSION=`grep "VENDOR_VERSION = " ember_csi/constants.py | sed -r "s/^VENDOR_VERSION = '(.+)'/\1/"`
+
 if [ "$SOURCE_BRANCH" == "master" ]
 then
   STABLE_RELEASE=`tail -1 hooks/rdo-releases`
+  EMBER_VERSION=$(echo "${PY_VERSION}.dev`date +%d%m%Y%H%M%S%N`")
   docker build \
          --build-arg RELEASE=master \
          --build-arg VERSION=$EMBER_VERSION \
          --build-arg BUILD_DATE=`date -u +"%Y-%m-%dT%H:%M:%SZ"` \
          --build-arg VCS_REF=`git rev-parse --short HEAD` \
-         -t $DOCKER_REPO:master7 \
+         -t $DOCKER_REPO:master \
          -f Dockerfile .
-  docker build \
-         --build-arg RELEASE=master \
-         --build-arg VERSION=$EMBER_VERSION \
-         --build-arg BUILD_DATE=`date -u +"%Y-%m-%dT%H:%M:%SZ"` \
-         --build-arg VCS_REF=`git rev-parse --short HEAD` \
-         -t $DOCKER_REPO:master8 \
-         -f Dockerfile8 .
-
-  # docker build \
-  #        --build-arg RELEASE=stable/$STABLE_RELEASE \
-  #        --build-arg VERSION=$EMBER_VERSION \
-  #        --build-arg BUILD_DATE=`date -u +"%Y-%m-%dT%H:%M:%SZ"` \
-  #        --build-arg VCS_REF=`git rev-parse --short HEAD` \
-  #        -t $DOCKER_REPO:latest7 \
-  #        -f Dockerfile .
-  # docker build \
-  #        --build-arg RELEASE=stable/$STABLE_RELEASE \
-  #        --build-arg VERSION=$EMBER_VERSION \
-  #        --build-arg BUILD_DATE=`date -u +"%Y-%m-%dT%H:%M:%SZ"` \
-  #        --build-arg VCS_REF=`git rev-parse --short HEAD` \
-  #        -t $DOCKER_REPO:latest8 \
-  #        -f Dockerfile8 .
 
 else
-  RDO_RELEASES=`cat hooks/rdo-releases`
-  while read -r release; do
-    echo "Building $SOURCE_BRANCH with cinderlib $release ..."
-    docker build \
-           --build-arg RELEASE=$release \
-           --build-arg VERSION=$EMBER_VERSION \
-           --build-arg BUILD_DATE=`date -u +"%Y-%m-%dT%H:%M:%SZ"` \
-           --build-arg VCS_REF=`git rev-parse --short HEAD` \
-           --build-arg TAG=$SOURCE_BRANCH \
-           -t $DOCKER_REPO:${release}7 \
-           -f Dockerfile-release .
-    docker build \
-           --build-arg RELEASE=$release \
-           --build-arg VERSION=$EMBER_VERSION \
-           --build-arg BUILD_DATE=`date -u +"%Y-%m-%dT%H:%M:%SZ"` \
-           --build-arg VCS_REF=`git rev-parse --short HEAD` \
-           --build-arg TAG=$SOURCE_BRANCH \
-           -t $DOCKER_REPO:${release}8 \
-           -f Dockerfile8-release .
-  done <<< "$RDO_RELEASES"
+  GIT_TAG=`git describe --all`
+  EMBER_VERSION=`echo ${GIT_TAG} | cut -d/ -f2`
+  RDO_RELEASE=`cat hooks/rdo-releases`
+  echo "Building $SOURCE_BRANCH with cinderlib $release ..."
+  docker build \
+         --build-arg RELEASE=$RDO_RELEASE \
+         --build-arg VERSION=$EMBER_VERSION \
+         --build-arg BUILD_DATE=`date -u +"%Y-%m-%dT%H:%M:%SZ"` \
+         --build-arg VCS_REF=`git rev-parse --short HEAD` \
+         --build-arg TAG=$SOURCE_BRANCH \
+         -t $DOCKER_REPO:{RDO_RELEASE \
+         -f Dockerfile-release .
 fi
