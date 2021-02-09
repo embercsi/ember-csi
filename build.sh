@@ -2,44 +2,47 @@
 set -e
 set -x
 
-OS_VERSION=${1:-'8'}
-
 DOCKER_REPO='docker.io/embercsi/ember-csi'
-if [[ "${OS_VERSION}" == "8" ]]; then
-  DOCKER_FILE='Dockerfile8'
-else
-  DOCKER_FILE='Dockerfile'
-fi
-# EMBER_VERSION=${EMBER_VERSION:-`git describe --tags`}
+
 GIT_TAG=`git describe --all`
 PY_VERSION=`grep "VENDOR_VERSION = " ember_csi/constants.py | sed -r "s/^VENDOR_VERSION = '(.+)'/\1/"`
 
+# Tagged releases
+if [[ ${GIT_TAG} == tags/* ]]; then
+  if [[ "${GIT_TAG}" != "tags/${PY_VERSION}" ]]; then
+    echo "Tag '${GIT_TAG}' doesn't match 'tags/${PY_VERSION}' from python code"
+    exit 1
+  fi
 
-if [[ "${GIT_TAG}" == "heads/master" ]]; then
-  EMBER_VERSION=$(echo "${PY_VERSION}.dev`date +%d%m%Y%H%M%S%N`")
-  BRANCH='master'
-
-elif [[ "${GIT_TAG}" == "tags/${PY_VERSION}" ]]; then
   EMBER_VERSION=`echo ${GIT_TAG} | cut -d/ -f2`
   BRANCH=`cat hooks/rdo-releases`
+  DOCKER_FILE='Dockerfile-release'
+  CONTAINER_TAG='stable'
 
+# Branches and master
+elif [[ "${GIT_TAG}" == heads/* ]]; then
+  DOCKER_FILE='Dockerfile'
+  EMBER_VERSION=$(echo "${PY_VERSION}.dev`date +%d%m%Y%H%M%S%N`")
+  CONTAINER_TAG=`echo ${GIT_TAG} | cut -c7-`
+  if [[ $CONTAINER_TAG == 'master' ]]; then
+    CONTAINER_TAG='latest'
+  fi
+  BRANCH='master'
+
+# If it's a feature branch
 else
-  echo "Tag '${GIT_TAG}' doesn't match 'tags/${PY_VERSION}' from python code"
-  exit 1
+  echo "Unknown git HEAD, it's not a tag, nor master, nor a feature branch"
+  exit 2
 fi
-
-CONTAINER_TAG="${BRANCH}${OS_VERSION}"
 
 echo -e "BRANCH: ${BRANCH}\nGIT_TAG: ${GIT_TAG}\nEMBER_VERSION: ${EMBER_VERSION}"
 
-# -Arg RELEASE=  VERSION=
-#
-mkdir -p cache/$OS_VERSION/{pip,wheel,git_code}
+mkdir -p cache/$CONTAINER_TAG/{pip,wheel,git_code}
 sudo podman build \
          --build-arg RELEASE=$BRANCH \
          --build-arg VERSION=$EMBER_VERSION \
          --build-arg BUILD_DATE=`date -u +"%Y-%m-%dT%H:%M:%SZ"` \
          --build-arg VCS_REF=`git rev-parse --short HEAD` \
          -t ${DOCKER_REPO}:${CONTAINER_TAG} \
-         -v "`pwd`/cache/${OS_VERSION}:/var/cache:rw,shared,z" \
+         -v "`pwd`/cache/${CONTAINER_TAG}:/var/cache:rw,shared,z" \
          -f $DOCKER_FILE .
