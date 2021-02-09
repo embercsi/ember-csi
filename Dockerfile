@@ -64,7 +64,6 @@ COPY . /ember-csi
 RUN sed -i -r "s/^VENDOR_VERSION = '(.+)'/VENDOR_VERSION = '$VERSION'/" /ember-csi/ember_csi/constants.py && \
     sed -i -r "s/version='(.+)'/version='$VERSION'/" /ember-csi/setup.py && \
     sed -i -r "s/^__version__ = '(.*)'$/__version__ = '$VERSION'/" /ember-csi/ember_csi/__init__.py && \
-    cd /ember-csi && python3 setup.py csi_proto && \
     pip3 install --cache-dir=$PIP_CACHE --find-links=$WHEEL_CACHE -ve /ember-csi && \
 
     cp /ember-csi/nsenter-commands/* /usr/local/sbin && \

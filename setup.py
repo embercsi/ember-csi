@@ -3,18 +3,14 @@
 
 import glob
 import os
-import shutil
 import subprocess
 import sys
 
-from distutils import cmd
 import setuptools
 from setuptools.command import develop
 from setuptools.command import install
 from setuptools.command import sdist
 
-
-PY3 = sys.version_info[0] == 3
 
 # Wheel only necessary on the host to publish to PyPi, not on the container
 try:
@@ -62,31 +58,7 @@ else:
         def run(self):
             global PATCH_FILES
             PATCH_FILES = False
-            self.run_command('csi_proto')
             bdist_wheel.bdist_wheel.run(self)
-
-
-class SetCSIProto(cmd.Command):
-    description = 'Set csi_pb2 and csi_pb2_grpc based on the Python version'
-    user_options = []
-
-    def initialize_options(self):
-        pass
-
-    def finalize_options(self):
-        pass
-
-    def run(self):
-        pyver = 'py3' if PY3 else 'py2'
-
-        # Use the code as reference, that way if we forget to add the file
-        # under csi_proto this method will crash
-        for directory in sorted(glob.glob('ember_csi/v*_*_*/')):
-            print('Setting csi_pb2 files in ' + directory)
-            name = os.path.basename(directory[:-1])
-            for filename in ('csi_pb2.py', 'csi_pb2_grpc.py'):
-                shutil.copy2(os.path.join('csi_proto', pyver, name, filename),
-                             os.path.join(directory, filename))
 
 
 with open('README.md') as readme_file:
@@ -98,7 +70,7 @@ with open('HISTORY.md') as history_file:
 
 requirements = [
     'cinderlib>=0.9.0',
-    'grpcio>=1.15.0' if PY3 else 'grpcio==1.15.0',
+    'grpcio>=1.15.0',
     # GRPCIO v1.12.0 has broken dependencies, so we include them here
     'protobuf>=3.5.0.post1',
     # For the CRD persistent metadata plugin
@@ -127,7 +99,6 @@ setuptools.setup(
         'bdist_wheel': CustomBdist,
         'install': CustomInstall,
         'develop': CustomDevelop,
-        'csi_proto': SetCSIProto,
     },
     name='ember-csi',
     version='0.9.0',
@@ -156,8 +127,6 @@ setuptools.setup(
         'Intended Audience :: Information Technology',
         'License :: OSI Approved :: Apache Software License',
         'Natural Language :: English',
-        "Programming Language :: Python :: 2",
-        "Programming Language :: Python :: 2.7",
         "Programming Language :: Python :: 3",
         'Programming Language :: Python :: 3.6',
     ],
