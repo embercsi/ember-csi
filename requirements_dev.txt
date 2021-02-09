@@ -1,1 +1,5 @@
 grpcio-tools
+bumpversion
+docutils
+twine
+setuptools>=40.0.0
