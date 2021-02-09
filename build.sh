@@ -35,14 +35,21 @@ else
   exit 2
 fi
 
-echo -e "BRANCH: ${BRANCH}\nGIT_TAG: ${GIT_TAG}\nEMBER_VERSION: ${EMBER_VERSION}"
+IMAGE_NAME=${DOCKER_REPO}:${CONTAINER_TAG}
 
-mkdir -p cache/$CONTAINER_TAG/{pip,wheel,git_code}
+MSG="uilding $IMAGE_NAME\n Branch: $BRANCH\n Git tag: $GIT_TAG\n Ember version: $EMBER_VERSION"
+echo -e "B$MSG"
+
+CACHE_DIR="`pwd`/cache/${CONTAINER_TAG}"
+
+mkdir -p $CACHE_DIR/{pip,wheel,git_code}
 sudo podman build \
          --build-arg RELEASE=$BRANCH \
          --build-arg VERSION=$EMBER_VERSION \
          --build-arg BUILD_DATE=`date -u +"%Y-%m-%dT%H:%M:%SZ"` \
          --build-arg VCS_REF=`git rev-parse --short HEAD` \
-         -t ${DOCKER_REPO}:${CONTAINER_TAG} \
-         -v "`pwd`/cache/${CONTAINER_TAG}:/var/cache:rw,shared,z" \
+         -t $IMAGE_NAME \
+         -v $CACHE_DIR:/var/cache:rw,shared,z \
          -f $DOCKER_FILE .
+
+echo -e "Finished b$MSG"
