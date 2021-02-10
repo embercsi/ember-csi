@@ -101,7 +101,7 @@ setuptools.setup(
         'develop': CustomDevelop,
     },
     name='ember-csi',
-    version='0.9.0',
+    version='0.9.1',
     description=("Multi-vendor CSI plugin supporting over 80 storage drivers"),
     long_description=readme + '\n---\n' + history,
     long_description_content_type='text/markdown',
