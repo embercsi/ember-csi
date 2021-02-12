@@ -35,7 +35,7 @@ EXPOSE 50051 4444
 # We first check that we have access to the PyPi server
 RUN echo 'keepcache=true' >> /etc/dnf/dnf.conf && \
     dnf -y install targetcli epel-release lvm2 which && \
-    dnf -y install python3-pip python3-kubernetes && \
+    dnf -y install python3-pip python3-kubernetes python3-pywbem && \
     dnf -y install xfsprogs e2fsprogs nmap-ncat && \
     mkdir -p $PIP_CACHE $WHEEL_CACHE && \
     # Install the RDO repository
