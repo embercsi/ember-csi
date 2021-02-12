@@ -1,0 +1,280 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: csi-controller-sa
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: csi-controller-cr
+rules:
+  # Allow managing ember resources
+  - apiGroups: ['ember-csi.io']
+    resources: ['*']
+    verbs: ['*']
+  # Allow listing and creating CRDs
+  - apiGroups: ['apiextensions.k8s.io']
+    resources: ['customresourcedefinitions']
+    verbs: ['list', 'create']
+  - apiGroups: ['']
+    resources: ['persistentvolumes']
+    verbs: ['create', 'delete', 'get', 'list', 'watch', 'update', 'patch']
+  - apiGroups: ['']
+    resources: ['secrets']
+    verbs: ['get', 'list']
+  - apiGroups: ['']
+    resources: ['persistentvolumeclaims']
+    verbs: ['get', 'list', 'watch', 'update']
+  - apiGroups: [""]
+    resources: ["persistentvolumeclaims/status"]
+    verbs: ["update", "patch"]
+  - apiGroups: ['']
+    resources: ['nodes']
+    verbs: ['get', 'list', 'watch']
+  - apiGroups: ['storage.k8s.io']
+    resources: ['volumeattachments']
+    verbs: ['get', 'list', 'watch', 'update', 'patch']
+  - apiGroups: ['storage.k8s.io']
+    resources: ['storageclasses']
+    verbs: ['get', 'list', 'watch']
+  - apiGroups: ['csi.storage.k8s.io']
+    resources: ['csidrivers']
+    verbs: ['get', 'list', 'watch', 'update', 'create']
+  - apiGroups: ['']
+    resources: ['events']
+    verbs: ['list', 'watch', 'create', 'update', 'patch']
+  - apiGroups: ["snapshot.storage.k8s.io"]
+    resources: ["volumesnapshotclasses"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["snapshot.storage.k8s.io"]
+    resources: ["volumesnapshotcontents"]
+    verbs: ["create", "get", "list", "watch", "update", "delete"]
+  - apiGroups: ["snapshot.storage.k8s.io"]
+    resources: ["volumesnapshots"]
+    verbs: ["get", "list", "watch", "update"]
+  - apiGroups: ["snapshot.storage.k8s.io"]
+    resources: ["volumesnapshotcontents/status"]
+    verbs: ["update"]
+  - apiGroups: ["storage.k8s.io"]
+    resources: ["csinodes"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: storage.k8s.io/v1beta1
+kind: CSIDriver
+metadata:
+  name: ember-csi.io
+spec:
+  attachRequired: true
+  podInfoOnMount: true
+  # volumeLifecycleModes: # added in Kubernetes 1.16, we use default
+  # - Persistent
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: csi-controller-rb
+roleRef:
+  kind: ClusterRole
+  apiGroup: rbac.authorization.k8s.io
+  name: csi-controller-cr
+subjects:
+- kind: ServiceAccount
+  name: csi-controller-sa
+  namespace: default
+---
+kind: StatefulSet
+apiVersion: apps/v1
+metadata:
+  name: csi-controller
+  labels:
+    app: embercsi
+    embercsi_cr: lvm
+spec:
+  serviceName: csi-controller
+  replicas: 1
+  selector:
+    matchLabels:
+      app: embercsi
+      embercsi_cr: lvm
+  template:
+    metadata:
+      labels:
+        app: embercsi
+        embercsi_cr: lvm
+    spec:
+      serviceAccount: csi-controller-sa
+      # iSCSI only the very latest Open-iSCSI supports namespaces
+      hostNetwork: true
+      # Required by multipath detach (some drivers clone volumes dd-ing)
+      hostIPC: true
+      hostPID: true
+      # Allow running it in master even if it's tainted for NoSchedule
+      tolerations:
+      - operator: "Exists"
+        key: "node-role.kubernetes.io/master"
+        effect: "NoSchedule"
+      # Pin the controller to node0, where we created the LVM backend
+      nodeSelector:
+        kubernetes.io/hostname: master
+      containers:
+      - name: external-provisioner
+        image: quay.io/k8scsi/csi-provisioner:v1.6.0
+        args:
+        - --v=5
+        - --provisioner=ember-csi.io
+        - --csi-address=/csi-data/csi.sock
+        - --feature-gates=Topology=true
+        volumeMounts:
+        - mountPath: /csi-data
+          name: socket-dir
+      - name: external-attacher
+        image: quay.io/k8scsi/csi-attacher:v2.2.0
+        args:
+        - --v=5
+        - --csi-address=/csi-data/csi.sock
+        - --timeout=120s
+        volumeMounts:
+        - mountPath: /csi-data
+          name: socket-dir
+      - name: external-snapshotter
+        image: quay.io/k8scsi/csi-snapshotter:v2.1.3
+        args:
+        - --v=5
+        - --csi-address=/csi-data/csi.sock
+        volumeMounts:
+        - mountPath: /csi-data
+          name: socket-dir
+      - name: external-resizer
+        image: quay.io/k8scsi/csi-resizer:v0.5.0
+        args:
+        - --v=5
+        - --csi-address=/csi-data/csi.sock
+        volumeMounts:
+        - mountPath: /csi-data
+          name: socket-dir
+      - name: csi-driver
+        image: "{{ ember_image }}"
+        terminationMessagePath: /tmp/termination-log
+        # command: ["tail"]
+        # args: ["-f", "/dev/null"]
+        imagePullPolicy: Always
+        securityContext:
+          privileged: true
+          allowPrivilegeEscalation: true
+        env:
+        - name: PYTHONUNBUFFERED
+          value: '0'
+        - name: CSI_ENDPOINT
+          value: unix:///csi-data/csi.sock
+        - name: KUBE_NODE_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: spec.nodeName
+        - name: X_CSI_SPEC_VERSION
+          value: v1.1
+        - name: CSI_MODE
+          value: controller
+        - name: X_CSI_PERSISTENCE_CONFIG
+          value: '{"storage":"crd"}'
+        - name: X_CSI_EMBER_CONFIG
+          value: '{"debug":{{ ember_debug_logs | to_json }},"enable_probe":true}'
+        - name: X_CSI_TOPOLOGIES
+          value: '[{"iscsi":"true"}]'
+        - name: X_CSI_BACKEND_CONFIG
+          value: '{{ ember_lvm_config }}'
+        livenessProbe:
+          exec:
+            command:
+            - ember-liveness
+          initialDelaySeconds: 120
+          periodSeconds: 90
+          timeoutSeconds: 60
+        volumeMounts:
+        - name: socket-dir
+          mountPath: /csi-data
+        - name: iscsi-dir
+          mountPath: /etc/iscsi
+          mountPropagation: Bidirectional
+        - name: dev-dir
+          mountPath: /dev
+          mountPropagation: Bidirectional
+        - name: lvm-dir
+          mountPath: /etc/lvm
+          mountPropagation: Bidirectional
+        - name: lvm-lock
+          mountPath: /var/lock/lvm
+          mountPropagation: Bidirectional
+        - name: multipath-dir
+          mountPath: /etc/multipath
+          mountPropagation: Bidirectional
+        - name: multipath-conf
+          mountPath: /etc/multipath.conf
+          mountPropagation: HostToContainer
+        - name: modules-dir
+          mountPath: /lib/modules
+          mountPropagation: HostToContainer
+        - name: localtime
+          mountPath: /etc/localtime
+          mountPropagation: HostToContainer
+        - name: udev-data
+          mountPath: /run/udev
+          mountPropagation: HostToContainer
+        - name: lvm-run
+          mountPath: /run/lvm
+          mountPropagation: HostToContainer
+        # Required to preserve the node targets between restarts
+        - name: iscsi-info
+          mountPath: /var/lib/iscsi
+          mountPropagation: Bidirectional
+        # In a real deployment we should be mounting container's
+        # /var/lib-ember-csi on the host
+      - name: csc
+        image: embercsi/csc:v1.1.0
+        command: ["tail"]
+        args: ["-f", "/dev/null"]
+        env:
+          - name: CSI_ENDPOINT
+            value: unix:///csi-data/csi.sock
+        volumeMounts:
+          - name: socket-dir
+            mountPath: /csi-data
+      volumes:
+      - name: socket-dir
+        emptyDir:
+      # Some backends do create volume from snapshot by attaching and dd-ing
+      - name: iscsi-dir
+        hostPath:
+          path: /etc/iscsi
+          type: Directory
+      - name: dev-dir
+        hostPath:
+          path: /dev
+      - name: lvm-dir
+        hostPath:
+          path: /etc/lvm
+          type: Directory
+      - name: lvm-lock
+        hostPath:
+          path: /var/lock/lvm
+      - name: multipath-dir
+        hostPath:
+          path: /etc/multipath
+      - name: multipath-conf
+        hostPath:
+          path: /etc/multipath.conf
+      - name: modules-dir
+        hostPath:
+          path: /lib/modules
+      - name: localtime
+        hostPath:
+          path: /etc/localtime
+      - name: udev-data
+        hostPath:
+          path: /run/udev
+      - name: lvm-run
+        hostPath:
+          path: /run/lvm
+      - name: iscsi-info
+        hostPath:
+          path: /var/lib/iscsi

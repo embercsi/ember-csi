@@ -1,0 +1,262 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: csi-rbd
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: csi-rbd
+rules:
+  # Allow managing ember resources
+  - apiGroups: ['ember-csi.io']
+    resources: ['*']
+    verbs: ['*']
+  # Allow listing and creating CRDs
+  - apiGroups: ['apiextensions.k8s.io']
+    resources: ['customresourcedefinitions']
+    verbs: ['list', 'create']
+  - apiGroups: ['']
+    resources: ['persistentvolumes']
+    verbs: ['create', 'delete', 'get', 'list', 'watch', 'update', 'patch']
+  - apiGroups: ['']
+    resources: ['secrets']
+    verbs: ['get', 'list']
+  - apiGroups: ['']
+    resources: ['persistentvolumeclaims']
+    verbs: ['get', 'list', 'watch', 'update']
+  - apiGroups: [""]
+    resources: ["persistentvolumeclaims/status"]
+    verbs: ["update", "patch"]
+  - apiGroups: ['']
+    resources: ['nodes']
+    verbs: ['get', 'list', 'watch']
+  - apiGroups: ['storage.k8s.io']
+    resources: ['volumeattachments']
+    verbs: ['get', 'list', 'watch', 'update', 'patch']
+  - apiGroups: ['storage.k8s.io']
+    resources: ['storageclasses']
+    verbs: ['get', 'list', 'watch']
+  - apiGroups: ['csi.storage.k8s.io']
+    resources: ['csidrivers']
+    verbs: ['get', 'list', 'watch', 'update', 'create']
+  - apiGroups: ['']
+    resources: ['events']
+    verbs: ['list', 'watch', 'create', 'update', 'patch']
+  - apiGroups: ["snapshot.storage.k8s.io"]
+    resources: ["volumesnapshotclasses"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["snapshot.storage.k8s.io"]
+    resources: ["volumesnapshotcontents"]
+    verbs: ["create", "get", "list", "watch", "update", "delete"]
+  - apiGroups: ["snapshot.storage.k8s.io"]
+    resources: ["volumesnapshots"]
+    verbs: ["get", "list", "watch", "update"]
+  - apiGroups: ["snapshot.storage.k8s.io"]
+    resources: ["volumesnapshotcontents/status"]
+    verbs: ["update"]
+  - apiGroups: ["storage.k8s.io"]
+    resources: ["csinodes"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: storage.k8s.io/v1beta1
+kind: CSIDriver
+metadata:
+  name: rbd.ember-csi.io
+spec:
+  attachRequired: true
+  podInfoOnMount: true
+  # volumeLifecycleModes: # added in Kubernetes 1.16, we use default
+  # - Persistent
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: csi-rbd
+roleRef:
+  kind: ClusterRole
+  apiGroup: rbac.authorization.k8s.io
+  name: csi-rbd
+subjects:
+- kind: ServiceAccount
+  name: csi-rbd
+  namespace: default
+---
+kind: StatefulSet
+apiVersion: apps/v1
+metadata:
+  name: csi-rbd
+  labels:
+    app: embercsi
+    embercsi_cr: ceph
+spec:
+  serviceName: csi-rbd
+  replicas: 1
+  selector:
+    matchLabels:
+      app: embercsi
+      embercsi_cr: ceph
+  template:
+    metadata:
+      labels:
+        app: embercsi
+        embercsi_cr: ceph
+    spec:
+      serviceAccount: csi-rbd
+      # iSCSI only the very latest Open-iSCSI supports namespaces
+      hostNetwork: true
+      # Allow running it in master even if it's tainted for NoSchedule
+      tolerations:
+      - operator: "Exists"
+        key: "node-role.kubernetes.io/master"
+        effect: "NoSchedule"
+      # Pin the controller to node0, where we created the LVM backend
+      nodeSelector:
+        kubernetes.io/hostname: master
+      containers:
+      - name: external-provisioner
+        image: quay.io/k8scsi/csi-provisioner:v1.6.0
+        args:
+        - --v=5
+        - --provisioner=rbd.ember-csi.io
+        - --csi-address=/csi-data/csi.sock
+        - --feature-gates=Topology=true
+        volumeMounts:
+        - mountPath: /csi-data
+          name: socket-dir
+      - name: external-attacher
+        image: quay.io/k8scsi/csi-attacher:v2.2.0
+        args:
+        - --v=5
+        - --csi-address=/csi-data/csi.sock
+        - --timeout=60s
+        volumeMounts:
+        - mountPath: /csi-data
+          name: socket-dir
+      - name: external-snapshotter
+        image: quay.io/k8scsi/csi-snapshotter:v2.1.3
+        args:
+        - --v=5
+        - --csi-address=/csi-data/csi.sock
+        volumeMounts:
+        - mountPath: /csi-data
+          name: socket-dir
+      - name: external-resizer
+        image: quay.io/k8scsi/csi-resizer:v0.5.0
+        args:
+        - --v=5
+        - --csi-address=/csi-data/csi.sock
+        volumeMounts:
+        - mountPath: /csi-data
+          name: socket-dir
+      - name: csi-driver
+        image: "{{ ember_image }}"
+        terminationMessagePath: /tmp/termination-log
+        imagePullPolicy: Always
+        securityContext:
+          privileged: true
+          allowPrivilegeEscalation: true
+        env:
+        - name: PYTHONUNBUFFERED
+          value: '0'
+        - name: CSI_ENDPOINT
+          value: unix:///csi-data/csi.sock
+        - name: KUBE_NODE_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: spec.nodeName
+        - name: X_CSI_SPEC_VERSION
+          value: v1.1
+        - name: CSI_MODE
+          value: controller
+        - name: X_CSI_PERSISTENCE_CONFIG
+          value: '{"storage":"crd"}'
+        - name: X_CSI_EMBER_CONFIG
+          value: '{"plugin_name":"rbd","debug":{{ ember_debug_logs | to_json }},"enable_probe":true}'
+        - name: X_CSI_TOPOLOGIES
+          value: '[{"rbd":"true"}]'
+        - name: X_CSI_BACKEND_CONFIG
+          value: '{{ ember_rbd_config }}'
+        - name: X_CSI_SYSTEM_FILES
+          value: '/tmp/ember-csi/system-files.tar'
+        livenessProbe:
+          exec:
+            command:
+            - ember-liveness
+          initialDelaySeconds: 120
+          periodSeconds: 90
+          timeoutSeconds: 60
+        volumeMounts:
+        - name: "system-files"
+          mountPath: /tmp/ember-csi
+        - name: socket-dir
+          mountPath: /csi-data
+        - name: dev-dir
+          mountPath: /dev
+          mountPropagation: Bidirectional
+        - name: modules-dir
+          mountPath: /lib/modules
+          mountPropagation: HostToContainer
+        - name: localtime
+          mountPath: /etc/localtime
+          mountPropagation: HostToContainer
+        - name: udev-data
+          mountPath: /run/udev
+          mountPropagation: HostToContainer
+        - name: ceph-config
+          mountPath: /etc/ceph
+          mountPropagation: HostToContainer
+        # In a real deployment we should be mounting container's
+        # /var/lib-ember-csi on the host
+      - name: ceph-cluster
+        image: ceph/daemon:latest-mimic
+        args: ["demo"]
+        env:
+          - name: MON_IP
+            value: 192.168.10.90
+          - name: CEPH_PUBLIC_NETWORK
+            value: 192.168.10.90/0
+          - name: DEMO_DAEMONS
+            value: osd mds
+        volumeMounts:
+        - mountPath: /dev
+          name: dev-dir
+        - mountPath: /lib/modules
+          name: modules-dir
+        - mountPath: /etc/localtime
+          name: localtime
+        - mountPath: /run/udev
+          name: udev-data
+        - mountPath: /etc/ceph
+          name: ceph-config
+      - name: csc
+        image: embercsi/csc:v1.1.0
+        command: ["tail"]
+        args: ["-f", "/dev/null"]
+        env:
+          - name: CSI_ENDPOINT
+            value: unix:///csi-data/csi.sock
+        volumeMounts:
+          - name: socket-dir
+            mountPath: /csi-data
+      volumes:
+      - name: "system-files"
+        secret:
+          secretName: sysfiles-secret
+      - name: socket-dir
+        emptyDir:
+      - name: dev-dir
+        hostPath:
+          path: /dev
+      - name: modules-dir
+        hostPath:
+          path: /lib/modules
+      - name: localtime
+        hostPath:
+          path: /etc/localtime
+      - name: udev-data
+        hostPath:
+          path: /run/udev
+      - name: ceph-config
+        emptyDir: {}

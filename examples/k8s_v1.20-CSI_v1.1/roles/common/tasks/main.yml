@@ -1,0 +1,96 @@
+- name: update
+  yum:
+    name: '*'
+    state: latest
+
+- name: build hosts file
+  lineinfile: dest=/etc/hosts regexp='.*{{ item }}$' line="{{ hostvars[item].ansible_eth1.ipv4.address }} {{item}}" state=present
+  when: hostvars[item].ansible_eth1.ipv4.address is defined
+  with_items: "{{ groups['all'] }}"
+
+- name: disable selinux
+  selinux: state=disabled
+
+- name: disable of selinux - now
+  command: setenforce 0
+
+- name: Run sysctl
+  command: sysctl --system
+
+- name: Add Kubernetes yum repo
+  yum_repository:
+    name: kubernetes
+    description: Kubernetes kubeadm
+    baseurl: https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64
+    gpgkey: https://packages.cloud.google.com/yum/doc/yum-key.gpg
+    gpgcheck: yes
+
+# Pin kubernetes related packages to ensure we don't break every other day
+- name: install utility programs
+  yum:
+    name: ['wget', 'lvm2', 'chrony', 'epel-release', 'vim', 'ncurses-term', 'kubelet-1.20.2', 'kubeadm-1.20.2', 'kubectl-1.20.2']
+    state: present
+    disable_gpg_check: yes
+
+- name: Add docker repo
+  command: curl https://download.docker.com/linux/centos/docker-ce.repo -o /etc/yum.repos.d/docker-ce.repo
+
+- name: Install docker-ce
+  shell: dnf -y install docker-ce --nobest
+
+# Unlike the docker package, docker-ce doesn't create the directory until it
+# starts
+- file:
+    path: /etc/docker
+    state: directory
+    owner: root
+    group: root
+
+# Note(geguileo): If we want to use our own registry for developtment we just
+# need to edit the roles/common/files/daemon.json with the IP of our registry.
+# We can easily run a registry with:
+#     docker run -d -p 5000:5000 --name registry registry:2
+- name: Allow connecting to our own insecure registry
+  copy:
+    content: "{ \"insecure-registries\":[\"{{ ember_insecure_registry }}\"] }"
+    dest: /etc/docker/daemon.json
+    owner: root
+    group: root
+
+- name: enable kube services
+  service: name={{ item }} state=started enabled=yes
+  with_items:
+    - docker
+    - chronyd
+    - kubelet
+
+- name: turn off swap
+  command: swapoff -a
+
+- name: remove swap from /etc/fstab
+  lineinfile:
+    path: /etc/fstab
+    state: absent
+    regexp: "swap"
+
+# Accept loop devices for the LVM ember-volumes VG and reject anything else
+- name: Disable new LVM volumes
+  lineinfile:
+    path: /etc/lvm/lvm.conf
+    state: present
+    insertafter: '# filter ='
+    line: "\tfilter = [ \"a|loop|\", \"r|.*\\/|\" ]\n\tglobal_filter = [ \"a|loop|\", \"r|.*\\/|\" ]"
+
+- name: Install iSCSI
+  yum:
+    name: ['iscsi-initiator-utils', 'device-mapper-multipath']
+    state: present
+
+- name: Configure multipath
+  command: mpathconf --enable --with_multipathd y --user_friendly_names n --find_multipaths y
+
+- name: Enable connection services
+  service: name={{ item }} state=restarted enabled=yes
+  with_items:
+    - iscsid
+    - multipathd
