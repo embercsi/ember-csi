@@ -23,9 +23,9 @@ Ember-CSI has the following requirements:
 
 - Services: Depending on the driver and the configuration we may need additional services running on worker nodes and in some drivers controller nodes.
 
-  - iSCSI: For iSCSI drivers the iSCSI initiator, `iscsid` provided by the `iscsi-initiator-utils` package must be configured and running.  It can be running baremetal or in a container as long as the appropriate directories from the host are mounted.
+  - iSCSI: For iSCSI drivers the iSCSI initiator, `iscsid` provided by the `iscsi-initiator-utils` package must be configured and running on the host.
 
-  - Multipathing: When selecting multipathing on iSCSI and FC drivers we'll need to have `multipathd`, provided by the `device-mapper-multipath` package, configured and running. It can be running baremetal or in a container as long as the appropriate directories from the host are mounted.
+  - Multipathing: When selecting multipathing on iSCSI and FC drivers we'll need to have `multipathd`, provided by the `device-mapper-multipath` package, configured and running on the host.
 
 
 OpenShift
@@ -83,7 +83,7 @@ Inside the Ember-CSI operator page we create a new ``Storage Backend`` instance:
 
 Backends can be configured using YAML, but this is a cumbersome process, so it's usually only used on automated processes such as CI systems, and the Ember-CSI team recommends using the form interface when doing things manually, which is the default on OpenShift 4.5.
 
-In the form we should change the *name* field from *default* to a unique and meaningful name to identify this backend. Then go to the *Driver* dropdown and select the name of our storage backend.  After selecting the appropriate driver the relevant configuration optionsfor the selected driver will be displayed.
+In the form we should change the *name* field from *default* to a unique and meaningful name to identify this backend. Then go to the *Driver* dropdown and select the name of our storage backend.  After selecting the appropriate driver the relevant configuration options for the selected driver will be displayed.
 
 .. image:: img/install/09-name-and-driver.png
    :class: boxed-img
@@ -102,7 +102,7 @@ And a new *EmberStorageBackend* entity will be created.  Don't wait for the *Sta
    :align: center
 
 
-You can see that the deployment is complete going to *Stateful Sets*, *Daemon Sets*, and *Replica Sets* pages in the *Workloads* section to see that the deployed pods are running:
+We can see that the deployment is complete going to *Stateful Sets*, *Daemon Sets*, and *Replica Sets* pages in the *Workloads* section to see that the deployed pods are running:
 
 .. image:: img/install/12-StatefulSet.png
    :class: boxed-img
@@ -116,7 +116,7 @@ You can see that the deployment is complete going to *Stateful Sets*, *Daemon Se
    :class: boxed-img
    :align: center
 
-You can also check that a new *Storage Class* has been created in *Storage* > *Storage Classes*. The name of the new class will be *example.ember-csi.io* where *example* will be the name you gate to the *Storage Backend* in the form:
+We can also check that a new *Storage Class* has been created in *Storage* > *Storage Classes*. The name of the new class will be *example.ember-csi.io* where *example* will be the name we gave to the *Storage Backend* in the form:
 
 .. image:: img/install/15-StorageClass.png
    :class: boxed-img
@@ -134,7 +134,7 @@ And then adding key `storageclass.kubernetes.io/is-default-class` with the value
    :class: boxed-img
    :align: center
 
-.. warning:: If you already have a default and you want to change it to this one, you'll you need to modify the current default by removing the annotation or setting it to `false`.
+.. warning:: If we already have a default and we want to change it to this one, we'll need to modify the current default by removing the annotation or setting it to `false`.
 
 If we have configured everything right we'll now be able to use our storage solution into OpenShift using the new ``StorageClass`` that was created by the operator.  In the `usage section <usage.html>`_ there is information on how to use the new Storage Backend.
 
