@@ -1,4 +1,4 @@
-FROM centos:8
+FROM quay.io/centos/centos:stream8
 ARG RELEASE
 ARG VERSION
 ARG BUILD_DATE
@@ -29,7 +29,7 @@ EXPOSE 50051 4444
 RUN yum -y install --setopt=skip_missing_names_on_install=False targetcli epel-release lvm2 which && \
     yum -y install --setopt=skip_missing_names_on_install=False python3-pip python3-pywbem centos-release-openstack-${RELEASE} python3-kubernetes && \
     # Enable PowerTools so we can access python3-httplib2
-    sed -i -r 's/^enabled=0/enabled=1/' /etc/yum.repos.d/CentOS-Linux-PowerTools.repo && \
+    sed -i -r 's/^enabled=0/enabled=1/' /etc/yum.repos.d/CentOS-Stream-PowerTools.repo && \
     yum -y install python3-grpcio protobuf && \
     yum -y install --setopt=skip_missing_names_on_install=False python3-cinderlib xfsprogs e2fsprogs nmap-ncat && \
     # Required to apply patches
@@ -49,6 +49,8 @@ RUN yum -y install --setopt=skip_missing_names_on_install=False targetcli epel-r
     pip3 install --no-cache-dir krest purestorage pyxcli python-3parclient python-lefthandclient && \
     yum clean all && \
     rm -rf /var/cache/yum
+
+COPY ember-csi/nsenter-commands /
 
 # Define default command
 CMD ["ember-csi"]

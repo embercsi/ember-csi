@@ -3,7 +3,7 @@
 # Cinderlib and Cinder:
 #  - Pull from master if RELEASE=master
 #  - Pull from RELEASE if RELEASE!=master
-FROM centos:8
+FROM quay.io/centos/centos:stream8
 ARG RELEASE=master
 ARG VERSION=master
 ARG BUILD_DATE
@@ -41,7 +41,7 @@ RUN echo 'keepcache=true' >> /etc/dnf/dnf.conf && \
     # Install the RDO repository
     if [ "$RELEASE" = "master" ]; then curl -o /etc/yum.repos.d/rdo-trunk-runtime-deps.repo https://trunk.rdoproject.org/centos8-master/rdo-trunk-runtime-deps.repo; curl -o /etc/yum.repos.d/delorean.repo https://trunk.rdoproject.org/centos8-master/current/delorean.repo; else yum -y install centos-release-openstack-${RELEASE}; fi && \
     # Enable PowerTools so we can access python3-httplib2
-    sed -i -r 's/^enabled=0/enabled=1/' /etc/yum.repos.d/CentOS-Linux-PowerTools.repo && \
+    sed -i -r 's/^enabled=0/enabled=1/' /etc/yum.repos.d/CentOS-Stream-PowerTools.repo && \
     dnf -y install python3-cinderlib python3-grpcio protobuf && \
     # Create the ceph repo for the ceph packages
     curl --silent --remote-name --location https://github.com/ceph/ceph/raw/octopus/src/cephadm/cephadm && \
@@ -65,9 +65,9 @@ RUN sed -i -r "s/^VENDOR_VERSION = '(.+)'/VENDOR_VERSION = '$VERSION'/" /ember-c
     sed -i -r "s/version='(.+)'/version='$VERSION'/" /ember-csi/setup.py && \
     sed -i -r "s/^__version__ = '(.*)'$/__version__ = '$VERSION'/" /ember-csi/ember_csi/__init__.py && \
     pip3 install --cache-dir=$PIP_CACHE --find-links=$WHEEL_CACHE -ve /ember-csi && \
-
-    cp /ember-csi/nsenter-commands/* /usr/local/sbin && \
-    rm /usr/local/sbin/nsenter
+    # Merge nsenter-commands directory structure with the root directory
+    cd /ember-csi/nsenter-commands && \
+    find ./ ! \( -type d \) -printf '%P\n' | xargs -n 1 -I {} mv '{}' '/{}'
 
 # Define default command
 CMD ["ember-csi"]
