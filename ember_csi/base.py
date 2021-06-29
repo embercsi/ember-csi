@@ -1307,13 +1307,28 @@ class SnapshotBase(object):
     @common.require('name', 'source_volume_id')
     @common.Worker.unique('name')
     def CreateSnapshot(self, request, context):
-        snap = self._get_snap(snapshot_name=request.name)
+        snaps = self._get_snap(snapshot_name=request.name, always_list=True)
+
+        # There is no snapshot with the unique name, so this is the first
+        # request to create it
+        if not snaps:
+            vol = self._get_vol(request.source_volume_id, context=context)
+            snap = vol.create_snapshot(name=request.name)
 
         # If we have multiple references there's something wrong, either the
         # same DB used for multiple purposes and there is a collision name, or
-        # there's been a race condition, so we cannot be idempotent, create a
-        # new snapshot.
-        if isinstance(snap, cinderlib.Snapshot):
+        # there's been a race condition, so we cannot be idempotent.  Fail and
+        # let the admin fix things.
+        elif len(snaps) > 1:
+            context.abort(grpc.StatusCode.ALREADY_EXISTS,
+                          'There are %s snapshots with name "%s" !' %
+                          (len(snap), request.name))
+
+        # There is 1 snapshot with the unique name, if it's for a different
+        # volume we fail, and if it's for the same one we consider this to be
+        # a repeated request.
+        else:
+            snap = snaps[0]
             if request.source_volume_id != snap.volume_id:
                 context.abort(grpc.StatusCode.ALREADY_EXISTS,
                               'Snapshot %s from %s exists for volume %s' %
@@ -1321,9 +1336,6 @@ class SnapshotBase(object):
                                snap.volume_id))
             LOG.debug('Snapshot %s exists with id %s' % (request.name,
                                                          snap.id))
-        else:
-            vol = self._get_vol(request.source_volume_id, context=context)
-            snap = vol.create_snapshot(name=request.name)
         snapshot = self._convert_snapshot_type(snap)
         return self.TYPES.CreateSnapResp(snapshot=snapshot)
 
