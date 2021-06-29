@@ -151,8 +151,7 @@ class Controller(base.TopologyBase, base.SnapshotBase, base.ControllerBase):
 
     def _convert_snapshot_type(self, snap):
         creation_time = timestamp_pb2.Timestamp()
-        created_at = snap.created_at.replace(tzinfo=None)
-        creation_time.FromDatetime(created_at)
+        creation_time.FromDatetime(snap.created_at)
 
         snapshot = self.TYPES.Snapshot(
             snapshot_id=snap.id,

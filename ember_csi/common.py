@@ -14,6 +14,7 @@
 #    under the License.
 
 from __future__ import absolute_import
+import calendar
 import contextlib
 from datetime import datetime
 import functools
@@ -196,15 +197,15 @@ DEBUG_LIBRARY, debuggable = setup_debug()
 
 
 def date_to_nano(date):
-    nanosecs = int((date - constants.EPOCH).total_seconds() *
-                   constants.NANOSECONDS)
-    res = six.text_type(nanosecs)
-    return res
+    nanosecs = calendar.timegm(date.utctimetuple()) * constants.NANOSECONDS
+    nanosecs += date.microsecond * constants.NANOS_PER_MICROSECOND
+    return six.text_type(nanosecs)
 
 
 def nano_to_date(nanoseconds):
-    date = datetime.utcfromtimestamp(float(nanoseconds)/constants.NANOSECONDS)
-    return date.replace(tzinfo=pytz.UTC)
+    date = datetime.fromtimestamp(float(nanoseconds)/constants.NANOSECONDS,
+                                  pytz.utc)
+    return date
 
 
 def require(*fields):

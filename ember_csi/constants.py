@@ -21,6 +21,7 @@ import pytz
 
 
 NANOSECONDS = 10 ** 9
+NANOS_PER_MICROSECOND = 1000
 EPOCH = datetime.utcfromtimestamp(0).replace(tzinfo=pytz.UTC)
 GB = float(1024 ** 3)
 ONE_DAY_IN_SECONDS = 60 * 60 * 24
