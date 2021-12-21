@@ -12,8 +12,8 @@ Ember-CSI has the following requirements:
   - Fedora
 
 - Container Orchestrator: Both Kubernetes and OpenShift are supported:
-  - Openshift: Recommended version 4.4 or newer. Supported from version 3.10 onward.
-  - Kubernetes: Recommended version 1.17 or newer. Supported from version 1.11 onward.
+  - Openshift: Recommended version 4.6 or newer. Supported from version 4.3 onward.
+  - Kubernetes: Recommended version 1.17 or newer. Supported from version 1.16 onward.
 
 - Storage solution: Access and credentials to a `supported storage solution <index.html#supported_drivers>`_.
 

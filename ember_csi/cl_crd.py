@@ -133,11 +133,21 @@ class CRD(object):
 
         As well as with the individual names and shortcuts.
         """
-        crd = {'apiVersion': 'apiextensions.k8s.io/v1beta1',
+        crd = {'apiVersion': 'apiextensions.k8s.io/v1',
                'kind': 'CustomResourceDefinition',
                'metadata': {'name': cls.api_name},
                'spec': {'group': cls.DOMAIN,
-                        'version': cls.CRD_VERSION,
+                        'versions': [{
+                            'name': cls.CRD_VERSION,
+                            'served': True,
+                            'storage': True,
+                            'schema': {
+                                'openAPIV3Schema': {
+                                    'type': 'object',
+                                    'x-kubernetes-preserve-unknown-fields': True
+                                }
+                            }
+                        }],
                         'scope': 'Namespaced',
                         'names': {'kind': cls.kind,
                                   'singular': cls.singular,
@@ -473,11 +483,11 @@ class K8sConnection(object):
             k8s.config.load_incluster_config()
         else:
             k8s.config.load_kube_config()
-        config = k8s.client.Configuration()
+        config = k8s.client.Configuration().get_default_copy()
         if config.host.startswith('https://'):
             config.assert_hostname = False
         self.api = k8s.client.api_client.ApiClient(configuration=config)
-        self.ext_api = k8s.client.ApiextensionsV1beta1Api(self.api)
+        self.ext_api = k8s.client.ApiextensionsV1Api(self.api)
         self.crd_api = k8s.client.CustomObjectsApi(self.api)
 
 

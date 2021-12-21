@@ -132,7 +132,7 @@ def k8s_issue_376():
 
     That issue will raise a ValueError when creating a CRD because the status
     returned by Kubernetes is set to None, which according to
-    V1beta1CustomResourceDefinitionStatus cannot be.
+    V1CustomResourceDefinitionStatus cannot be.
 
         u'status': {u'acceptedNames': {u'kind': u'', u'plural': u''},
                     u'conditions': None}}
@@ -143,7 +143,7 @@ def k8s_issue_376():
         # Unlike the original one we accept None values
         self._conditions = conditions
 
-    crd_status = k8s.client.models.v1beta1_custom_resource_definition_status
-    crd_status_cls = crd_status.V1beta1CustomResourceDefinitionStatus
+    crd_status = k8s.client.models.v1_custom_resource_definition_status
+    crd_status_cls = crd_status.V1CustomResourceDefinitionStatus
     setattr(crd_status_cls, 'conditions',
             property(fget=crd_status_cls.conditions.fget, fset=set_conditions))
