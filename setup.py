@@ -74,7 +74,7 @@ requirements = [
     # GRPCIO v1.12.0 has broken dependencies, so we include them here
     'protobuf>=3.5.0.post1',
     # For the CRD persistent metadata plugin
-    'kubernetes>=7.0.0,<12.0.0',
+    'kubernetes>=12.0.0,<13.0.0.',
     # If we install from PyPi we needed a newer setuptools because some
     # Kubernetes dependencies use version in format of 4.*
     # 'setuptools>=40.0.0',
