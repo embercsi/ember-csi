@@ -763,6 +763,7 @@ class MountInfo(object):
 
 class NodeBase(IdentityBase):
     STAGED_NAME = 'stage'
+    MOUNT_FS_FLAGS = {'xfs': ['nouuid']}
 
     def __init__(self, server, persistence_config=None, ember_config=None,
                  node_id=None, storage_nw_ip=None, **kwargs):
@@ -901,9 +902,12 @@ class NodeBase(IdentityBase):
         # Mount must only be called if it's already not mounted
         # We don't use the util-linux Python library to reduce dependencies
         command = ['mount', '-t', fs_type]
+        flags = self.MOUNT_FS_FLAGS.get(fs_type, [])
         if mount_flags:
+            flags.extend(mount_flags)
+        if flags:
             command.append('-o')
-            command.append(','.join(mount_flags))
+            command.append(','.join(flags))
         command.append(private_bind)
         command.append(target)
         self.sudo(*command)
