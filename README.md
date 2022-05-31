@@ -1,6 +1,6 @@
 [![License](https://img.shields.io/:license-apache-blue.svg)](http://www.apache.org/licenses/LICENSE-2.0) [![Docs](https://readthedocs.org/projects/ember-csi/badge/?version=latest)](http://docs.ember-csi.io/) [![PyPi](https://img.shields.io/pypi/v/ember_csi.svg)](https://pypi.python.org/pypi/ember_csi) [![PyVersion](https://img.shields.io/pypi/pyversions/ember_csi.svg)](https://pypi.python.org/pypi/ember_csi)
 
-# Ember CSI - [https://ember-csi.io](https://ember-csi-io)
+# Ember CSI - [https://ember-csi.io](https://ember-csi.io)
 
 Multi-vendor CSI plugin driver supporting over 80 storage drivers in a single plugin to provide `block` and `mount` storage to Container Orchestration systems such as Kubernetes and OpenShift.
 
